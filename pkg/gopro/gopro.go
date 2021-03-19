@@ -428,6 +428,16 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 			Type:     Thumbnail,
 			HeroMode: true,
 		},
+		{
+			Regex:    regexp.MustCompile(`GG\d+.MP4`), // Live Bursts...
+			Type:     Video,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`G\d+.JPG`),
+			Type:     Multishot,
+			HeroMode: true,
+		},
 	}
 	var result utils.Result
 	/*
@@ -570,6 +580,24 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 												result.FilesImported += 1
 											}
 										}
+									case Multishot:
+										root = de.Name()[:4]
+										if _, err := os.Stat(filepath.Join(dayFolder, "multishot", root)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "multishot", root), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										color.Green(">>> %s/%s", root, de.Name(), color.Bold)
+
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", root, de.Name()), 1000)
+										if err != nil {
+											result.Errors = append(result.Errors, err)
+											result.FilesNotImported = append(result.FilesNotImported, osPathname)
+										} else {
+											result.FilesImported += 1
+										}
 									default:
 										color.Red("Unsupported file %s", de.Name())
 										result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
@@ -681,6 +709,10 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 									case Video:
 										x := de.Name()
 
+										chaptered := regexp.MustCompile(`GP\d+.MP4`)
+										if chaptered.MatchString(de.Name()) {
+											x = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+										}
 										color.Green(">>> %s", x, color.Bold)
 
 										if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
@@ -751,6 +783,24 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											} else {
 												result.FilesImported += 1
 											}
+										}
+									case Multishot:
+										root = de.Name()[:4]
+										if _, err := os.Stat(filepath.Join(dayFolder, "multishot", root)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "multishot", root), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										color.Green(">>> %s/%s", root, de.Name(), color.Bold)
+
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", root, de.Name()), 1000)
+										if err != nil {
+											result.Errors = append(result.Errors, err)
+											result.FilesNotImported = append(result.FilesNotImported, osPathname)
+										} else {
+											result.FilesImported += 1
 										}
 									default:
 										color.Red("Unsupported file %s", de.Name())

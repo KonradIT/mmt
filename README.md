@@ -70,3 +70,4 @@ Download from the releases tab, a github action will run for every push.
 -   [x] **Update camera firmware?** (Done: GoPro, pending: Insta360)
 -   [ ] **Use goroutines**
 -   [ ] **Tests**
+-   [ ] **Import media from GoPro's Webcam mode (USB Ethernet)**
