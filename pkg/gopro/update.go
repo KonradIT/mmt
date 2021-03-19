@@ -1,0 +1,70 @@
+package gopro
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"path/filepath"
+	"strings"
+
+	"github.com/erdaltsksn/cui"
+	"github.com/fatih/color"
+	"github.com/k3a/html2text"
+	"github.com/konradit/mmt/pkg/utils"
+)
+
+var FIRMWARE_CATALOG = "https://firmware-api.gopro.com/v2/firmware/catalog"
+
+func UpdateCamera(sdcard string) error {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", FIRMWARE_CATALOG, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var response = &FirmwareCatalog{}
+	err = json.NewDecoder(resp.Body).Decode(response)
+	if err != nil {
+		return err
+	}
+	gpVersion, err := readInfo(sdcard)
+	if err != nil {
+		return err
+	}
+
+	cameraId := fmt.Sprintf("%s.%s", strings.Split(gpVersion.FirmwareVersion, ".")[0], strings.Split(gpVersion.FirmwareVersion, ".")[1])
+
+	for _, camera := range response.Cameras {
+		if camera.ModelString == cameraId {
+			cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraId+".", "", 1)
+
+			if cameraVersion != camera.Version {
+				color.Cyan("New update available!")
+				color.Cyan("🎥 Firmware [%s]:", cameraVersion)
+				color.Cyan("☁️ Firmware [%s]:", camera.Version)
+				color.Yellow(">> Firmware release date: %s", camera.ReleaseDate)
+				color.Yellow(html2text.HTML2Text(camera.ReleaseHTML))
+
+				err = utils.DownloadFile(filepath.Join(sdcard, "UPDATE.zip"), camera.URL)
+				if err != nil {
+					return err
+				}
+				color.Cyan("Unzipping...")
+				err = utils.Unzip(filepath.Join(sdcard, "UPDATE.zip"), filepath.Join(sdcard, "UPDATE"))
+				if err != nil {
+					return err
+				}
+				color.Cyan("Firmware extracted to SD card!")
+				color.Cyan("Now eject the SD card and insert it into your camera")
+				color.Cyan("then turn your camera on and wait for it to update")
+			} else {
+				cui.Warning("Firmware version is up to date.")
+			}
+		}
+	}
+	return nil
+}
