@@ -49,6 +49,7 @@ const (
 	Multishot          FileType = "multishot"
 	LowResolutionVideo FileType = "lrv"
 	Thumbnail          FileType = "thm"
+	RawPhoto           FileType = "gpr"
 )
 
 type FileTypeMatch struct {

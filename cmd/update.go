@@ -33,7 +33,11 @@ var updateCmd = &cobra.Command{
 			}
 			break
 		case utils.Insta360:
-			err = insta360.UpdateCamera(input)
+			model, err := cmd.Flags().GetString("model")
+			if err != nil {
+				cui.Error("Something went wrong", err)
+			}
+			err = insta360.UpdateCamera(input, model)
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
@@ -47,5 +51,6 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 	updateCmd.Flags().StringP("input", "i", "", "Input directory for root sd card, eg: E:\\")
 	updateCmd.Flags().StringP("camera", "c", "", "Camera type")
+	updateCmd.Flags().StringP("model", "m", "", "Model type (for insta360): oner, onex, onex2")
 
 }

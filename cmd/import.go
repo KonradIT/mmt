@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/erdaltsksn/cui"
+	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/android"
 	"github.com/konradit/mmt/pkg/dji"
 	"github.com/konradit/mmt/pkg/gopro"
@@ -23,19 +24,19 @@ var importCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		input, err := cmd.Flags().GetString("input")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing input", err)
 		}
 		output, err := cmd.Flags().GetString("output")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing output", err)
 		}
 		camera, err := cmd.Flags().GetString("camera")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing camera", err)
 		}
 		projectName, err := cmd.Flags().GetString("name")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing name", err)
 		}
 
 		if projectName != "" {
@@ -44,20 +45,20 @@ var importCmd = &cobra.Command{
 
 		dateFormat, err := cmd.Flags().GetString("date")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing date", err)
 		}
 		bufferSize, err := cmd.Flags().GetInt("buffer")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing buffer", err)
 		}
 		prefix, err := cmd.Flags().GetString("prefix")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing prefix", err)
 		}
 
-		dateRange, err := cmd.Flags().GetStringArray("range")
+		dateRange, err := cmd.Flags().GetStringSlice("range")
 		if err != nil {
-			cui.Error("Something went wrong", err)
+			cui.Error("Problem parsing range", err)
 		}
 
 		if camera != "" {
@@ -83,7 +84,7 @@ var importCmd = &cobra.Command{
 			if len(r.Errors) != 0 {
 				fmt.Println("Errors: ")
 				for _, error := range r.Errors {
-					fmt.Println(">> " + error.Error())
+					color.Red(">> " + error.Error())
 				}
 			}
 		}
@@ -102,7 +103,7 @@ func init() {
 	importCmd.Flags().StringP("date", "d", "dd-mm-yyyy", "Date format, dd-mm-yyyy by default")
 	importCmd.Flags().IntP("buffer", "b", 1000, "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
-	importCmd.Flags().StringArray("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
+	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
 
 	for _, item := range []string{
 		"input", "output",

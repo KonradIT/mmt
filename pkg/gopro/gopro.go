@@ -37,8 +37,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	}
 	percentage := (float64(di.Total-di.Free) / float64(di.Total)) * 100
 
-	c := color.New(color.FgCyan, color.Bold)
-	y := color.New(color.FgHiBlue, color.Bold)
+	c := color.New(color.FgCyan)
+	y := color.New(color.FgHiBlue)
 	color.Cyan("🎥 [%s]:", gpVersion.CameraType)
 	c.Printf("\t📹 FW: %s ", gpVersion.FirmwareVersion)
 	y.Printf("SN: %s\n", gpVersion.CameraSerialNumber)
@@ -72,11 +72,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 		if len(dateRange) == 2 {
 			replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
-			start, err := time.Parse(replacer.Replace(replacer.Replace(dateFormat)), dateRange[0])
+			start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
 			if err == nil {
 				dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 			}
-			end, err := time.Parse(replacer.Replace(replacer.Replace(dateFormat)), dateRange[1])
+			end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
 			if err == nil {
 				dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
 			}
@@ -220,9 +220,23 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 								if t.HasBirthTime() {
 									d := t.BirthTime()
 									mediaDate := d.Format("02-01-2006")
+									replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
+
 									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
-										replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+									}
+
+									if len(sortoptions.DateRange) == 2 {
+
+										start := sortoptions.DateRange[0]
+										end := sortoptions.DateRange[0]
+										if d.Before(start) {
+											return godirwalk.SkipThis
+										}
+										if d.After(end) {
+											return godirwalk.SkipThis
+										}
+
 									}
 
 									dayFolder := filepath.Join(output, mediaDate)
@@ -242,7 +256,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										x := de.Name()
 
 										filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-										color.Green(">>> %s", filename, color.Bold)
+										color.Green(">>> %s", filename)
 
 										foldersNeeded := []string{"videos/360", "videos/heromode"}
 										for _, fn := range foldersNeeded {
@@ -280,7 +294,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										if !ftype.HeroMode {
 											dest = foldersNeeded[0]
 										}
-										color.Green(">>> %s", de.Name(), color.Bold)
+										color.Green(">>> %s", de.Name())
 
 										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), 1000)
 										if err != nil {
@@ -304,7 +318,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										if !ftype.HeroMode {
 											dest = foldersNeeded[0]
 										}
-										color.Green(">>> %s", de.Name(), color.Bold)
+										color.Green(">>> %s", de.Name())
 
 										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), 1000)
 										if err != nil {
@@ -438,6 +452,11 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 			Type:     Multishot,
 			HeroMode: true,
 		},
+		{
+			Regex:    regexp.MustCompile(`.GPR`),
+			Type:     RawPhoto,
+			HeroMode: true,
+		},
 	}
 	var result utils.Result
 	/*
@@ -506,7 +525,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 										x := de.Name()
 
 										filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-										color.Green(">>> %s", filename, color.Bold)
+										color.Green(">>> %s", filename)
 
 										if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
 											err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
@@ -530,7 +549,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										color.Green(">>> %s", de.Name(), color.Bold)
+										color.Green(">>> %s", de.Name())
 
 										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), 1000)
 										if err != nil {
@@ -589,7 +608,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										color.Green(">>> %s/%s", root, de.Name(), color.Bold)
+										color.Green(">>> %s/%s", root, de.Name())
 
 										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", root, de.Name()), 1000)
 										if err != nil {
@@ -598,6 +617,24 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 										} else {
 											result.FilesImported += 1
 										}
+									case RawPhoto:
+										if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										color.Green(">>> %s", de.Name())
+										// convert to DNG here
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), 1000)
+										if err != nil {
+											result.Errors = append(result.Errors, err)
+											result.FilesNotImported = append(result.FilesNotImported, osPathname)
+										} else {
+											result.FilesImported += 1
+										}
+
 									default:
 										color.Red("Unsupported file %s", de.Name())
 										result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
@@ -643,7 +680,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 		},
 		{
 			Regex:    regexp.MustCompile(`GP\d+.MP4`),
-			Type:     Video,
+			Type:     ChapteredVideo,
 			HeroMode: true,
 		},
 		{
@@ -654,6 +691,11 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 		{
 			Regex:    regexp.MustCompile(`GOPR\d+.THM`),
 			Type:     Thumbnail,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`.GPR`),
+			Type:     RawPhoto,
 			HeroMode: true,
 		},
 	}
@@ -713,7 +755,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 										if chaptered.MatchString(de.Name()) {
 											x = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 										}
-										color.Green(">>> %s", x, color.Bold)
+										color.Green(">>> %s", x)
 
 										if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
 											err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
@@ -729,6 +771,26 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 										} else {
 											result.FilesImported += 1
 										}
+									case ChapteredVideo:
+										x := de.Name()
+										name := fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+
+										color.Green(">>> %s", x)
+
+										if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", name), 1000)
+										if err != nil {
+											result.Errors = append(result.Errors, err)
+											result.FilesNotImported = append(result.FilesNotImported, osPathname)
+										} else {
+											result.FilesImported += 1
+										}
 									case Photo:
 										if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
 											err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
@@ -737,7 +799,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										color.Green(">>> %s", de.Name(), color.Bold)
+										color.Green(">>> %s", de.Name())
 
 										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), 1000)
 										if err != nil {
@@ -793,7 +855,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										color.Green(">>> %s/%s", root, de.Name(), color.Bold)
+										color.Green(">>> %s/%s", root, de.Name())
 
 										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", root, de.Name()), 1000)
 										if err != nil {
@@ -802,6 +864,24 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 										} else {
 											result.FilesImported += 1
 										}
+									case RawPhoto:
+										if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										color.Green(">>> %s", de.Name())
+										// convert to DNG here
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), 1000)
+										if err != nil {
+											result.Errors = append(result.Errors, err)
+											result.FilesNotImported = append(result.FilesNotImported, osPathname)
+										} else {
+											result.FilesImported += 1
+										}
+
 									default:
 										color.Red("Unsupported file %s", de.Name())
 										result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))

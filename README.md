@@ -15,11 +15,8 @@ This tool draws inspiration from my [dji-utils/offload.sh](https://github.com/Ko
 Right now the script supports these cameras:
 
 -   GoPro: Pretty much all of them
-
-To be supported:
-
+-   Insta360: X2 (GO 2 to follow)
 -   DJI: Tested with Osmo Pocket, Spark and Mavic Air 2, but should work on Osmo action and other drones as well
--   Insta360: X2
 -   Android: photos and videos recorded with OnePlus 7T, but possibly most Android phones
 
 Feel free to PR!
@@ -28,7 +25,7 @@ I plan have the tool read a directory, use a config file and act accordingly to 
 
 ## Installing:
 
-Download from the releases tab, a github action will run for every push.
+Download from the releases tab, additionally, a github action will run for every push.
 
 ## Running:
 
@@ -36,8 +33,17 @@ Download from the releases tab, a github action will run for every push.
     -   `--input`: A directory pointing to your SD card, or MTP connection, on Windows it would be a letter (eg: `E:\`)
     -   `--output`: Destination folder, a hard drive, etc...
     -   `--name`: Project name, eg: `Paragliding Weekend Winter 2021`
+    -   `--camera`: Type of device being imported. Values supported: `gopro, insta360, dji`
+    -   `--buffersize`: Buffer size for copying files. Default is `1000 bytes`
+    -   `--date`: Date format. Default is `dd-mm-yyyy`
+    -   `--range`: Date range, for example: `12-03-2021,15-03-2021`
 -   update
     -   `--input`: A directory pointing to your SD card
+    -   `--camera`: Type of device being imported. Values supported: `gopro, insta360`
+
+## How it looks:
+
+![](https://i.imgur.com/04m55zg.png)
 
 ## To-do:
 
@@ -71,3 +77,4 @@ Download from the releases tab, a github action will run for every push.
 -   [ ] **Use goroutines**
 -   [ ] **Tests**
 -   [ ] **Import media from GoPro's Webcam mode (USB Ethernet)**
+-   [ ] **GUI counterpart using fyne.io**
