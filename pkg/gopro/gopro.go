@@ -25,6 +25,8 @@ Uses data from:
 https://community.gopro.com/t5/en/GoPro-Camera-File-Naming-Convention/ta-p/390220#
 */
 
+var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
+
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
 	gpVersion, err := readInfo(in)
 	if err != nil {
@@ -71,12 +73,17 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		}
 
 		if len(dateRange) == 2 {
-			replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
 			start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
+			if err != nil {
+				log.Fatal(err.Error())
+			}
 			if err == nil {
 				dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 			}
 			end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
+			if err != nil {
+				log.Fatal(err.Error())
+			}
 			if err == nil {
 				dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
 			}
@@ -220,7 +227,6 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 								if t.HasBirthTime() {
 									d := t.BirthTime()
 									mediaDate := d.Format("02-01-2006")
-									replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
 
 									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
@@ -229,7 +235,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 									if len(sortoptions.DateRange) == 2 {
 
 										start := sortoptions.DateRange[0]
-										end := sortoptions.DateRange[0]
+										end := sortoptions.DateRange[1]
 										if d.Before(start) {
 											return godirwalk.SkipThis
 										}
@@ -504,8 +510,21 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 									mediaDate := d.Format("02-01-2006")
 									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
-										replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
+
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+									}
+
+									if len(sortoptions.DateRange) == 2 {
+
+										start := sortoptions.DateRange[0]
+										end := sortoptions.DateRange[1]
+										if d.Before(start) {
+											return godirwalk.SkipThis
+										}
+										if d.After(end) {
+											return godirwalk.SkipThis
+										}
+
 									}
 
 									dayFolder := filepath.Join(output, mediaDate)
@@ -731,8 +750,20 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 									mediaDate := d.Format("02-01-2006")
 									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
-										replacer := strings.NewReplacer("day", "02", "month", "01", "year", "2006")
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+									}
+
+									if len(sortoptions.DateRange) == 2 {
+
+										start := sortoptions.DateRange[0]
+										end := sortoptions.DateRange[1]
+										if d.Before(start) {
+											return godirwalk.SkipThis
+										}
+										if d.After(end) {
+											return godirwalk.SkipThis
+										}
+
 									}
 
 									dayFolder := filepath.Join(output, mediaDate)
