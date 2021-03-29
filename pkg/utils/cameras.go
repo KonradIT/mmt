@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -102,6 +103,62 @@ func CopyFile(src string, dst string, buffersize int) error {
 	}
 	bar.Finish()
 	return err
+}
+
+// MIT Licensed code: https://gist.github.com/r0l1/92462b38df26839a3ca324697c8cba04
+func CopyDir(src string, dst string, bufferSize int) (err error) {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
+
+	si, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if !si.IsDir() {
+		return errors.New("source is not a directory")
+	}
+
+	_, err = os.Stat(dst)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err == nil {
+		return errors.New("destination already exists")
+	}
+
+	err = os.MkdirAll(dst, si.Mode())
+	if err != nil {
+		return err
+	}
+
+	entries, err := ioutil.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			err = CopyDir(srcPath, dstPath, bufferSize)
+			if err != nil {
+				return
+			}
+		} else {
+			// Skip symlinks.
+			if entry.Mode()&os.ModeSymlink != 0 {
+				continue
+			}
+
+			err = CopyFile(srcPath, dstPath, bufferSize)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return nil
 }
 
 type Timedelta struct {

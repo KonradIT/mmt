@@ -278,7 +278,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										if !ftype.HeroMode {
 											dest = foldersNeeded[0]
 										}
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -302,7 +302,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										}
 										color.Green(">>> %s", de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -326,7 +326,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										}
 										color.Green(">>> %s", de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -351,7 +351,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 											x := de.Name()
 
 											filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), 1000)
+											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
 											if err != nil {
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -377,7 +377,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 											x := de.Name()
 
 											filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), 1000)
+											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
 											if err != nil {
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -553,7 +553,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -570,7 +570,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 										color.Green(">>> %s", de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -590,7 +590,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											x := de.Name()
 
 											filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), 1000)
+											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), sortoptions.BufferSize)
 											if err != nil {
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -610,7 +610,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											x := de.Name()
 
 											filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), 1000)
+											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), sortoptions.BufferSize)
 											if err != nil {
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -619,17 +619,17 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											}
 										}
 									case Multishot:
-										root = de.Name()[:4]
-										if _, err := os.Stat(filepath.Join(dayFolder, "multishot", root)); os.IsNotExist(err) {
-											err = os.MkdirAll(filepath.Join(dayFolder, "multishot", root), 0755)
+										filebaseroot := de.Name()[:4]
+										if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
 											if err != nil {
 												log.Fatal(err.Error())
 											}
 										}
 
-										color.Green(">>> %s/%s", root, de.Name())
+										color.Green(">>> %s/%s", filebaseroot, de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", root, de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", filebaseroot, de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -646,7 +646,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 										color.Green(">>> %s", de.Name())
 										// convert to DNG here
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -795,7 +795,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", x), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", x), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -815,7 +815,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", name), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", name), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -832,7 +832,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 										color.Green(">>> %s", de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -851,7 +851,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 											x := de.Name()
 
-											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), 1000)
+											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), sortoptions.BufferSize)
 											if err != nil {
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -869,7 +869,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 
 											x := de.Name()
-											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), 1000)
+											err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), sortoptions.BufferSize)
 											if err != nil {
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -878,17 +878,17 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 										}
 									case Multishot:
-										root = de.Name()[:4]
-										if _, err := os.Stat(filepath.Join(dayFolder, "multishot", root)); os.IsNotExist(err) {
-											err = os.MkdirAll(filepath.Join(dayFolder, "multishot", root), 0755)
+										filebaseroot := de.Name()[:4]
+										if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
 											if err != nil {
 												log.Fatal(err.Error())
 											}
 										}
 
-										color.Green(">>> %s/%s", root, de.Name())
+										color.Green(">>> %s/%s", filebaseroot, de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", root, de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", filebaseroot, de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -905,7 +905,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 										color.Green(">>> %s", de.Name())
 										// convert to DNG here
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)

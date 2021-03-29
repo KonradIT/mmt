@@ -87,8 +87,9 @@ var importCmd = &cobra.Command{
 					color.Red(">> " + error.Error())
 				}
 			}
+			return
 		}
-
+		color.Red("No camera selected.")
 	},
 }
 
@@ -105,8 +106,13 @@ func init() {
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
 
+	// GoPro-specific options
+
+	importCmd.Flags().BoolP("skip_aux", "s", false, "GoPro: skip auxiliary files (THM, LRV)")
+	importCmd.Flags().StringSlice("sort_by", []string{"camera", "days"}, "GoPro: sort files by: `camera` and/or `days`")
+
 	for _, item := range []string{
-		"input", "output",
+		"output", "camera",
 	} {
 		importCmd.MarkFlagRequired(item)
 	}

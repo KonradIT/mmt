@@ -242,7 +242,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/osc_mode", id, x), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/osc_mode", id, x), bufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -262,7 +262,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -301,7 +301,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 												log.Fatal(err.Error())
 											}
 										}
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), 1000)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), bufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -322,7 +322,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 										}
 									}
 
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), 1000)
+									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
 									if err != nil {
 										result.Errors = append(result.Errors, err)
 										result.FilesNotImported = append(result.FilesNotImported, osPathname)

@@ -40,13 +40,33 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	for entries.Next() {
 
 		replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
-
 		mediaDate := entries.Entry().ModifiedAt.Format("02-01-2006")
 		if strings.Contains(dateFormat, "year") && strings.Contains(dateFormat, "month") && strings.Contains(dateFormat, "day") {
 			mediaDate = entries.Entry().ModifiedAt.Format(replacer.Replace(dateFormat))
 		}
 
 		// check if is in date range
+		dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+
+		dateEnd := time.Now()
+
+		if len(dateRange) == 1 {
+			switch dateRange[0] {
+			case "today":
+				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+			case "yesterday":
+				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
+			case "week":
+				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
+			}
+			if entries.Entry().ModifiedAt.Before(dateStart) {
+				continue
+			}
+			if entries.Entry().ModifiedAt.After(dateEnd) {
+				continue
+			}
+
+		}
 
 		if len(dateRange) == 2 {
 
@@ -104,10 +124,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil
 
-		} else {
-			result.FilesImported += 1
 		}
-
 		localPath := ""
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".mp4") {
 			localPath = filepath.Join(dayFolder, "videos", entries.Entry().Name)
@@ -115,14 +132,13 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") {
 			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 		}
+		fmt.Println(localPath)
 		outFile, err := os.Create(localPath)
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil
 
-		} else {
-			result.FilesImported += 1
 		}
 		defer outFile.Close()
 		_, err = io.Copy(outFile, readfile)
@@ -130,9 +146,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil
-		} else {
-			result.FilesImported += 1
 		}
+		result.FilesImported += 1
 
 	}
 
