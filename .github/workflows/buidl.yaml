@@ -1,5 +1,5 @@
 on: [push, pull_request]
-name: Test
+name: Build Mac OS X/Linux
 jobs:
     build:
         name: GoReleaser build
@@ -27,5 +27,5 @@ jobs:
             - name: Upload assets
               uses: actions/upload-artifact@v2
               with:
-                  name: myapp
+                  name: mmt
                   path: dist/*
