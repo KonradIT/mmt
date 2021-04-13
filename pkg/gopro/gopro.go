@@ -27,116 +27,60 @@ https://community.gopro.com/t5/en/GoPro-Camera-File-Naming-Convention/ta-p/39022
 
 var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
-	gpVersion, err := readInfo(in)
-	if err != nil {
-		return nil, err
-	}
-
-	di, err := disk.GetInfo(in)
-	if err != nil {
-		return nil, err
-	}
-	percentage := (float64(di.Total-di.Free) / float64(di.Total)) * 100
-
-	c := color.New(color.FgCyan)
-	y := color.New(color.FgHiBlue)
-	color.Cyan("🎥 [%s]:", gpVersion.CameraType)
-	c.Printf("\t📹 FW: %s ", gpVersion.FirmwareVersion)
-	y.Printf("SN: %s\n", gpVersion.CameraSerialNumber)
-	color.Cyan("\t💾 %s/%s (%0.2f%%)\n",
-		humanize.Bytes(di.Total-di.Free),
-		humanize.Bytes(di.Total),
-		percentage,
-	)
-
-	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
-
-	if prefix == "cameraname" {
-		prefix = gpVersion.CameraType
-	}
-
-	dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-
-	dateEnd := time.Now()
-
-	if len(dateRange) != 0 {
-		if len(dateRange) == 1 {
-			switch dateRange[0] {
-			case "today":
-				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-			case "yesterday":
-				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
-			case "week":
-				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-			}
-		}
-
-		if len(dateRange) == 2 {
-			start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			if err == nil {
-				dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-			}
-			end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			if err == nil {
-				dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
-			}
-
-		}
-	}
-	switch root {
-	case "HD6", "HD7", "HD8", "HD9":
-		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, SortOptions{
-			ByDays:             true,
-			SkipAuxiliaryFiles: false,
-			AddHiLightTags:     true,
-			ByCamera:           true,
-			DateFormat:         dateFormat,
-			BufferSize:         bufferSize,
-			Prefix:             prefix,
-			DateRange:          []time.Time{dateStart, dateEnd},
-		}, gpVersion.CameraType)
-		return &result, nil
-	case "HD2,", "HD3", "HD4", "HX", "HD5":
-		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, SortOptions{
-			ByDays:             true,
-			SkipAuxiliaryFiles: false,
-			AddHiLightTags:     true,
-			ByCamera:           true,
-			DateFormat:         dateFormat,
-			BufferSize:         bufferSize,
-			Prefix:             prefix,
-			DateRange:          []time.Time{dateStart, dateEnd},
-		}, gpVersion.CameraType)
-		return &result, nil
-	case "H19":
-
-		result := importFromMAX(filepath.Join(in, fmt.Sprint(DCIM)), out, SortOptions{
-			ByDays:             true,
-			SkipAuxiliaryFiles: false,
-			AddHiLightTags:     true,
-			ByCamera:           true,
-			DateFormat:         dateFormat,
-			BufferSize:         bufferSize,
-			Prefix:             prefix,
-			DateRange:          []time.Time{dateStart, dateEnd},
-		})
-		return &result, nil
-	default:
-		return nil, errors.New(fmt.Sprintf("Camera `%s` is not supported", gpVersion.CameraType))
-	}
-}
-
-func importFromMAX(root string, output string, sortoptions SortOptions) utils.Result {
-	mediaFolder := `\d\d\dGOPRO`
-
-	fileTypes := []FileTypeMatch{
+var FileTypeMatches = map[GoProType][]FileTypeMatch{
+	V2: {
+		{
+			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
+			Type:     Photo,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GP\d+.JPG`),
+			Type:     Photo,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GX\d+.MP4`),
+			Type:     Video,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GH\d+.MP4`),
+			Type:     Video,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GL\d+.LRV`),
+			Type:     LowResolutionVideo,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GH\d+.THM`),
+			Type:     Thumbnail,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GX\d+.THM`),
+			Type:     Thumbnail,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GG\d+.MP4`), // Live Bursts...
+			Type:     Video,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`G\d+.JPG`),
+			Type:     Multishot,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`.GPR`),
+			Type:     RawPhoto,
+			HeroMode: true,
+		},
+	},
+	MAX: {
 		{
 			Regex:    regexp.MustCompile(`GS\d+.360`),
 			Type:     Video,
@@ -182,7 +126,173 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 			Type:     Thumbnail,
 			HeroMode: false,
 		},
+	},
+	V1: {
+		{
+			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
+			Type:     Photo,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`G\d+.JPG`),
+			Type:     Multishot,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GOPR\d+.MP4`),
+			Type:     Video,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GP\d+.MP4`),
+			Type:     ChapteredVideo,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GOPR\d+.LRV`),
+			Type:     LowResolutionVideo,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`GOPR\d+.THM`),
+			Type:     Thumbnail,
+			HeroMode: true,
+		},
+		{
+			Regex:    regexp.MustCompile(`.GPR`),
+			Type:     RawPhoto,
+			HeroMode: true,
+		},
+	},
+}
+
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+
+	/* Import method using SD card bay or SD card reader */
+
+	dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+
+	dateEnd := time.Now()
+
+	byDays := false
+	byCamera := false
+
+	sortByOptions, found := cameraOptions["sort_by"]
+	if found {
+		for _, sortop := range sortByOptions.([]string) {
+			if sortop == "by_days" {
+				byDays = true
+			}
+			if sortop == "by_camera" {
+				byCamera = true
+			}
+		}
 	}
+	if len(dateRange) != 0 {
+		if len(dateRange) == 1 {
+			switch dateRange[0] {
+			case "today":
+				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+			case "yesterday":
+				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
+			case "week":
+				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
+			}
+		}
+
+		if len(dateRange) == 2 {
+			start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			if err == nil {
+				dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+			}
+			end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			if err == nil {
+				dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+			}
+
+		}
+	}
+
+	skipAux := false
+	skipAuxOption, found := cameraOptions["skip_aux"]
+	if found {
+		skipAux = skipAuxOption.(bool)
+	}
+	sortOptions := SortOptions{
+		ByDays:             byDays,
+		SkipAuxiliaryFiles: skipAux,
+		AddHiLightTags:     true,
+		ByCamera:           byCamera,
+		DateFormat:         dateFormat,
+		BufferSize:         bufferSize,
+		Prefix:             prefix,
+		DateRange:          []time.Time{dateStart, dateEnd},
+	}
+
+	connectionType, found := cameraOptions["connection"]
+	if found {
+		switch connectionType.(string) {
+		case string(utils.MTP):
+			return ImportViaMTP(in, out, sortOptions)
+		case string(utils.Connect):
+			return ImportConnect(in, out, sortOptions)
+		}
+	}
+
+	gpVersion, err := readInfo(in)
+	if err != nil {
+		return nil, err
+	}
+	if prefix == "cameraname" {
+		prefix = gpVersion.CameraType
+		sortOptions.Prefix = prefix
+	}
+
+	di, err := disk.GetInfo(in)
+	if err != nil {
+		return nil, err
+	}
+	percentage := (float64(di.Total-di.Free) / float64(di.Total)) * 100
+
+	c := color.New(color.FgCyan)
+	y := color.New(color.FgHiBlue)
+	color.Cyan("🎥 [%s]:", gpVersion.CameraType)
+	c.Printf("\t📹 FW: %s ", gpVersion.FirmwareVersion)
+	y.Printf("SN: %s\n", gpVersion.CameraSerialNumber)
+	color.Cyan("\t💾 %s/%s (%0.2f%%)\n",
+		humanize.Bytes(di.Total-di.Free),
+		humanize.Bytes(di.Total),
+		percentage,
+	)
+
+	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
+
+	switch root {
+	case "HD6", "HD7", "HD8", "HD9":
+		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
+		return &result, nil
+	case "HD2,", "HD3", "HD4", "HX", "HD5":
+		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
+		return &result, nil
+	case "H19":
+		result := importFromMAX(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions)
+		return &result, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Camera `%s` is not supported", gpVersion.CameraType))
+	}
+}
+
+func importFromMAX(root string, output string, sortoptions SortOptions) utils.Result {
+	mediaFolder := `\d\d\dGOPRO`
+
+	fileTypes := FileTypeMatches[MAX]
+
 	var result utils.Result
 	/*
 		The idea is to have a result like:
@@ -262,7 +372,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										x := de.Name()
 
 										filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-										color.Green(">>> %s", filename)
+										color.Green(">>> %s", x)
 
 										foldersNeeded := []string{"videos/360", "videos/heromode"}
 										for _, fn := range foldersNeeded {
@@ -310,23 +420,16 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 											result.FilesImported += 1
 										}
 									case PowerPano:
-										foldersNeeded := []string{"photos/powerpano"}
-										for _, fn := range foldersNeeded {
-											if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
-												err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
-												if err != nil {
-													log.Fatal(err.Error())
-												}
+										if _, err := os.Stat(filepath.Join(dayFolder, "photos/powerpano")); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "photos/powerpano"), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
 											}
 										}
 
-										dest := foldersNeeded[1]
-										if !ftype.HeroMode {
-											dest = foldersNeeded[0]
-										}
 										color.Green(">>> %s", de.Name())
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), sortoptions.BufferSize)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/powerpano", de.Name()), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -412,58 +515,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 func importFromGoProV2(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
 	mediaFolder := `\d\d\dGOPRO`
 
-	fileTypes := []FileTypeMatch{
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GP\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GX\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GL\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GX\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GG\d+.MP4`), // Live Bursts...
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`G\d+.JPG`),
-			Type:     Multishot,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`.GPR`),
-			Type:     RawPhoto,
-			HeroMode: true,
-		},
-	}
+	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
 	/*
 		The idea is to have a result like:
@@ -681,43 +733,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 func importFromGoProV1(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
 	mediaFolder := `\d\d\dGOPRO`
 
-	fileTypes := []FileTypeMatch{
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`G\d+.JPG`),
-			Type:     Multishot,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GP\d+.MP4`),
-			Type:     ChapteredVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`.GPR`),
-			Type:     RawPhoto,
-			HeroMode: true,
-		},
-	}
+	fileTypes := FileTypeMatches[V1]
 	var result utils.Result
 
 	folders, err := ioutil.ReadDir(root)

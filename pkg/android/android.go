@@ -1,7 +1,6 @@
 package android
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -98,8 +97,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			os.Mkdir(filepath.Join(dayFolder, deviceInfo.Product), 0755)
 		}
 		dayFolder = filepath.Join(dayFolder, deviceInfo.Product)
-		fmt.Printf("\t%+v\n", *entries.Entry())
-		fmt.Printf("\t%+v", entries.Entry().ModifiedAt)
 
 		if entries.Entry().Name == "." || entries.Entry().Name == ".." {
 			continue
@@ -132,7 +129,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") {
 			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 		}
-		fmt.Println(localPath)
 		outFile, err := os.Create(localPath)
 		if err != nil {
 			result.Errors = append(result.Errors, err)

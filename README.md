@@ -29,17 +29,25 @@ Download from the releases tab, additionally, a github action will run for every
 
 ## Running:
 
--   import
-    -   `--input`: A directory pointing to your SD card, or MTP connection, on Windows it would be a letter (eg: `E:\`)
+-   import - **import camera footage**
+    -   `--input`: Either one of these:
+        -   A directory pointing to your SD card, on Windows it would be a letter (eg: `E:\`)
+        -   MTP connection ID, eg: `HERO9 Black`
+        -   USB Ethernet IP (v4) bound to a GoPro Connect connection (HERO8/9 Black)
     -   `--output`: Destination folder, a hard drive, etc...
     -   `--name`: Project name, eg: `Paragliding Weekend Winter 2021`
-    -   `--camera`: Type of device being imported. Values supported: `gopro, insta360, dji`
+    -   `--camera`: Type of device being imported. Values supported: `gopro, insta360, dji, android`
     -   `--buffersize`: Buffer size for copying files. Default is `1000 bytes`
     -   `--date`: Date format. Default is `dd-mm-yyyy`
     -   `--range`: Date range, for example: `12-03-2021,15-03-2021`
--   update
-    -   `--input`: A directory pointing to your SD card
-    -   `--camera`: Type of device being imported. Values supported: `gopro, insta360`
+    -   GoPro specific:
+        -   `connection`: `mtp`/`sd_card`/`connect`
+        -   `skip_aux`: Skips `.THM`, `.LRV` files
+        -   `sort_by`: Sort by: `camera`, `days` (defaults to both)
+-   update - **updates your camera**
+    -   `--input`: A directory pointing to your SD card, MTP or GoPro Connect not supported
+    -   `--camera`: Type of device being updated. Values supported: `gopro, insta360`
+-   list: - **list devices plugged in**
 
 ## How it looks:
 
@@ -74,7 +82,7 @@ Download from the releases tab, additionally, a github action will run for every
 -   [ ] **Generate DNG from GPR**: Using [gpr tool](https://github.com/gopro/gpr)
 -   [x] **Proxy file support**
 -   [ ] **H265 to H264 conversion**: Using ffmpeg
--   [x] **Update camera firmware?** (Done: GoPro, pending: Insta360)
+-   [x] **Update camera firmware?** (Done: GoPro, Insta360)
 -   [ ] **Use goroutines**
 -   [ ] **Tests**
 -   [ ] **Import media from GoPro's Webcam mode (USB Ethernet)**

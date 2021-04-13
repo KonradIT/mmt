@@ -20,6 +20,16 @@ const (
 	MISC Directory = "MISC"
 )
 
+type GoProType string
+
+const (
+	V2  GoProType = "v2"
+	MAX GoProType = "max"
+	V1  GoProType = "v1"
+
+	UNKNOWN GoProType = "unknown"
+)
+
 type FileOfInterest string
 
 const (
@@ -78,4 +88,52 @@ type FirmwareCatalog struct {
 	Magic   string   `json:"magic"`
 	Group   string   `json:"group"`
 	Cameras []Camera `json:"cameras"`
+}
+
+type cameraInfo struct {
+	Info struct {
+		ModelNumber             int      `json:"model_number"`
+		ModelName               string   `json:"model_name"`
+		FirmwareVersion         string   `json:"firmware_version"`
+		SerialNumber            string   `json:"serial_number"`
+		BoardType               string   `json:"board_type"`
+		ApMac                   string   `json:"ap_mac"`
+		ApSsid                  string   `json:"ap_ssid"`
+		ApHasDefaultCredentials string   `json:"ap_has_default_credentials"`
+		Capabilities            string   `json:"capabilities"`
+		LensCount               string   `json:"lens_count"`
+		UpdateRequired          string   `json:"update_required"`
+		RequiredNetworks        []string `json:"required_networks"`
+		HTTPKeepalive           int      `json:"http_keepalive"`
+	} `json:"info"`
+}
+
+type goProMediaList struct {
+	ID    string `json:"id"`
+	Media []struct {
+		D  string `json:"d"`
+		Fs []struct {
+			N    string        `json:"n"`
+			Cre  string        `json:"cre"`
+			Mod  string        `json:"mod"`
+			Glrv string        `json:"glrv,omitempty"`
+			Ls   string        `json:"ls,omitempty"`
+			S    string        `json:"s"`
+			G    string        `json:"g,omitempty"`
+			B    string        `json:"b,omitempty"`
+			L    string        `json:"l,omitempty"`
+			T    string        `json:"t,omitempty"`
+			M    []interface{} `json:"m,omitempty"`
+			Raw  string        `json:"raw,omitempty"`
+		} `json:"fs"`
+	} `json:"media"`
+}
+
+type goProTurboResponse struct {
+	Turbo string `json:"turbo"`
+}
+
+type GoProConnectDevice struct {
+	IP   string
+	Info cameraInfo
 }

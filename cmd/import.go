@@ -66,7 +66,25 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
-			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange)
+
+			customCameraOpts := make(map[string]interface{})
+			if c == utils.GoPro {
+				skipAuxFiles, err := cmd.Flags().GetBool("skip_aux")
+				if err == nil {
+					customCameraOpts["skip_aux"] = skipAuxFiles
+				}
+
+				sortBy, err := cmd.Flags().GetStringSlice("sort_by")
+				if err == nil {
+					customCameraOpts["sort_by"] = sortBy
+				}
+
+				connection, err := cmd.Flags().GetString("connection")
+				if err == nil {
+					customCameraOpts["connection"] = connection
+				}
+			}
+			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, customCameraOpts)
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
@@ -105,6 +123,7 @@ func init() {
 	importCmd.Flags().IntP("buffer", "b", 1000, "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
+	importCmd.Flags().StringP("connection", "x", "sd_card", "Connexion type: `mtp`, `sd_card`, `connect` (GoPro-specific)")
 
 	// GoPro-specific options
 
@@ -119,10 +138,10 @@ func init() {
 
 }
 
-func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
+func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, camOpts map[string]interface{}) (*utils.Result, error) {
 	switch c {
 	case utils.GoPro:
-		return gopro.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
+		return gopro.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	case utils.DJI:
 		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
 	case utils.Insta360:

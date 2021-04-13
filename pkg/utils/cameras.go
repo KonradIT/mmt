@@ -52,6 +52,14 @@ type Result struct {
 	Errors           []error
 }
 
+type ConnectionType string
+
+const (
+	SDCard  ConnectionType = "sd_card"
+	MTP     ConnectionType = "mtp"
+	Connect ConnectionType = "connect"
+)
+
 func CopyFile(src string, dst string, buffersize int) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
