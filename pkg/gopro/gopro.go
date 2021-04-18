@@ -180,10 +180,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	sortByOptions, found := cameraOptions["sort_by"]
 	if found {
 		for _, sortop := range sortByOptions.([]string) {
-			if sortop == "by_days" {
+			if sortop == "days" {
 				byDays = true
 			}
-			if sortop == "by_camera" {
+			if sortop == "camera" {
 				byCamera = true
 			}
 		}
