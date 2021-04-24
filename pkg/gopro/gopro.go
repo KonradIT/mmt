@@ -186,6 +186,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			if sortop == "camera" {
 				byCamera = true
 			}
+
+			if sortop != "camera" && sortop != "days" {
+				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
+			}
 		}
 	}
 	if len(dateRange) != 0 {
@@ -551,7 +555,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
-
+							fmt.Printf("\nFile %s matches regex %s", de.Name(), ftype.Regex.String())
 							if sortoptions.ByDays {
 								t, err := times.Stat(osPathname)
 								if err != nil {

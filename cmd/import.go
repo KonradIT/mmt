@@ -127,7 +127,7 @@ func init() {
 
 	// GoPro-specific options
 
-	importCmd.Flags().BoolP("skip_aux", "s", false, "GoPro: skip auxiliary files (THM, LRV)")
+	importCmd.Flags().BoolP("skip_aux", "s", true, "GoPro: skip auxiliary files (THM, LRV)")
 	importCmd.Flags().StringSlice("sort_by", []string{"camera", "days"}, "GoPro: sort files by: `camera` and/or `days`")
 
 	for _, item := range []string{
