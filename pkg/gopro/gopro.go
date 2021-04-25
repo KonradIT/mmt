@@ -555,7 +555,6 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
-							fmt.Printf("\nFile %s matches regex %s", de.Name(), ftype.Regex.String())
 							if sortoptions.ByDays {
 								t, err := times.Stat(osPathname)
 								if err != nil {
