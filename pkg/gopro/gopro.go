@@ -102,6 +102,11 @@ var FileTypeMatches = map[GoProType][]FileTypeMatch{
 			HeroMode: true,
 		},
 		{
+			Regex:    regexp.MustCompile(`GX\d+.MP4`),
+			Type:     Video,
+			HeroMode: true,
+		},
+		{
 			Regex:    regexp.MustCompile(`GPAA\d+.JPG`),
 			Type:     Multishot,
 			HeroMode: true,
