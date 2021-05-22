@@ -67,7 +67,7 @@ func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
 			continue
 		}
 		for _, a := range addrs {
-			r := regexp.MustCompile(`172.28.\d\d\d.5\d`)
+			r := regexp.MustCompile(`172.2\d.\d\d\d.5\d`)
 			ipv4Addr := a.(*net.IPNet).IP.To4()
 			if r.MatchString(ipv4Addr.String()) {
 				correctIP := ipv4Addr.String()[:len(ipv4Addr.String())-1] + "1"

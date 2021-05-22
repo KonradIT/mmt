@@ -131,6 +131,11 @@ var FileTypeMatches = map[GoProType][]FileTypeMatch{
 			Type:     Thumbnail,
 			HeroMode: false,
 		},
+		{
+			Regex:    regexp.MustCompile(`GSAA\d+.JPG`),
+			Type:     Multishot,
+			HeroMode: false,
+		},
 	},
 	V1: {
 		{
