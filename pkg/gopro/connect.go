@@ -130,17 +130,13 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 						mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
 					}
 
-					if len(sortOptions.DateRange) == 2 {
-
-						start := sortOptions.DateRange[0]
-						end := sortOptions.DateRange[1]
-						if tm.Before(start) {
-							continue
-						}
-						if tm.After(end) {
-							continue
-						}
-
+					start := sortOptions.DateRange[0]
+					end := sortOptions.DateRange[1]
+					if tm.Before(start) {
+						continue
+					}
+					if tm.After(end) {
+						continue
 					}
 
 					dayFolder := filepath.Join(out, mediaDate)
@@ -249,5 +245,6 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 			}
 		}
 	}
+	caller(ipAddress, "gp/gpTurbo?p=0", nil)
 	return &result, nil
 }
