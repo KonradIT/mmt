@@ -262,7 +262,19 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
+										// 3 = IMG
+										// 8 = date
+										// 2 = jump to next + "_"
+										// 6 = id
+										id := x[3+8+2 : 3+8+6+2]
+										if _, err := os.Stat(filepath.Join(dayFolder, "photos", id)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), bufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
