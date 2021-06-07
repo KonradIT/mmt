@@ -1,7 +1,6 @@
 package insta360
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -75,6 +74,20 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			ProMode:       false,
 		},
 		{
+			Regex:         regexp.MustCompile(`PRO_LRV_\d+_\d+_\d\d_\d+.mp4`),
+			Type:          LowResolutionVideo,
+			SteadyCamMode: true,
+			OSCMode:       false,
+			ProMode:       true,
+		},
+		{
+			Regex:         regexp.MustCompile(`PRO_VID_\d+_\d+_\d\d_\d+.mp4`),
+			Type:          Video,
+			SteadyCamMode: true,
+			OSCMode:       false,
+			ProMode:       true,
+		},
+		{
 			Regex:         regexp.MustCompile(`VID_\d+_\d+_\d\d_\d+.mp4`),
 			Type:          Video,
 			SteadyCamMode: true,
@@ -94,21 +107,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			SteadyCamMode: false,
 			OSCMode:       false,
 			ProMode:       false,
-		},
-
-		{
-			Regex:         regexp.MustCompile(`PRO_LRV_\d+_\d+_\d\d_\d+.mp4`),
-			Type:          LowResolutionVideo,
-			SteadyCamMode: true,
-			OSCMode:       false,
-			ProMode:       true,
-		},
-		{
-			Regex:         regexp.MustCompile(`PRO_VID_\d+_\d+_\d\d_\d+.mp4`),
-			Type:          Video,
-			SteadyCamMode: true,
-			OSCMode:       false,
-			ProMode:       true,
 		},
 	}
 
@@ -286,42 +284,45 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								case Video, LowResolutionVideo:
 									slug := ""
 									if ftype.SteadyCamMode {
-										slug = "videos/steady_cam"
-									} else if ftype.ProMode {
-										slug = "videos/pro_mode"
+										slug = "videos/flat"
+										if ftype.ProMode {
+											slug = "videos/flat/pro_mode"
+										}
 									} else {
 										slug = "videos/360"
 									}
 
-									if slug == "" {
-										result.Errors = append(result.Errors, errors.New("Video file "+de.Name()+" not recognized"))
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
+									x := de.Name()
 
-									} else {
-										x := de.Name()
+									color.Green(">>> %s", x)
 
-										color.Green(">>> %s", x)
-
+									// 3 = IMG
+									// 8 = date
+									// 2 = jump to next + "_"
+									// 6 = id
+									id := x[3+8+2 : 3+8+6+2]
+									if ftype.ProMode {
 										// 3 = IMG
 										// 8 = date
 										// 2 = jump to next + "_"
 										// 6 = id
-										id := x[3+8+2 : 3+8+6+2]
-										if _, err := os.Stat(filepath.Join(dayFolder, slug, id)); os.IsNotExist(err) {
-											err = os.MkdirAll(filepath.Join(dayFolder, slug, id), 0755)
-											if err != nil {
-												log.Fatal(err.Error())
-											}
-										}
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), bufferSize)
-										if err != nil {
-											result.Errors = append(result.Errors, err)
-											result.FilesNotImported = append(result.FilesNotImported, osPathname)
-										} else {
-											result.FilesImported += 1
-										}
-
+										id = x[3+3+8+2+1 : 3+3+8+6+2+1]
 									}
+									if _, err := os.Stat(filepath.Join(dayFolder, slug, id)); os.IsNotExist(err) {
+										err = os.MkdirAll(filepath.Join(dayFolder, slug, id), 0755)
+										if err != nil {
+											log.Fatal(err.Error())
+										}
+									}
+									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), bufferSize)
+									if err != nil {
+										result.Errors = append(result.Errors, err)
+										result.FilesNotImported = append(result.FilesNotImported, osPathname)
+									} else {
+										result.FilesImported += 1
+									}
+
+									return godirwalk.SkipThis
 								case RawPhoto:
 									x := de.Name()
 
