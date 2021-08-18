@@ -5,8 +5,8 @@ import (
 
 	"github.com/erdaltsksn/cui"
 	"github.com/fatih/color"
-	"github.com/konradit/gowpd"
 	"github.com/konradit/mmt/pkg/gopro"
+	"github.com/shirou/gopsutil/disk"
 	"github.com/spf13/cobra"
 )
 
@@ -14,17 +14,13 @@ var listDevicesCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List devices available for importing",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := gowpd.Init()
-		defer gowpd.Destroy()
-		if err != nil {
-			cui.Error(err.Error())
-		}
-		n := gowpd.GetDeviceCount()
-		if n >= 1 {
+		partitions, _ := disk.Partitions(false)
+
+		if len(partitions) >= 1 {
 			color.Yellow("📷 Devices:")
 		}
-		for i := 0; i < n; i++ {
-			color.Cyan(fmt.Sprintf("\t🎥 %v - %v (%v) [%v]\n", i, gowpd.GetDeviceName(i), gowpd.GetDeviceDescription(i), gowpd.GetDeviceManufacturer(i)))
+		for i, partition := range partitions {
+			color.Cyan(fmt.Sprintf("\t🎥 %v - %v (%v)\n", i, partition.Device, partition.Mountpoint))
 		}
 
 		networkDevices, err := gopro.GetGoProNetworkAddresses()

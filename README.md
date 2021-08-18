@@ -32,7 +32,6 @@ Download from the releases tab, additionally, a github action will run for every
 -   import - **import camera footage**
     -   `--input`: Either one of these:
         -   A directory pointing to your SD card, on Windows it would be a letter (eg: `E:\`)
-        -   MTP connection ID, eg: `HERO9 Black`
         -   USB Ethernet IP (v4) bound to a GoPro Connect connection (HERO8/9 Black)
     -   `--output`: Destination folder, a hard drive, etc...
     -   `--name`: Project name, eg: `Paragliding Weekend Winter 2021`
@@ -41,7 +40,7 @@ Download from the releases tab, additionally, a github action will run for every
     -   `--date`: Date format. Default is `dd-mm-yyyy`
     -   `--range`: Date range, for example: `12-03-2021,15-03-2021`
     -   GoPro specific:
-        -   `connection`: `mtp`/`sd_card`/`connect`
+        -   `connection`: `sd_card`/`connect`
         -   `skip_aux`: Skips `.THM`, `.LRV` files
         -   `sort_by`: Sort by: `camera`, `days` (defaults to both)
 -   update - **updates your camera**
@@ -85,5 +84,5 @@ Download from the releases tab, additionally, a github action will run for every
 -   [x] **Update camera firmware?** (Done: GoPro, Insta360)
 -   [ ] **Use goroutines**
 -   [ ] **Tests**
--   [ ] **Import media from GoPro's Webcam mode (USB Ethernet)**
+-   [X] **Import media from GoPro's Webcam mode (USB Ethernet)**
 -   [ ] **GUI counterpart using fyne.io**

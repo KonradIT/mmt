@@ -56,7 +56,6 @@ type ConnectionType string
 
 const (
 	SDCard  ConnectionType = "sd_card"
-	MTP     ConnectionType = "mtp"
 	Connect ConnectionType = "connect"
 )
 

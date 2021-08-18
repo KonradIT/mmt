@@ -252,10 +252,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	connectionType, found := cameraOptions["connection"]
 	if found {
 		switch connectionType.(string) {
-		case string(utils.MTP):
-			return ImportViaMTP(in, out, sortOptions)
 		case string(utils.Connect):
 			return ImportConnect(in, out, sortOptions)
+		default:
+			return nil, errors.New("Unsupported connection")
 		}
 	}
 

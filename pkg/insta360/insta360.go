@@ -199,7 +199,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								dayFolder = filepath.Join(dayFolder, "Insta360 Camera")
 
 								switch ftype.Type {
-								case Photo:
+								case Photo, RawPhoto:
 
 									// get model first
 									if model == "" {
@@ -323,25 +323,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 									}
 
 									return godirwalk.SkipThis
-								case RawPhoto:
-									x := de.Name()
-
-									color.Green(">>> %s", x)
-
-									if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported += 1
-									}
 
 								}
 							}

@@ -123,7 +123,7 @@ func init() {
 	importCmd.Flags().IntP("buffer", "b", 1000, "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
-	importCmd.Flags().StringP("connection", "x", "sd_card", "Connexion type: `mtp`, `sd_card`, `connect` (GoPro-specific)")
+	importCmd.Flags().StringP("connection", "x", "sd_card", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
 
 	// GoPro-specific options
 
