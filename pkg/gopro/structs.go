@@ -137,3 +137,27 @@ type GoProConnectDevice struct {
 	IP   string
 	Info cameraInfo
 }
+
+type goProMediaMetadata struct {
+	Cre       string        `json:"cre"`
+	S         string        `json:"s"`
+	Us        string        `json:"us"`
+	Mos       []interface{} `json:"mos"`
+	Eis       string        `json:"eis"`
+	Pta       string        `json:"pta"`
+	Ao        string        `json:"ao"`
+	Tr        string        `json:"tr"`
+	Mp        string        `json:"mp"`
+	Gumi      string        `json:"gumi"`
+	Ls        string        `json:"ls"`
+	Cl        string        `json:"cl"`
+	Hc        string        `json:"hc"`
+	Hi        []interface{} `json:"hi"`
+	Dur       string        `json:"dur"`
+	W         string        `json:"w"`
+	H         string        `json:"h"`
+	Fps       int           `json:"fps,string"`
+	FpsDenom  int           `json:"fps_denom,string"`
+	Prog      string        `json:"prog"`
+	Subsample string        `json:"subsample"`
+}

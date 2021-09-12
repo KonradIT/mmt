@@ -157,14 +157,23 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 						color.Green(">>> %s", x)
 
-						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+						var gpFileInfo = &goProMediaMetadata{}
+						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, goprofile.N), gpFileInfo)
+						if err != nil {
+							return nil, err
+						}
+
+						framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
+						rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
+
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}
 						}
 
-						err := utils.DownloadFile(filepath.Join(dayFolder, "videos", filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
+						err := utils.DownloadFile(filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
 						if err != nil {
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
