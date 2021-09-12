@@ -176,6 +176,8 @@ var FileTypeMatches = map[GoProType][]FileTypeMatch{
 	},
 }
 
+var ffprobe = utils.NewFFprobe(nil)
+
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 
 	/* Import method using SD card bay or SD card reader */
@@ -254,6 +256,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		switch connectionType.(string) {
 		case string(utils.Connect):
 			return ImportConnect(in, out, sortOptions)
+		case string(utils.SDCard):
+			break
 		default:
 			return nil, errors.New("Unsupported connection")
 		}
@@ -288,7 +292,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
 
 	switch root {
-	case "HD6", "HD7", "HD8", "HD9":
+	case "HD6", "HD7", "HD8", "HD9", "H21":
 		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
 		return &result, nil
 	case "HD2,", "HD3", "HD4", "HX", "HD5":
@@ -611,14 +615,23 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 										filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 										color.Green(">>> %s", filename)
 
-										if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-											err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+										s, err := ffprobe.VideoSize(osPathname)
+
+										if err != nil {
+											log.Fatal(err.Error())
+											return godirwalk.SkipThis
+										}
+
+										framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
+										rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
+										if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
 											if err != nil {
 												log.Fatal(err.Error())
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), sortoptions.BufferSize)
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", rfpsFolder, filename), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -824,7 +837,23 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											}
 										}
 
-										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", x), sortoptions.BufferSize)
+										s, err := ffprobe.VideoSize(osPathname)
+
+										if err != nil {
+											log.Fatal(err.Error())
+											return godirwalk.SkipThis
+										}
+
+										framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
+										rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
+										if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
+											err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
+											if err != nil {
+												log.Fatal(err.Error())
+											}
+										}
+
+										err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", rfpsFolder, x), sortoptions.BufferSize)
 										if err != nil {
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
@@ -972,6 +1001,10 @@ GoPro adds a trailing comma to their version.txt file... this removes it.
 func cleanVersion(s string) string {
 	i := strings.LastIndex(s, ",")
 	excludingLast := s[:i] + strings.Replace(s[i:], ",", "", 1)
+
+	if strings.Contains(s, "HERO10") {
+		return strings.ReplaceAll(s, "\n", "")
+	}
 	return excludingLast
 }
 

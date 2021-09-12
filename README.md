@@ -74,6 +74,7 @@ Download from the releases tab, additionally, a github action will run for every
     To get location info: GoPro ([GPMF](https://github.com/stilldavid/gopro-utils)) DJI (SRT file) Insta360 (???)
 
 -   [x] **Date range**: Import from only certain dates (allow for: `today`, `yesterday` and `week`, `--date-start` and `--date-end`)
+-   [X] **Sort by resolution/framerate**: use ffmpeg for getting resolution/framerate
 -   [ ] **Extract info from each clip**: Eg: km travelled, altitude changes, number of faces, shouts, etc...
 -   [ ] **Merging chapters**: GoPro only, merge chapters from separate files losslessly using ffmpeg
 -   [ ] **Generate GIF for burst photos**: Move each burst sequence to a separate folder and make a GIF
