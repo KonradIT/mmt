@@ -126,7 +126,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					}
 					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(dateFormat, "year") && strings.Contains(dateFormat, "month") && strings.Contains(dateFormat, "day") {
+					if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
 						mediaDate = d.Format(replacer.Replace(dateFormat))
 					}
 
@@ -171,7 +171,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
 							mediaDate := d.Format("02-01-2006")
-							if strings.Contains(dateFormat, "year") && strings.Contains(dateFormat, "month") && strings.Contains(dateFormat, "day") {
+							if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
 								mediaDate = d.Format(replacer.Replace(dateFormat))
 							}
 
