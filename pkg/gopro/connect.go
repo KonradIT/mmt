@@ -126,7 +126,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					tm := time.Unix(i, 0)
 					mediaDate := tm.Format("02-01-2006")
 
-					if strings.Contains(sortOptions.DateFormat, "year") && strings.Contains(sortOptions.DateFormat, "month") && strings.Contains(sortOptions.DateFormat, "day") {
+					if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {
 						mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
 					}
 
