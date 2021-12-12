@@ -190,7 +190,10 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 							x := goprofile.N
 							filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-							utils.DownloadFile(filepath.Join(dayFolder, "videos/proxy", filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, getThumbnailFilename(goprofile.N)))
+							err = utils.DownloadFile(filepath.Join(dayFolder, "videos/proxy", filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, getThumbnailFilename(goprofile.N)))
+							if err != nil {
+								log.Fatal(err.Error())
+							}
 						}
 					case Photo:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {

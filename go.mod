@@ -17,6 +17,7 @@ require (
 	github.com/shirou/gopsutil v3.21.7+incompatible
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.0
+	github.com/xfrr/goffmpeg v0.0.0-20210624103149-5ca2d3062daf // indirect
 	github.com/zach-klippenstein/goadb v0.0.0-20201208042340-620e0e950ed7
 	gopkg.in/djherbis/times.v1 v1.2.0
 )

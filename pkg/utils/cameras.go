@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -199,7 +200,7 @@ func (wc WriteCounter) PrintProgress() {
 }
 
 func DownloadFile(filepath string, url string) error {
-
+	log.Println(filepath, url)
 	// Create the file, but give it a tmp file extension, this means we won't overwrite a
 	// file until it's downloaded, but we'll remove the tmp extension once downloaded.
 	out, err := os.Create(filepath + ".tmp")
