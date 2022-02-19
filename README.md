@@ -14,10 +14,14 @@ This tool draws inspiration from my [dji-utils/offload.sh](https://github.com/Ko
 
 Right now the script supports these cameras:
 
--   GoPro: Pretty much all of them
--   Insta360: X2 (GO 2 to follow)
--   DJI: Tested with Osmo Pocket, Spark and Mavic Air 2, but should work on Osmo action and other drones as well
--   Android: photos and videos recorded with OnePlus 7T, but possibly most Android phones
+-   GoPro: 
+    - HERO2 - HERO5
+    - MAX
+    - Fusion
+    - HERO7 - HERO10
+-   Insta360: X2, GO2
+-   DJI: Osmo Pocket 1/2, Mavic
+-   Android: All, but with Pixel 6 (Google Camera) specific fixes
 
 Feel free to PR!
 
@@ -86,4 +90,5 @@ Download from the releases tab, additionally, a github action will run for every
 -   [ ] **Use goroutines**
 -   [ ] **Tests**
 -   [X] **Import media from GoPro's Webcam mode (USB Ethernet)**
+-   [ ] **Converting videos to AV1 2.7k for long term backup storage**
 -   [ ] **GUI counterpart using fyne.io**
