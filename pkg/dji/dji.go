@@ -284,7 +284,9 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								}
 								err = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1))
 								if err != nil {
-									log.Fatal(err.Error())
+
+									// Could be a folder allready exists... time to move the content to that folder.
+
 								}
 								DeviceName = s
 

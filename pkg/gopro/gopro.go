@@ -292,7 +292,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
 
 	switch root {
-	case "HD6", "HD7", "HD8", "HD9", "H21":
+	case "HD6", "HD7", "HD8", "HD9", "H21", "H22":
 		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
 		return &result, nil
 	case "HD2,", "HD3", "HD4", "HX", "HD5":
@@ -1002,7 +1002,7 @@ func cleanVersion(s string) string {
 	i := strings.LastIndex(s, ",")
 	excludingLast := s[:i] + strings.Replace(s[i:], ",", "", 1)
 
-	if strings.Contains(s, "HERO10") {
+	if strings.Contains(s, "HERO10") || strings.Contains(s, "HERO11") {
 		return strings.ReplaceAll(s, "\n", "")
 	}
 	return excludingLast
