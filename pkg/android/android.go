@@ -8,10 +8,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/utils"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
+func pixelNameSort(filename string) (string, string) {
+	if strings.Contains(filename, "MOTION") {
+		// PXL_20211212_121243677.MOTION-01.COVER.jpg -- ok
+		// PXL_20211212_121243677.MOTION-02.ORIGINAL.jpg -- ok
+		// PXL_20211212_121307021.jpg -- ko
+		s := strings.Split(filename, ".MOTION")
+		return filename, s[0]
+	}
+	return filename, ""
+}
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
 
 	var result utils.Result
@@ -114,7 +125,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 				log.Fatal(err.Error())
 			}
 		}
-
+		color.Cyan(">>> " + entries.Entry().Name)
 		readfile, err := device.OpenRead("/sdcard/DCIM/Camera/" + entries.Entry().Name)
 		if err != nil {
 			result.Errors = append(result.Errors, err)
@@ -127,7 +138,16 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			localPath = filepath.Join(dayFolder, "videos", entries.Entry().Name)
 		}
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") {
-			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
+			filename, folder := pixelNameSort(entries.Entry().Name)
+			if folder != "" {
+				if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
+					err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
+					if err != nil {
+						log.Fatal(err.Error())
+					}
+				}
+			}
+			localPath = filepath.Join(dayFolder, "photos", folder, filename)
 		}
 		outFile, err := os.Create(localPath)
 		if err != nil {

@@ -14,10 +14,14 @@ This tool draws inspiration from my [dji-utils/offload.sh](https://github.com/Ko
 
 Right now the script supports these cameras:
 
--   GoPro: Pretty much all of them
--   Insta360: X2 (GO 2 to follow)
--   DJI: Tested with Osmo Pocket, Spark and Mavic Air 2, but should work on Osmo action and other drones as well
--   Android: photos and videos recorded with OnePlus 7T, but possibly most Android phones
+-   GoPro: 
+    - HERO2 - HERO5
+    - MAX
+    - Fusion
+    - HERO7 - HERO11
+-   Insta360: X2, GO2, X3
+-   DJI: Osmo Pocket 1/2, Mavic (most of them)
+-   Android: All, but with Pixel 6 (Google Camera) specific fixes
 
 Feel free to PR!
 
@@ -54,36 +58,4 @@ Download from the releases tab, additionally, a github action will run for every
 
 ## To-do:
 
--   [ ] Auto detect camera using clues from SD card.
--   [ ] **HiLight parsing**: I've found that the best way to see which clip I will use later on is to put some tags at the end of it (press mode button on GoPro, or shout "Oh Shit", or use the app/pebble app). Then when I run a script that prints the number of hilight tags during the last 30 seconds of each video. That lets me know the clips are important. This tool should let you label each tag count (eg: --tag-labels="good,great,important") for each hilight count.
--   [ ] **Sort by location**: Should be on root, so:
-
-    ```
-    - Mexico City, Mexico:
-       - 2020-01-02:
-    	     ...
-    - New York, NY, United States:
-       - 2017-07-01:
-    	     ...
-    - Madrid, Spain:
-       - 2020-09-02:
-    	     ...
-
-    ```
-
-    To get location info: GoPro ([GPMF](https://github.com/stilldavid/gopro-utils)) DJI (SRT file) Insta360 (???)
-
--   [x] **Date range**: Import from only certain dates (allow for: `today`, `yesterday` and `week`, `--date-start` and `--date-end`)
--   [X] **Sort by resolution/framerate**: use ffmpeg for getting resolution/framerate
--   [ ] **Extract info from each clip**: Eg: km travelled, altitude changes, number of faces, shouts, etc...
--   [ ] **Merging chapters**: GoPro only, merge chapters from separate files losslessly using ffmpeg
--   [ ] **Generate GIF for burst photos**: Move each burst sequence to a separate folder and make a GIF
--   [ ] **Merge timelapse photos**: Using ffmpeg
--   [ ] **Generate DNG from GPR**: Using [gpr tool](https://github.com/gopro/gpr)
--   [x] **Proxy file support**
--   [ ] **H265 to H264 conversion**: Using ffmpeg
--   [x] **Update camera firmware?** (Done: GoPro, Insta360)
--   [ ] **Use goroutines**
--   [ ] **Tests**
--   [X] **Import media from GoPro's Webcam mode (USB Ethernet)**
--   [ ] **GUI counterpart using fyne.io**
+Refer to [Issues](https://github.com/KonradIT/mmt/issues)

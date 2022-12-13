@@ -14,8 +14,15 @@ import (
 	"github.com/karrick/godirwalk"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/minio/minio/pkg/disk"
+	"github.com/rwcarlsen/goexif/exif"
 	"gopkg.in/djherbis/times.v1"
 )
+
+var DeviceName = "DJI Device"
+
+func getDeviceName() string {
+	return DeviceName
+}
 
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
 
@@ -35,6 +42,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	mediaFolder := `\d+MEDIA`
 	panoramaFolder := "PANORAMA"
+
 	fileTypes := []FileTypeMatch{
 		{
 			Regex: regexp.MustCompile(`.JPG`),
@@ -130,7 +138,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						mediaDate = d.Format(replacer.Replace(dateFormat))
 					}
 
-					dayFolder := filepath.Join(out, mediaDate, "DJI Drone", "photos/panoramas")
+					dayFolder := filepath.Join(out, mediaDate, getDeviceName(), "photos/panoramas")
 					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
 						os.Mkdir(dayFolder, 0755)
 					}
@@ -218,10 +226,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								os.Mkdir(dayFolder, 0755)
 							}
 
-							if _, err := os.Stat(filepath.Join(dayFolder, "DJI Drone")); os.IsNotExist(err) {
-								os.Mkdir(filepath.Join(dayFolder, "DJI Drone"), 0755)
+							if _, err := os.Stat(filepath.Join(dayFolder, getDeviceName())); os.IsNotExist(err) {
+								os.Mkdir(filepath.Join(dayFolder, getDeviceName()), 0755)
 							}
-							dayFolder = filepath.Join(dayFolder, "DJI Drone")
+							dayFolder = filepath.Join(dayFolder, getDeviceName())
 
 							switch ftype.Type {
 							case Photo:
@@ -244,6 +252,44 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								} else {
 									result.FilesImported += 1
 								}
+
+								// Get Device Name
+
+								f, err := os.Open(osPathname)
+								if err != nil {
+									log.Fatal(err.Error())
+									return godirwalk.SkipThis
+								}
+								exifData, err := exif.Decode(f)
+								if err != nil {
+									log.Fatal(err.Error())
+									return godirwalk.SkipThis
+								}
+
+								camModel, err := exifData.Get(exif.Model)
+								if err != nil {
+									log.Fatal(err.Error())
+									return godirwalk.SkipThis
+								}
+								s, err := camModel.StringVal()
+								if err != nil {
+									log.Fatal(err.Error())
+									return godirwalk.SkipThis
+								}
+
+								// Rename directory
+								matchDeviceName, is := DeviceNames[s]
+								if is {
+									s = matchDeviceName
+								}
+								err = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1))
+								if err != nil {
+
+									// Could be a folder allready exists... time to move the content to that folder.
+
+								}
+								DeviceName = s
+
 								break
 							case Video, Subtitle:
 
