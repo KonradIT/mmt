@@ -158,7 +158,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					}
 
 					switch fileTypeMatch.Type {
-					case Video:
+					case Video, ChapteredVideo:
 						x := goprofile.N
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 						color.Green(">>> %s", x)
