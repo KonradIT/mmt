@@ -131,15 +131,18 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					if err != nil {
 						continue
 					}
-					tm := time.Unix(i, 0)
+					tm := time.Unix(i, 0).UTC()
+					start := sortOptions.DateRange[0]
+					end := sortOptions.DateRange[1]
+                                        zone_name, _ := end.Zone()
+                                        new_time := strings.Replace(tm.Format(time.UnixDate), "UTC", zone_name, -1)
+                                        tm, _ = time.Parse(time.UnixDate, new_time)
 					mediaDate := tm.Format("02-01-2006")
 
 					if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {
 						mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
 					}
 
-					start := sortOptions.DateRange[0]
-					end := sortOptions.DateRange[1]
 					if tm.Before(start) {
 						continue
 					}
