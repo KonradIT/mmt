@@ -36,7 +36,7 @@ var importCmd = &cobra.Command{
                 prefix := get_flag_string(cmd, "prefix")
                 dateRange := get_flag_slice(cmd, "range")
 
-		if camera != "" {
+		if camera != "" && output != "" {
 			c, err := utils.CameraGet(camera)
 			if err != nil {
 				cui.Error("Something went wrong", err)
@@ -80,7 +80,7 @@ var importCmd = &cobra.Command{
 			}
 			return
 		}
-		color.Red("No camera selected.")
+                color.Red("Error: required flag(s) \"camera\", \"output\" not set")
 	},
 }
 
@@ -102,13 +102,6 @@ func init() {
 
 	importCmd.Flags().StringP("skip_aux", "s", "", "GoPro: skip auxiliary files (THM, LRV)")
 	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera` and/or `days`")
-/*
-	for _, item := range []string{
-		"output", "camera",
-	} {
-		importCmd.MarkFlagRequired(item)
-	}
-        */
 
 }
 
