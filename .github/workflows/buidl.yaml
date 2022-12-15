@@ -1,5 +1,9 @@
 on: [push, pull_request]
 name: Build Mac OS X/Linux
+on:
+  push:
+    tags:
+      - '*'
 jobs:
     build:
         name: GoReleaser build
