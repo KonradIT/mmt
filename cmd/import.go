@@ -41,13 +41,16 @@ func get_flag_slice(cmd *cobra.Command, name string) []string {
         return value
 }
 
-func get_flag_int(cmd *cobra.Command, name string) int {
+func get_flag_int(cmd *cobra.Command, name string, default_int string) int {
 	value, err := cmd.Flags().GetString(name)
         if err != nil {
                 cui.Error("Problem parsing "+name, err)
         }
         if value == "" {
           value = viper.GetString("import."+name)
+        }
+        if value == "" {
+          value = default_int
         }
         int1, err := strconv.Atoi(value)
         return int1
@@ -82,7 +85,7 @@ var importCmd = &cobra.Command{
 		}
 
                 dateFormat := get_flag_string(cmd, "date")
-                bufferSize := get_flag_int(cmd, "buffer")
+                bufferSize := get_flag_int(cmd, "buffer", "1000")
                 prefix := get_flag_string(cmd, "prefix")
                 dateRange := get_flag_slice(cmd, "range")
 
@@ -143,7 +146,7 @@ func init() {
 	importCmd.Flags().StringP("name", "n", "", "Project name")
 	importCmd.Flags().StringP("camera", "c", "", "Camera type")
 	importCmd.Flags().StringP("date", "d", "dd-mm-yyyy", "Date format, dd-mm-yyyy by default")
-	importCmd.Flags().IntP("buffer", "b", 1000, "Buffer size for copying, default is 1000 bytes")
+	importCmd.Flags().StringP("buffer", "b", "", "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
 	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
