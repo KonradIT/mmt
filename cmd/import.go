@@ -30,6 +30,44 @@ func get_flag_string(cmd *cobra.Command, name string) string {
         return value
 }
 
+func get_flag_slice(cmd *cobra.Command, name string) []string {
+	value, err := cmd.Flags().GetStringSlice(name)
+        if err != nil {
+                cui.Error("Problem parsing "+name, err)
+        }
+        if len(value) == 0 {
+          value = viper.GetStringSlice("import."+name)
+        }
+        return value
+}
+
+func get_flag_int(cmd *cobra.Command, name string) int {
+	value, err := cmd.Flags().GetString(name)
+        if err != nil {
+                cui.Error("Problem parsing "+name, err)
+        }
+        if value == "" {
+          value = viper.GetString("import."+name)
+        }
+        int1, err := strconv.Atoi(value)
+        return int1
+}
+
+func get_flag_bool(cmd *cobra.Command, name string, default_bool string) bool {
+	value, err := cmd.Flags().GetString(name)
+        if err != nil {
+                cui.Error("Problem parsing "+name, err)
+        }
+        if value == "" {
+          value = viper.GetString("import."+name)
+        }
+        if value == "" {
+          value = default_bool
+        }
+        bool1, err := strconv.ParseBool(value)
+        return bool1
+}
+
 var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import media",
@@ -44,18 +82,9 @@ var importCmd = &cobra.Command{
 		}
 
                 dateFormat := get_flag_string(cmd, "date")
-
-		bufferSize, err := cmd.Flags().GetInt("buffer")
-		if err != nil {
-			cui.Error("Problem parsing buffer", err)
-		}
-
+                bufferSize := get_flag_int(cmd, "buffer")
                 prefix := get_flag_string(cmd, "prefix")
-
-		dateRange, err := cmd.Flags().GetStringSlice("range")
-		if err != nil {
-			cui.Error("Problem parsing range", err)
-		}
+                dateRange := get_flag_slice(cmd, "range")
 
 		if camera != "" {
 			c, err := utils.CameraGet(camera)
@@ -65,15 +94,12 @@ var importCmd = &cobra.Command{
 
 			customCameraOpts := make(map[string]interface{})
 			if c == utils.GoPro {
-				skipAuxFiles, err := cmd.Flags().GetBool("skip_aux")
-				if err == nil {
-					customCameraOpts["skip_aux"] = skipAuxFiles
-				}
-
-				sortBy, err := cmd.Flags().GetStringSlice("sort_by")
-				if err == nil {
-					customCameraOpts["sort_by"] = sortBy
-				}
+                                skipAuxFiles := get_flag_bool(cmd, "skip_aux", "true")
+                                customCameraOpts["skip_aux"] = skipAuxFiles
+                                sortBy := get_flag_slice(cmd, "sort_by")
+                                if len(sortBy) > 0 {
+                                        customCameraOpts["sort_by"] = []string{"camera", "days"}
+                                }
 
                                 connection := get_flag_string(cmd, "connection")
 				if connection == "" {
@@ -124,8 +150,8 @@ func init() {
 
 	// GoPro-specific options
 
-	importCmd.Flags().BoolP("skip_aux", "s", true, "GoPro: skip auxiliary files (THM, LRV)")
-	importCmd.Flags().StringSlice("sort_by", []string{"camera", "days"}, "GoPro: sort files by: `camera` and/or `days`")
+	importCmd.Flags().StringP("skip_aux", "s", "", "GoPro: skip auxiliary files (THM, LRV)")
+	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera` and/or `days`")
 /*
 	for _, item := range []string{
 		"output", "camera",
