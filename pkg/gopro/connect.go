@@ -29,7 +29,7 @@ func handleKill() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
+		_ = <-c
 		color.Red("\nKilling program, exiting Turbo mode.")
 		if gpTurbo {
 			if err := caller(ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
@@ -149,12 +149,12 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 					dayFolder := filepath.Join(out, mediaDate)
 					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						os.Mkdir(dayFolder, 0755)
+						_ = os.Mkdir(dayFolder, 0755)
 					}
 
 					if sortOptions.ByCamera {
 						if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-							os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+							_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
 						}
 						dayFolder = filepath.Join(dayFolder, cameraName)
 					}

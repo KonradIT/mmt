@@ -22,19 +22,19 @@ var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import media",
 	Run: func(cmd *cobra.Command, args []string) {
-                input := get_flag_string(cmd, "input")
-                output := get_flag_string(cmd, "output")
-                camera := get_flag_string(cmd, "camera")
-                projectName := get_flag_string(cmd, "name")
+		input := get_flag_string(cmd, "input")
+		output := get_flag_string(cmd, "output")
+		camera := get_flag_string(cmd, "camera")
+		projectName := get_flag_string(cmd, "name")
 
 		if projectName != "" {
 			os.Mkdir(filepath.Join(output, projectName), 0755)
 		}
 
-                dateFormat := get_flag_string(cmd, "date")
-                bufferSize := get_flag_int(cmd, "buffer", "1000")
-                prefix := get_flag_string(cmd, "prefix")
-                dateRange := get_flag_slice(cmd, "range")
+		dateFormat := get_flag_string(cmd, "date")
+		bufferSize := get_flag_int(cmd, "buffer", "1000")
+		prefix := get_flag_string(cmd, "prefix")
+		dateRange := get_flag_slice(cmd, "range")
 
 		if camera != "" && output != "" {
 			c, err := utils.CameraGet(camera)
@@ -44,16 +44,16 @@ var importCmd = &cobra.Command{
 
 			customCameraOpts := make(map[string]interface{})
 			if c == utils.GoPro {
-                                skipAuxFiles := get_flag_bool(cmd, "skip_aux", "true")
-                                customCameraOpts["skip_aux"] = skipAuxFiles
-                                sortBy := get_flag_slice(cmd, "sort_by")
-                                if len(sortBy) > 0 {
-                                        customCameraOpts["sort_by"] = []string{"camera", "days"}
-                                }
+				skipAuxFiles := get_flag_bool(cmd, "skip_aux", "true")
+				customCameraOpts["skip_aux"] = skipAuxFiles
+				sortBy := get_flag_slice(cmd, "sort_by")
+				if len(sortBy) > 0 {
+					customCameraOpts["sort_by"] = []string{"camera", "days"}
+				}
 
-                                connection := get_flag_string(cmd, "connection")
+				connection := get_flag_string(cmd, "connection")
 				if connection == "" {
-                                        connection = "sd_card"
+					connection = "sd_card"
 				}
 				customCameraOpts["connection"] = connection
 			}
@@ -80,7 +80,7 @@ var importCmd = &cobra.Command{
 			}
 			return
 		}
-                color.Red("Error: required flag(s) \"camera\", \"output\" not set")
+		color.Red("Error: required flag(s) \"camera\", \"output\" not set")
 	},
 }
 
