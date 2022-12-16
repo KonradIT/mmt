@@ -41,6 +41,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	)
 
 	mediaFolder := `\d+MEDIA`
+	mediaFolderRegex, err := regexp.Compile(mediaFolder)
+	if err != nil {
+		return nil, err
+	}
+
 	panoramaFolder := "PANORAMA"
 
 	fileTypes := []FileTypeMatch{
@@ -140,7 +145,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					dayFolder := filepath.Join(out, mediaDate, getDeviceName(), "photos/panoramas")
 					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						os.Mkdir(dayFolder, 0755)
+						_ = os.Mkdir(dayFolder, 0755)
 					}
 					err = utils.CopyDir(filepath.Join(root, panoramaFolder, panoramaId.Name()), filepath.Join(dayFolder, panoramaId.Name()), bufferSize)
 					if err != nil {
@@ -154,10 +159,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 		}
 
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := mediaFolderRegex.MatchString(f.Name())
 		if !r {
 			continue
 		}
@@ -282,12 +284,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								if is {
 									s = matchDeviceName
 								}
-								err = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1))
-								if err != nil {
+								_ = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
 
-									// Could be a folder allready exists... time to move the content to that folder.
-
-								}
 								DeviceName = s
 							case Video, Subtitle:
 
