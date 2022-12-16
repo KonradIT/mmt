@@ -31,9 +31,11 @@ func handleKill() {
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
-                if gpTurbo {
-		    caller(ipAddress, "gp/gpTurbo?p=0", nil)
-                }
+		if gpTurbo {
+			if err := caller(ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
+				color.Red("Could not exit turbo mode")
+			}
+		}
 		os.Exit(0)
 	}()
 }
@@ -94,17 +96,17 @@ func getThumbnailFilename(filename string) string {
 	return replacer.Replace(filename)
 }
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
-        var verType GoProType = V2
+	var verType GoProType = V2
 	var result utils.Result
 
 	ipAddress = in
 	handleKill()
 	// activate turbo
-        var gpTurboOut = ""
+	var gpTurboOut = ""
 	err := caller(in, "gp/gpTurbo?p=1", gpTurboOut)
 	if err != nil {
-                gpTurbo = false
-                verType = V1
+		gpTurbo = false
+		verType = V1
 	}
 
 	var gpMediaList = &goProMediaList{}
@@ -263,8 +265,10 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 			}
 		}
 	}
-        if gpTurbo {
-	    caller(ipAddress, "gp/gpTurbo?p=0", nil)
-        }
+	if gpTurbo {
+		if err := caller(ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
+			color.Red("Could not exit turbo mode")
+		}
+	}
 	return &result, nil
 }

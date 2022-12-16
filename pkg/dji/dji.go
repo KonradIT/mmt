@@ -289,8 +289,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 								}
 								DeviceName = s
-
-								break
 							case Video, Subtitle:
 
 								x := de.Name()

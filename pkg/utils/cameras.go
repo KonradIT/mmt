@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
@@ -168,15 +167,6 @@ func CopyDir(src string, dst string, bufferSize int) (err error) {
 	return nil
 }
 
-type Timedelta struct {
-	Base time.Time
-	End  time.Time
-}
-
-func (t *Timedelta) diff() time.Time {
-	return t.Base.AddDate(t.End.Year(), int(t.End.Month()), t.End.Day())
-}
-
 type WriteCounter struct {
 	Total uint64
 }
@@ -253,7 +243,9 @@ func Unzip(src string, dest string) error {
 
 		if f.FileInfo().IsDir() {
 			// Make Folder
-			os.MkdirAll(fpath, os.ModePerm)
+			if err = os.MkdirAll(fpath, os.ModePerm); err != nil {
+				return err
+			}
 			continue
 		}
 
