@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+        "sync"
 
 	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
@@ -186,6 +187,18 @@ func (wc WriteCounter) PrintProgress() {
 	// Return again and print current status of download
 	// We use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
 	fmt.Printf("\rDownloading... %s complete", humanize.Bytes(wc.Total))
+}
+
+func DownloadFile_async(wg *sync.WaitGroup, filepath string, url string) error {
+        wg.Add(1)
+        go DownloadFile_async1(wg, filepath, url)
+        return nil
+}
+
+func DownloadFile_async1(wg *sync.WaitGroup, filepath string, url string) error {
+      err := DownloadFile(filepath, url)
+      defer wg.Done()
+      return err
 }
 
 func DownloadFile(filepath string, url string) error {

@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+        "sync"
 
 	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/utils"
@@ -120,6 +121,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 		return nil, err
 	}
 	cameraName := gpInfo.Info.ModelName
+        wg := new (sync.WaitGroup)
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 
@@ -181,7 +183,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
-						err := utils.DownloadFile(filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
+						err := utils.DownloadFile_async(wg, filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
 						if err != nil {
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
@@ -198,7 +200,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 							x := goprofile.N
 							filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-							err = utils.DownloadFile(filepath.Join(dayFolder, "videos/proxy", filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, getThumbnailFilename(goprofile.N)))
+							err = utils.DownloadFile_async(wg, filepath.Join(dayFolder, "videos/proxy", filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, getThumbnailFilename(goprofile.N)))
 							if err != nil {
 								log.Fatal(err.Error())
 							}
@@ -213,7 +215,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 						color.Green(">>> %s", goprofile.N)
 
-						err := utils.DownloadFile(filepath.Join(dayFolder, "photos", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
+						err := utils.DownloadFile_async(wg, filepath.Join(dayFolder, "photos", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
 						if err != nil {
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
@@ -231,7 +233,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 						color.Green(">>> %s/%s", filebaseroot, goprofile.N)
 
-						err := utils.DownloadFile(filepath.Join(dayFolder, "multishot", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
+						err := utils.DownloadFile_async(wg, filepath.Join(dayFolder, "multishot", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
 						if err != nil {
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
@@ -249,7 +251,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 						color.Green(">>> %s", goprofile.N)
 						// convert to DNG here
-						err := utils.DownloadFile(filepath.Join(dayFolder, "photos/raw", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
+						err := utils.DownloadFile_async(wg, filepath.Join(dayFolder, "photos/raw", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
 						if err != nil {
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
@@ -265,6 +267,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 			}
 		}
 	}
+        wg.Wait()
 	if gpTurbo {
 		if err := caller(ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
 			color.Red("Could not exit turbo mode")
