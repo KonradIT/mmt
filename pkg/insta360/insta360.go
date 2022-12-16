@@ -43,7 +43,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	model := ""
 
 	mediaFolder := `Camera\d+`
-
+	mediaFolderRegex := regexp.MustCompile(mediaFolder)
 	fileTypes := []FileTypeMatch{
 		{
 			Regex:         regexp.MustCompile(`IMG_\d+_\d+_\d\d_\d+.jpg`),
@@ -120,10 +120,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	}
 
 	for _, f := range folders {
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := mediaFolderRegex.MatchString(f.Name())
 		if r {
 			if model != "" {
 				color.Green("Looking at %s", f.Name())
