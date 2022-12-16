@@ -15,22 +15,22 @@ jobs:
         uses: thatisuday/go-cross-build@v1
         with:
           platforms: "linux/amd64, darwin/amd64, windows/amd64"
-          package: "mmt"
+          package: ""
           name: "mmt"
           compress: "false"
           dest: "dist"
       - name: Upload assets for Windows
         uses: actions/upload-artifact@v2
         with:
-          name: mmt-win
-          path: dist-win/*
+          name: mmt-win.exe
+          path: dist/mmt-windows-amd64.exe
       - name: Upload assets for Linux
         uses: actions/upload-artifact@v2
         with:
           name: mmt-linux
-          path: dist-linux/*
+          path: dist/mmt-linux-amd64
       - name: Upload assets for Mac OS
         uses: actions/upload-artifact@v2
         with:
           name: mmt-darwin
-          path: dist-darwin/*
+          path: dist/mmt-darwin-amd64
