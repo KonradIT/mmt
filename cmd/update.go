@@ -12,15 +12,8 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update camera firmware",
 	Run: func(cmd *cobra.Command, args []string) {
-		input, err := cmd.Flags().GetString("input")
-		if err != nil {
-			cui.Error("Something went wrong", err)
-		}
-
-		camera, err := cmd.Flags().GetString("camera")
-		if err != nil {
-			cui.Error("Something went wrong", err)
-		}
+                input := get_flag_string(cmd, "input")
+                camera := get_flag_string(cmd, "camera")
 		c, err := utils.CameraGet(camera)
 		if err != nil {
 			cui.Error("Something went wrong", err)
@@ -33,10 +26,7 @@ var updateCmd = &cobra.Command{
 			}
 			break
 		case utils.Insta360:
-			model, err := cmd.Flags().GetString("model")
-			if err != nil {
-				cui.Error("Something went wrong", err)
-			}
+                        model := get_flag_string(cmd, "model")
 			err = insta360.UpdateCamera(input, model)
 			if err != nil {
 				cui.Error("Something went wrong", err)
