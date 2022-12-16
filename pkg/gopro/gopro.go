@@ -176,6 +176,8 @@ var FileTypeMatches = map[GoProType][]FileTypeMatch{
 	},
 }
 
+var MediaFolderRegex = regexp.MustCompile(`\d\d\dGOPRO`)
+
 var ffprobe = utils.NewFFprobe(nil)
 
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
@@ -302,13 +304,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		result := importFromMAX(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions)
 		return &result, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("Camera `%s` is not supported", gpVersion.CameraType))
+		return nil, fmt.Errorf("Camera `%s` is not supported", gpVersion.CameraType)
 	}
 }
 
 func importFromMAX(root string, output string, sortoptions SortOptions) utils.Result {
-	mediaFolder := `\d\d\dGOPRO`
-
 	fileTypes := FileTypeMatches[MAX]
 
 	var result utils.Result
@@ -334,10 +334,8 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 	}
 
 	for _, f := range folders {
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := MediaFolderRegex.MatchString(f.Name())
+
 		if r {
 			color.Green("Looking at %s", f.Name())
 
@@ -375,12 +373,12 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 
 									dayFolder := filepath.Join(output, mediaDate)
 									if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-										os.Mkdir(dayFolder, 0755)
+										_ = os.Mkdir(dayFolder, 0755)
 									}
 
 									if sortoptions.ByCamera {
 										if _, err := os.Stat(filepath.Join(dayFolder, "MAX")); os.IsNotExist(err) {
-											os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
+											_ = os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
 										}
 										dayFolder = filepath.Join(dayFolder, "MAX")
 									}
@@ -531,7 +529,6 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 }
 
 func importFromGoProV2(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
-	mediaFolder := `\d\d\dGOPRO`
 
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
@@ -557,10 +554,8 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 	}
 
 	for _, f := range folders {
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := MediaFolderRegex.MatchString(f.Name())
+
 		if r {
 			color.Green("Looking at %s", f.Name())
 
@@ -598,12 +593,12 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 									dayFolder := filepath.Join(output, mediaDate)
 									if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-										os.Mkdir(dayFolder, 0755)
+										_ = os.Mkdir(dayFolder, 0755)
 									}
 
 									if sortoptions.ByCamera {
 										if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-											os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+											_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
 										}
 										dayFolder = filepath.Join(dayFolder, cameraName)
 									}
@@ -757,7 +752,6 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 }
 
 func importFromGoProV1(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
-	mediaFolder := `\d\d\dGOPRO`
 
 	fileTypes := FileTypeMatches[V1]
 	var result utils.Result
@@ -769,10 +763,8 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 	}
 
 	for _, f := range folders {
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := MediaFolderRegex.MatchString(f.Name())
+
 		if r {
 			color.Green("Looking at %s", f.Name())
 
@@ -810,12 +802,12 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 									dayFolder := filepath.Join(output, mediaDate)
 									if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-										os.Mkdir(dayFolder, 0755)
+										_ = os.Mkdir(dayFolder, 0755)
 									}
 
 									if sortoptions.ByCamera {
 										if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-											os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+											_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
 										}
 										dayFolder = filepath.Join(dayFolder, cameraName)
 									}

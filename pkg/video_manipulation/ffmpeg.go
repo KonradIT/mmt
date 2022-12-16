@@ -19,6 +19,7 @@ func New() {
 	trans.SetConfiguration(conf)
 }
 
+//nolint:golint,unused,errcheck
 func extractGPMF(input string) (*[]byte, error) {
 
 	err := trans.InitializeEmptyTranscoder()
