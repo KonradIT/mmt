@@ -27,9 +27,9 @@ var gpTurbo = true
 
 func handleKill() {
 	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM) //nolint:govet // todo
 	go func() {
-		_ = <-c
+		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
 		if gpTurbo {
 			if err := caller(ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
