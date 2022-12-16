@@ -28,7 +28,13 @@ var importCmd = &cobra.Command{
 		projectName := get_flag_string(cmd, "name")
 
 		if projectName != "" {
-			os.Mkdir(filepath.Join(output, projectName), 0755)
+			_, err := os.Stat(filepath.Join(output, projectName))
+			if os.IsNotExist(err) {
+				err := os.Mkdir(filepath.Join(output, projectName), 0755)
+				if err != nil {
+					cui.Error("Something went wrong creating project dir", err)
+				}
+			}
 		}
 
 		dateFormat := get_flag_string(cmd, "date")

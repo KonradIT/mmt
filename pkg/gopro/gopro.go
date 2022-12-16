@@ -307,8 +307,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 }
 
 func importFromMAX(root string, output string, sortoptions SortOptions) utils.Result {
-	mediaFolder := `\d\d\dGOPRO`
-
 	fileTypes := FileTypeMatches[MAX]
 
 	var result utils.Result
@@ -333,11 +331,16 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 		return result
 	}
 
+	mediaFolder := `\d\d\dGOPRO`
+	mediaFolderRegex, err := regexp.Compile(mediaFolder)
+	if err != nil {
+		result.Errors = append(result.Errors, err)
+		return result
+	}
+
 	for _, f := range folders {
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := mediaFolderRegex.MatchString(f.Name())
+
 		if r {
 			color.Green("Looking at %s", f.Name())
 
@@ -531,7 +534,6 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 }
 
 func importFromGoProV2(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
-	mediaFolder := `\d\d\dGOPRO`
 
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
@@ -556,11 +558,16 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 		return result
 	}
 
+	mediaFolder := `\d\d\dGOPRO`
+	mediaFolderRegex, err := regexp.Compile(mediaFolder)
+	if err != nil {
+		result.Errors = append(result.Errors, err)
+		return result
+	}
+
 	for _, f := range folders {
-		r, err := regexp.MatchString(mediaFolder, f.Name())
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
+		r := mediaFolderRegex.MatchString(f.Name())
+
 		if r {
 			color.Green("Looking at %s", f.Name())
 
