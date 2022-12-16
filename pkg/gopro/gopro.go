@@ -356,7 +356,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 									d := t.BirthTime()
 									mediaDate := d.Format("02-01-2006")
 
-									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
+									if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
 									}
 
@@ -578,7 +578,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 									d := t.BirthTime()
 
 									mediaDate := d.Format("02-01-2006")
-									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
+									if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
 
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
 									}
@@ -791,7 +791,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 									d := t.BirthTime()
 
 									mediaDate := d.Format("02-01-2006")
-									if strings.Contains(sortoptions.DateFormat, "year") && strings.Contains(sortoptions.DateFormat, "month") && strings.Contains(sortoptions.DateFormat, "day") {
+									if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
 									}
 

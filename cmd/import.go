@@ -22,46 +22,21 @@ var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import media",
 	Run: func(cmd *cobra.Command, args []string) {
-		input, err := cmd.Flags().GetString("input")
-		if err != nil {
-			cui.Error("Problem parsing input", err)
-		}
-		output, err := cmd.Flags().GetString("output")
-		if err != nil {
-			cui.Error("Problem parsing output", err)
-		}
-		camera, err := cmd.Flags().GetString("camera")
-		if err != nil {
-			cui.Error("Problem parsing camera", err)
-		}
-		projectName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			cui.Error("Problem parsing name", err)
-		}
+                input := get_flag_string(cmd, "input")
+                output := get_flag_string(cmd, "output")
+                camera := get_flag_string(cmd, "camera")
+                projectName := get_flag_string(cmd, "name")
 
 		if projectName != "" {
 			os.Mkdir(filepath.Join(output, projectName), 0755)
 		}
 
-		dateFormat, err := cmd.Flags().GetString("date")
-		if err != nil {
-			cui.Error("Problem parsing date", err)
-		}
-		bufferSize, err := cmd.Flags().GetInt("buffer")
-		if err != nil {
-			cui.Error("Problem parsing buffer", err)
-		}
-		prefix, err := cmd.Flags().GetString("prefix")
-		if err != nil {
-			cui.Error("Problem parsing prefix", err)
-		}
+                dateFormat := get_flag_string(cmd, "date")
+                bufferSize := get_flag_int(cmd, "buffer", "1000")
+                prefix := get_flag_string(cmd, "prefix")
+                dateRange := get_flag_slice(cmd, "range")
 
-		dateRange, err := cmd.Flags().GetStringSlice("range")
-		if err != nil {
-			cui.Error("Problem parsing range", err)
-		}
-
-		if camera != "" {
+		if camera != "" && output != "" {
 			c, err := utils.CameraGet(camera)
 			if err != nil {
 				cui.Error("Something went wrong", err)
@@ -69,20 +44,18 @@ var importCmd = &cobra.Command{
 
 			customCameraOpts := make(map[string]interface{})
 			if c == utils.GoPro {
-				skipAuxFiles, err := cmd.Flags().GetBool("skip_aux")
-				if err == nil {
-					customCameraOpts["skip_aux"] = skipAuxFiles
-				}
+                                skipAuxFiles := get_flag_bool(cmd, "skip_aux", "true")
+                                customCameraOpts["skip_aux"] = skipAuxFiles
+                                sortBy := get_flag_slice(cmd, "sort_by")
+                                if len(sortBy) > 0 {
+                                        customCameraOpts["sort_by"] = []string{"camera", "days"}
+                                }
 
-				sortBy, err := cmd.Flags().GetStringSlice("sort_by")
-				if err == nil {
-					customCameraOpts["sort_by"] = sortBy
+                                connection := get_flag_string(cmd, "connection")
+				if connection == "" {
+                                        connection = "sd_card"
 				}
-
-				connection, err := cmd.Flags().GetString("connection")
-				if err == nil {
-					customCameraOpts["connection"] = connection
-				}
+				customCameraOpts["connection"] = connection
 			}
 			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, customCameraOpts)
 			if err != nil {
@@ -107,7 +80,7 @@ var importCmd = &cobra.Command{
 			}
 			return
 		}
-		color.Red("No camera selected.")
+                color.Red("Error: required flag(s) \"camera\", \"output\" not set")
 	},
 }
 
@@ -120,21 +93,15 @@ func init() {
 	importCmd.Flags().StringP("name", "n", "", "Project name")
 	importCmd.Flags().StringP("camera", "c", "", "Camera type")
 	importCmd.Flags().StringP("date", "d", "dd-mm-yyyy", "Date format, dd-mm-yyyy by default")
-	importCmd.Flags().IntP("buffer", "b", 1000, "Buffer size for copying, default is 1000 bytes")
+	importCmd.Flags().StringP("buffer", "b", "", "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
-	importCmd.Flags().StringP("connection", "x", "sd_card", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
+	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
 
 	// GoPro-specific options
 
-	importCmd.Flags().BoolP("skip_aux", "s", true, "GoPro: skip auxiliary files (THM, LRV)")
-	importCmd.Flags().StringSlice("sort_by", []string{"camera", "days"}, "GoPro: sort files by: `camera` and/or `days`")
-
-	for _, item := range []string{
-		"output", "camera",
-	} {
-		importCmd.MarkFlagRequired(item)
-	}
+	importCmd.Flags().StringP("skip_aux", "s", "", "GoPro: skip auxiliary files (THM, LRV)")
+	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera` and/or `days`")
 
 }
 
