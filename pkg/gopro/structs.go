@@ -129,10 +129,6 @@ type goProMediaList struct {
 	} `json:"media"`
 }
 
-type goProTurboResponse struct {
-	Turbo string `json:"turbo"`
-}
-
 type GoProConnectDevice struct {
 	IP   string
 	Info cameraInfo

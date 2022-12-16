@@ -105,7 +105,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			return nil, err
 		}
 		if _, err := os.Stat(filepath.Join(dayFolder, deviceInfo.Product)); os.IsNotExist(err) {
-			os.Mkdir(filepath.Join(dayFolder, deviceInfo.Product), 0755)
+			_ = os.Mkdir(filepath.Join(dayFolder, deviceInfo.Product), 0755)
 		}
 		dayFolder = filepath.Join(dayFolder, deviceInfo.Product)
 
