@@ -23,6 +23,7 @@ import (
 )
 
 var ipAddress = ""
+var gpTurbo = true
 
 func handleKill() {
 	c := make(chan os.Signal)
@@ -30,7 +31,9 @@ func handleKill() {
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
-		caller(ipAddress, "gp/gpTurbo?p=0", nil)
+                if gpTurbo {
+		    caller(ipAddress, "gp/gpTurbo?p=0", nil)
+                }
 		os.Exit(0)
 	}()
 }
@@ -91,14 +94,17 @@ func getThumbnailFilename(filename string) string {
 	return replacer.Replace(filename)
 }
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
+        var verType GoProType = V2
 	var result utils.Result
 
 	ipAddress = in
 	handleKill()
 	// activate turbo
-	err := caller(in, "gp/gpTurbo?p=1", nil)
+        var gpTurboOut = ""
+	err := caller(in, "gp/gpTurbo?p=1", gpTurboOut)
 	if err != nil {
-		return nil, err
+                gpTurbo = false
+                verType = V1
 	}
 
 	var gpMediaList = &goProMediaList{}
@@ -115,7 +121,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 
-			for _, fileTypeMatch := range FileTypeMatches[V2] {
+			for _, fileTypeMatch := range FileTypeMatches[verType] {
 
 				if fileTypeMatch.Regex.MatchString(goprofile.N) {
 
@@ -126,7 +132,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					tm := time.Unix(i, 0)
 					mediaDate := tm.Format("02-01-2006")
 
-					if strings.Contains(sortOptions.DateFormat, "year") && strings.Contains(sortOptions.DateFormat, "month") && strings.Contains(sortOptions.DateFormat, "day") {
+					if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {
 						mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
 					}
 
@@ -152,7 +158,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					}
 
 					switch fileTypeMatch.Type {
-					case Video:
+					case Video, ChapteredVideo:
 						x := goprofile.N
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 						color.Green(">>> %s", x)
@@ -257,6 +263,8 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 			}
 		}
 	}
-	caller(ipAddress, "gp/gpTurbo?p=0", nil)
+        if gpTurbo {
+	    caller(ipAddress, "gp/gpTurbo?p=0", nil)
+        }
 	return &result, nil
 }
