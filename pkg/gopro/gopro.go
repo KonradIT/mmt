@@ -302,7 +302,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		result := importFromMAX(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions)
 		return &result, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("Camera `%s` is not supported", gpVersion.CameraType))
+		return nil, fmt.Errorf("Camera `%s` is not supported", gpVersion.CameraType)
 	}
 }
 
@@ -375,12 +375,12 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 
 									dayFolder := filepath.Join(output, mediaDate)
 									if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-										os.Mkdir(dayFolder, 0755)
+										_ = os.Mkdir(dayFolder, 0755)
 									}
 
 									if sortoptions.ByCamera {
 										if _, err := os.Stat(filepath.Join(dayFolder, "MAX")); os.IsNotExist(err) {
-											os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
+											_ = os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
 										}
 										dayFolder = filepath.Join(dayFolder, "MAX")
 									}
@@ -598,12 +598,12 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 									dayFolder := filepath.Join(output, mediaDate)
 									if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-										os.Mkdir(dayFolder, 0755)
+										_ = os.Mkdir(dayFolder, 0755)
 									}
 
 									if sortoptions.ByCamera {
 										if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-											os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+											_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
 										}
 										dayFolder = filepath.Join(dayFolder, cameraName)
 									}
@@ -810,12 +810,12 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 									dayFolder := filepath.Join(output, mediaDate)
 									if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-										os.Mkdir(dayFolder, 0755)
+										_ = os.Mkdir(dayFolder, 0755)
 									}
 
 									if sortoptions.ByCamera {
 										if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-											os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+											_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
 										}
 										dayFolder = filepath.Join(dayFolder, cameraName)
 									}
