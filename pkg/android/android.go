@@ -97,7 +97,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 		dayFolder := filepath.Join(out, mediaDate)
 		if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-			os.Mkdir(dayFolder, 0755)
+			_ = os.Mkdir(dayFolder, 0755)
 		}
 
 		deviceInfo, err := device.DeviceInfo()
@@ -105,7 +105,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			return nil, err
 		}
 		if _, err := os.Stat(filepath.Join(dayFolder, deviceInfo.Product)); os.IsNotExist(err) {
-			os.Mkdir(filepath.Join(dayFolder, deviceInfo.Product), 0755)
+			_ = os.Mkdir(filepath.Join(dayFolder, deviceInfo.Product), 0755)
 		}
 		dayFolder = filepath.Join(dayFolder, deviceInfo.Product)
 
