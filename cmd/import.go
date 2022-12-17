@@ -62,6 +62,9 @@ var importCmd = &cobra.Command{
 					connection = "sd_card"
 				}
 				customCameraOpts["connection"] = connection
+
+                                batchSize := get_flag_int(cmd, "batch_size", "3")
+                                customCameraOpts["batch_size"] = batchSize
 			}
 			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, customCameraOpts)
 			if err != nil {
@@ -103,6 +106,7 @@ func init() {
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
 	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
+        importCmd.Flags().StringP("batch_size", "bs", "", "Parallel download batch size: 3")
 
 	// GoPro-specific options
 

@@ -96,7 +96,7 @@ func getThumbnailFilename(filename string) string {
 	replacer := strings.NewReplacer("H", "L", "X", "L", "MP4", "LRV")
 	return replacer.Replace(filename)
 }
-func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
+func ImportConnect(in, out string, sortOptions SortOptions, batch_size int) (*utils.Result, error) {
 	var verType GoProType = V2
 	var result utils.Result
 
@@ -122,7 +122,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 	}
 	cameraName := gpInfo.Info.ModelName
         wg := new (sync.WaitGroup)
-        wg.Add(3)
+        wg.Add(batch_size)
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 

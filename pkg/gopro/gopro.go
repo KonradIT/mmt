@@ -253,11 +253,19 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		DateRange:          []time.Time{dateStart, dateEnd},
 	}
 
+        batchSize := 3
+        batchSizeOption, found := cameraOptions["batch_size"]
+        if found {
+                batchSize = batchSizeOption.(int)
+        }
+
+
 	connectionType, found := cameraOptions["connection"]
+
 	if found {
 		switch connectionType.(string) {
 		case string(utils.Connect):
-			return ImportConnect(in, out, sortOptions)
+			return ImportConnect(in, out, sortOptions, batchSize)
 		case string(utils.SDCard):
 			break
 		default:
