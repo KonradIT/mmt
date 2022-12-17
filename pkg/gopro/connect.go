@@ -118,7 +118,7 @@ func getThumbnailFilename(filename string) string {
 	return replacer.Replace(filename)
 }
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
-	var verType GoProType = V2
+	var verType GoProType
 	var result utils.Result
 	ipAddress = in
 
