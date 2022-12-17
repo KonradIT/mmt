@@ -122,6 +122,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 	}
 	cameraName := gpInfo.Info.ModelName
         wg := new (sync.WaitGroup)
+        wg.Add(3)
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 

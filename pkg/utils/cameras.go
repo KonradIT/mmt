@@ -190,7 +190,6 @@ func (wc WriteCounter) PrintProgress() {
 }
 
 func DownloadFile_async(wg *sync.WaitGroup, filepath string, url string) error {
-        wg.Add(1)
         go DownloadFile_async1(wg, filepath, url)
         return nil
 }
