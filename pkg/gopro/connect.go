@@ -309,21 +309,43 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
-						go func(outfile, path string, result utils.Result) {
-							defer wg.Done()
-							err := utils.DownloadFile(
-								outfile, path,
-								bar,
-							)
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, filepath.Base(outfile))
-							} else {
-								result.FilesImported += 1
-							}
-						}(filepath.Join(dayFolder, "multishot", filebaseroot, goprofile.N),
-							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
+						for i := goprofile.B; i <= goprofile.L; i++ {
 
+							wg.Add(1)
+							filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
+
+							multiShotTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename))
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+							multiShotBar := progressBar.AddBar(int64(multiShotTotal),
+								mpb.PrependDecorators(
+									decor.Name(fmt.Sprintf("%s: ", filename)),
+									decor.CountersKiloByte("% .2f / % .2f"),
+								),
+								mpb.AppendDecorators(
+									decor.OnComplete(
+										decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncWidth), "✔️",
+									),
+								),
+							)
+
+							go func(outfile, path string, result utils.Result) {
+								defer wg.Done()
+								err := utils.DownloadFile(
+									outfile, path,
+									multiShotBar,
+								)
+								if err != nil {
+									result.Errors = append(result.Errors, err)
+									result.FilesNotImported = append(result.FilesNotImported, filepath.Base(outfile))
+								} else {
+									result.FilesImported += 1
+								}
+
+							}(filepath.Join(dayFolder, "multishot", filebaseroot, filename),
+								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename), result)
+						}
 					case RawPhoto:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
 							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
