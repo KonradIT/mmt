@@ -49,7 +49,7 @@ func UpdateCamera(sdcard string) error {
 				color.Yellow(">> Firmware release date: %s", camera.ReleaseDate)
 				color.Yellow(html2text.HTML2Text(camera.ReleaseHTML))
 
-				err = utils.DownloadFile(filepath.Join(sdcard, "UPDATE.zip"), camera.URL)
+				err = utils.DownloadFile(filepath.Join(sdcard, "UPDATE.zip"), camera.URL, nil)
 				if err != nil {
 					return err
 				}

@@ -44,7 +44,7 @@ func UpdateCamera(sdcard string, model string) error {
 				color.White(html2text.HTML2Text(item.Description))
 
 				fwUrl := item.Channels[0].DownloadURL
-				err = utils.DownloadFile(filepath.Join(sdcard, strings.Split(fwUrl, "/")[len(strings.Split(fwUrl, "/"))-1]), fwUrl)
+				err = utils.DownloadFile(filepath.Join(sdcard, strings.Split(fwUrl, "/")[len(strings.Split(fwUrl, "/"))-1]), fwUrl, nil)
 				if err != nil {
 					return err
 				}
