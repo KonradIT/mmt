@@ -1,0 +1,15 @@
+
+linters:
+  enable:
+  - whitespace
+  - gosec
+  - gci
+  - gofmt
+  - goimports
+  - revive
+  - nilerr
+  - nestif
+  - goconst
+  - funlen
+  - exhaustive
+  - asasalint
