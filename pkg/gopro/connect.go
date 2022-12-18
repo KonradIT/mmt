@@ -113,10 +113,6 @@ func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
 	return ipsFound, nil
 }
 
-func getThumbnailFilename(filename string) string {
-	replacer := strings.NewReplacer("H", "L", "X", "L", "MP4", "LRV")
-	return replacer.Replace(filename)
-}
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
 	var verType GoProType
 	var result utils.Result
