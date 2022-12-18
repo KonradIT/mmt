@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
 	"github.com/konradit/mmt/pkg/utils"
+	"github.com/maja42/goval"
 	"github.com/minio/minio/pkg/disk"
 	"gopkg.in/djherbis/times.v1"
 )
@@ -606,8 +608,19 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 										return godirwalk.SkipThis
 									}
 
-									framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
-									rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
+									eval := goval.NewEvaluator()
+									framerate, err := eval.Evaluate(s.Streams[0].RFrameRate, nil, nil)
+									if err != nil {
+										log.Fatal(err.Error())
+										return godirwalk.SkipThis
+									}
+									fpsAsFloat := strconv.Itoa(framerate.(int))
+
+									if err != nil {
+										log.Fatal(err.Error())
+										return godirwalk.SkipThis
+									}
+									rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
 									if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
 										err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
 										if err != nil {
