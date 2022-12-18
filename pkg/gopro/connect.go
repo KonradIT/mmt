@@ -210,7 +210,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					wg.Add(1)
 					bar := progressBar.AddBar(int64(total),
 						mpb.PrependDecorators(
-							decor.Name(fmt.Sprintf("%s: ", goprofile.N)),
+							decor.Name(color.CyanString(fmt.Sprintf("%s: ", goprofile.N))),
 							decor.CountersKiloByte("% .2f / % .2f"),
 						),
 						mpb.AppendDecorators(
@@ -244,39 +244,25 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
+						var werr = make(chan error)
 						go func(outfile string, path string, result utils.Result) {
 							defer wg.Done()
-							err := utils.DownloadFile(
+
+							werr <- utils.DownloadFile(
 								outfile,
 								path,
 								bar)
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, filepath.Base(outfile))
-							} else {
-								result.FilesImported += 1
-							}
+
 						}(filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
 
-						if !sortOptions.SkipAuxiliaryFiles {
-							if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
-								err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
-								if err != nil {
-									log.Fatal(err.Error())
-								}
-							}
-
-							x := goprofile.N
-							filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-							err = utils.DownloadFile(
-								filepath.Join(dayFolder, "videos/proxy", filename),
-								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, getThumbnailFilename(goprofile.N)),
-								bar,
-							)
-							if err != nil {
-								log.Fatal(err.Error())
-							}
+						err = <-werr
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, filename)
+						} else {
+							result.FilesImported += 1
 						}
+
 					case Photo:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
 							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
@@ -285,20 +271,24 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
+						var werr = make(chan error)
 						go func(outfile, path string, result utils.Result) {
 							defer wg.Done()
-							err := utils.DownloadFile(
+
+							werr <- utils.DownloadFile(
 								outfile,
 								path,
 								bar,
 							)
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, filepath.Base(outfile))
-							} else {
-								result.FilesImported += 1
-							}
+
 						}(filepath.Join(dayFolder, "photos", goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
+						err = <-werr
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
+						} else {
+							result.FilesImported += 1
+						}
 
 					case Multishot:
 						filebaseroot := goprofile.N[:4]
@@ -310,8 +300,9 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 						}
 
 						for i := goprofile.B; i <= goprofile.L; i++ {
-
-							wg.Add(1)
+							if i > goprofile.B {
+								wg.Add(1)
+							}
 							filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
 
 							multiShotTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename))
@@ -320,7 +311,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 							multiShotBar := progressBar.AddBar(int64(multiShotTotal),
 								mpb.PrependDecorators(
-									decor.Name(fmt.Sprintf("%s: ", filename)),
+									decor.Name(color.CyanString(fmt.Sprintf("%s: ", filename))),
 									decor.CountersKiloByte("% .2f / % .2f"),
 								),
 								mpb.AppendDecorators(
@@ -329,22 +320,25 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 									),
 								),
 							)
-
+							var werr = make(chan error)
 							go func(outfile, path string, result utils.Result) {
 								defer wg.Done()
-								err := utils.DownloadFile(
+
+								werr <- utils.DownloadFile(
 									outfile, path,
 									multiShotBar,
 								)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, filepath.Base(outfile))
-								} else {
-									result.FilesImported += 1
-								}
 
 							}(filepath.Join(dayFolder, "multishot", filebaseroot, filename),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename), result)
+
+							err = <-werr
+							if err != nil {
+								result.Errors = append(result.Errors, err)
+								result.FilesNotImported = append(result.FilesNotImported, filename)
+							} else {
+								result.FilesImported += 1
+							}
 						}
 					case RawPhoto:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
@@ -375,11 +369,14 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 			}
 		}
 	}
-	progressBar.Wait()
+
+	wg.Wait()
+	progressBar.Shutdown()
 	if verType == V2 {
 		if err := caller(in, "gp/gpTurbo?p=0", nil); err != nil {
 			color.Red("Could not exit turbo mode")
 		}
 	}
+
 	return &result, nil
 }
