@@ -91,8 +91,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 				return &result, nil
 			}
 
-			for _, panoramaId := range panoramaBatches {
-				t, err := times.Stat(filepath.Join(root, panoramaFolder, panoramaId.Name()))
+			for _, panoramaID := range panoramaBatches {
+				t, err := times.Stat(filepath.Join(root, panoramaFolder, panoramaID.Name()))
 				if err != nil {
 					log.Fatal(err.Error())
 					continue
@@ -144,12 +144,12 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
 						_ = os.Mkdir(dayFolder, 0755)
 					}
-					err = utils.CopyDir(filepath.Join(root, panoramaFolder, panoramaId.Name()), filepath.Join(dayFolder, panoramaId.Name()), bufferSize)
+					err = utils.CopyDir(filepath.Join(root, panoramaFolder, panoramaID.Name()), filepath.Join(dayFolder, panoramaID.Name()), bufferSize)
 					if err != nil {
 						result.Errors = append(result.Errors, err)
-						result.FilesNotImported = append(result.FilesNotImported, panoramaId.Name())
+						result.FilesNotImported = append(result.FilesNotImported, panoramaID.Name())
 					} else {
-						result.FilesImported += 1
+						result.FilesImported++
 					}
 				}
 			}
@@ -245,7 +245,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 									result.Errors = append(result.Errors, err)
 									result.FilesNotImported = append(result.FilesNotImported, osPathname)
 								} else {
-									result.FilesImported += 1
+									result.FilesImported++
 								}
 
 								// Get Device Name
@@ -297,7 +297,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 									result.Errors = append(result.Errors, err)
 									result.FilesNotImported = append(result.FilesNotImported, osPathname)
 								} else {
-									result.FilesImported += 1
+									result.FilesImported++
 								}
 							case RawPhoto:
 								x := de.Name()
@@ -316,9 +316,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 									result.Errors = append(result.Errors, err)
 									result.FilesNotImported = append(result.FilesNotImported, osPathname)
 								} else {
-									result.FilesImported += 1
+									result.FilesImported++
 								}
 							case PanoramaIndex:
+							case Audio:
+								// TODO get audio files
 							}
 						}
 					}

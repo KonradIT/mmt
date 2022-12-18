@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type GoProVersion struct {
+type Info struct {
 	InfoVersion        string `json:"info version"`
 	FirmwareVersion    string `json:"firmware version"`
 	WifiMac            string `json:"wifi mac"`
@@ -20,14 +20,14 @@ const (
 	MISC Directory = "MISC"
 )
 
-type GoProType string
+type Type string
 
 const (
-	V2  GoProType = "v2"
-	MAX GoProType = "max"
-	V1  GoProType = "v1"
+	V2  Type = "v2"
+	MAX Type = "max"
+	V1  Type = "v1"
 
-	UNKNOWN GoProType = "unknown"
+	UNKNOWN Type = "unknown"
 )
 
 type FileOfInterest string
@@ -129,7 +129,7 @@ type goProMediaList struct {
 	} `json:"media"`
 }
 
-type GoProConnectDevice struct {
+type ConnectDevice struct {
 	IP   string
 	Info cameraInfo
 }

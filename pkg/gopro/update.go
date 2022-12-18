@@ -13,11 +13,11 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 )
 
-var FIRMWARE_CATALOG = "https://firmware-api.gopro.com/v2/firmware/catalog"
+var FirmwareCatalogRemoteURL = "https://firmware-api.gopro.com/v2/firmware/catalog"
 
 func UpdateCamera(sdcard string) error {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", FIRMWARE_CATALOG, nil)
+	req, err := http.NewRequest("GET", FirmwareCatalogRemoteURL, nil)
 	if err != nil {
 		return err
 	}
@@ -36,11 +36,11 @@ func UpdateCamera(sdcard string) error {
 		return err
 	}
 
-	cameraId := fmt.Sprintf("%s.%s", strings.Split(gpVersion.FirmwareVersion, ".")[0], strings.Split(gpVersion.FirmwareVersion, ".")[1])
+	cameraID := fmt.Sprintf("%s.%s", strings.Split(gpVersion.FirmwareVersion, ".")[0], strings.Split(gpVersion.FirmwareVersion, ".")[1])
 
 	for _, camera := range response.Cameras {
-		if camera.ModelString == cameraId {
-			cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraId+".", "", 1)
+		if camera.ModelString == cameraID {
+			cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraID+".", "", 1)
 
 			if cameraVersion != camera.Version {
 				color.Cyan("New update available!")

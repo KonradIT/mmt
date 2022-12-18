@@ -156,7 +156,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil
 		}
-		result.FilesImported += 1
+		result.FilesImported++
 	}
 
 	return &result, nil

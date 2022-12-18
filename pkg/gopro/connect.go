@@ -59,8 +59,8 @@ func caller(ip, path string, object interface{}) error {
 	return nil
 }
 
-func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
-	ipsFound := []GoProConnectDevice{}
+func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
+	ipsFound := []ConnectDevice{}
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return ipsFound, err
@@ -80,7 +80,7 @@ func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
 				if err != nil {
 					continue
 				}
-				ipsFound = append(ipsFound, GoProConnectDevice{
+				ipsFound = append(ipsFound, ConnectDevice{
 					IP:   correctIP,
 					Info: *gpInfo,
 				})
@@ -95,7 +95,7 @@ func getThumbnailFilename(filename string) string {
 	return replacer.Replace(filename)
 }
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
-	var verType GoProType = V2
+	var verType = V2
 	var result utils.Result
 
 	ipAddress = in
@@ -185,7 +185,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 						} else {
-							result.FilesImported += 1
+							result.FilesImported++
 						}
 						if !sortOptions.SkipAuxiliaryFiles {
 							if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
@@ -217,7 +217,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 						} else {
-							result.FilesImported += 1
+							result.FilesImported++
 						}
 					case Multishot:
 						filebaseroot := goprofile.N[:4]
@@ -235,7 +235,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 						} else {
-							result.FilesImported += 1
+							result.FilesImported++
 						}
 
 					case RawPhoto:
@@ -253,7 +253,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							result.Errors = append(result.Errors, err)
 							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 						} else {
-							result.FilesImported += 1
+							result.FilesImported++
 						}
 					default:
 						color.Red("Unsupported file %s", goprofile.N)

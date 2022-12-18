@@ -27,7 +27,7 @@ https://community.gopro.com/t5/en/GoPro-Camera-File-Naming-Convention/ta-p/39022
 
 var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
-var FileTypeMatches = map[GoProType][]FileTypeMatch{
+var FileTypeMatches = map[Type][]FileTypeMatch{
 	V2: {
 		{
 			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
@@ -403,7 +403,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case Photo:
 										foldersNeeded := []string{"photos/360", "photos/heromode"}
@@ -427,7 +427,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case PowerPano:
 										if _, err := os.Stat(filepath.Join(dayFolder, "photos/powerpano")); os.IsNotExist(err) {
@@ -444,7 +444,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case LowResolutionVideo:
 										if !sortoptions.SkipAuxiliaryFiles {
@@ -469,7 +469,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
 											} else {
-												result.FilesImported += 1
+												result.FilesImported++
 											}
 										}
 									case Thumbnail:
@@ -495,7 +495,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
 											} else {
-												result.FilesImported += 1
+												result.FilesImported++
 											}
 										}
 									default:
@@ -618,7 +618,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case Photo:
 										if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
@@ -635,7 +635,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 
 									case LowResolutionVideo:
@@ -655,7 +655,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
 											} else {
-												result.FilesImported += 1
+												result.FilesImported++
 											}
 										}
 									case Thumbnail:
@@ -675,7 +675,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
 											} else {
-												result.FilesImported += 1
+												result.FilesImported++
 											}
 										}
 									case Multishot:
@@ -694,7 +694,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case RawPhoto:
 										if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
@@ -711,7 +711,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 
 									default:
@@ -830,7 +830,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case ChapteredVideo:
 										x := de.Name()
@@ -850,7 +850,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case Photo:
 										if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
@@ -867,7 +867,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 
 									case LowResolutionVideo:
@@ -886,7 +886,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
 											} else {
-												result.FilesImported += 1
+												result.FilesImported++
 											}
 										}
 									case Thumbnail:
@@ -904,7 +904,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 												result.Errors = append(result.Errors, err)
 												result.FilesNotImported = append(result.FilesNotImported, osPathname)
 											} else {
-												result.FilesImported += 1
+												result.FilesImported++
 											}
 										}
 									case Multishot:
@@ -923,7 +923,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									case RawPhoto:
 										if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
@@ -940,7 +940,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 
 									default:
@@ -978,7 +978,7 @@ func cleanVersion(s string) string {
 	return excludingLast
 }
 
-func readInfo(in string) (*GoProVersion, error) {
+func readInfo(in string) (*Info, error) {
 	files, err := ioutil.ReadDir(in)
 	if err != nil {
 		return nil, err
@@ -1001,7 +1001,7 @@ func readInfo(in string) (*GoProVersion, error) {
 					}
 					text := string(inBytes)
 					clean := cleanVersion(text)
-					var gpVersion GoProVersion
+					var gpVersion Info
 					err = json.Unmarshal([]byte(clean), &gpVersion)
 					if err != nil {
 						return nil, err

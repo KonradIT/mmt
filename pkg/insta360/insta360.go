@@ -237,7 +237,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									} else {
 										x := de.Name()
@@ -268,7 +268,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 											result.Errors = append(result.Errors, err)
 											result.FilesNotImported = append(result.FilesNotImported, osPathname)
 										} else {
-											result.FilesImported += 1
+											result.FilesImported++
 										}
 									}
 								case Video, LowResolutionVideo:
@@ -309,7 +309,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 										result.Errors = append(result.Errors, err)
 										result.FilesNotImported = append(result.FilesNotImported, osPathname)
 									} else {
-										result.FilesImported += 1
+										result.FilesImported++
 									}
 
 									return godirwalk.SkipThis

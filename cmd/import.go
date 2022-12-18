@@ -22,10 +22,10 @@ var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import media",
 	Run: func(cmd *cobra.Command, args []string) {
-		input := get_flag_string(cmd, "input")
-		output := get_flag_string(cmd, "output")
-		camera := get_flag_string(cmd, "camera")
-		projectName := get_flag_string(cmd, "name")
+		input := getFlagString(cmd, "input")
+		output := getFlagString(cmd, "output")
+		camera := getFlagString(cmd, "camera")
+		projectName := getFlagString(cmd, "name")
 
 		if projectName != "" {
 			_, err := os.Stat(filepath.Join(output, projectName))
@@ -37,10 +37,10 @@ var importCmd = &cobra.Command{
 			}
 		}
 
-		dateFormat := get_flag_string(cmd, "date")
-		bufferSize := get_flag_int(cmd, "buffer", "1000")
-		prefix := get_flag_string(cmd, "prefix")
-		dateRange := get_flag_slice(cmd, "range")
+		dateFormat := getFlagString(cmd, "date")
+		bufferSize := getFlagInt(cmd, "buffer", "1000")
+		prefix := getFlagString(cmd, "prefix")
+		dateRange := getFlagSlice(cmd, "range")
 
 		if camera != "" && output != "" {
 			c, err := utils.CameraGet(camera)
@@ -50,14 +50,14 @@ var importCmd = &cobra.Command{
 
 			customCameraOpts := make(map[string]interface{})
 			if c == utils.GoPro {
-				skipAuxFiles := get_flag_bool(cmd, "skip_aux", "true")
+				skipAuxFiles := getFlagBool(cmd, "skip_aux", "true")
 				customCameraOpts["skip_aux"] = skipAuxFiles
-				sortBy := get_flag_slice(cmd, "sort_by")
+				sortBy := getFlagSlice(cmd, "sort_by")
 				if len(sortBy) > 0 {
 					customCameraOpts["sort_by"] = []string{"camera", "days"}
 				}
 
-				connection := get_flag_string(cmd, "connection")
+				connection := getFlagString(cmd, "connection")
 				if connection == "" {
 					connection = "sd_card"
 				}
@@ -121,6 +121,6 @@ func importFromCamera(c utils.Camera, input string, output string, dateFormat st
 	case utils.Android:
 		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
 	default:
-		return nil, errors.New("Unsupported camera!")
+		return nil, errors.New("Unsupported camera")
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"regexp"
 )
 
-type Insta360Metadata struct {
+type Metadata struct {
 	Model        string
 	SerialNumber string
 }
@@ -73,7 +73,7 @@ type FileTypeMatch struct {
 	ProMode       bool
 }
 
-type Insta360File struct {
+type File struct {
 	Type           FileType `len:"3"`
 	Date           string   `len:"8"`
 	ID             int      `len:"6"`

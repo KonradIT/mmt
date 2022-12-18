@@ -10,5 +10,11 @@ linters:
   - nilerr
   - nestif
   - goconst
-  - exhaustive
   - asasalint
+linter-settings:
+  gosec:
+    excludes:
+      - G107
+config:
+  global:
+    nosec: false
