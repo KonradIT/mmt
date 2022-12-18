@@ -346,7 +346,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						if ftype.Regex.MatchString(de.Name()) {
 
 							if sortoptions.ByDays {
-                                                                d := getFileTime(osPathname, false)
+								d := getFileTime(osPathname, false)
 								mediaDate := d.Format("02-01-2006")
 
 								if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
@@ -559,7 +559,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
 							if sortoptions.ByDays {
-                                                                d := getFileTime(osPathname, false)
+								d := getFileTime(osPathname, false)
 
 								mediaDate := d.Format("02-01-2006")
 								if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
@@ -762,7 +762,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
 							if sortoptions.ByDays {
-                                                                d := getFileTime(osPathname, true)
+								d := getFileTime(osPathname, true)
 
 								mediaDate := d.Format("02-01-2006")
 								if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
@@ -1020,20 +1020,16 @@ func readInfo(in string) (*GoProVersion, error) {
 }
 
 func getFileTime(osPathname string, utcFix bool) time.Time {
-    var d time.Time
-    t, err := times.Stat(osPathname)
-    if err != nil {
-	log.Fatal(err.Error())
-    }
-    if t.HasBirthTime() {
-	d = t.BirthTime()
-    } else {
-        d = t.ModTime()
-    }
-    if utcFix {
-	zoneName, _ := d.Zone()
-	newTime := strings.Replace(d.Format(time.UnixDate), zoneName, "UTC", -1)
-	d, _ = time.Parse(time.UnixDate, newTime)
-    }
-    return d
+	var d time.Time
+	t, err := times.Stat(osPathname)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	d = t.ModTime()
+	if utcFix {
+		zoneName, _ := d.Zone()
+		newTime := strings.Replace(d.Format(time.UnixDate), zoneName, "UTC", -1)
+		d, _ = time.Parse(time.UnixDate, newTime)
+	}
+	return d
 }
