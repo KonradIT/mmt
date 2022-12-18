@@ -40,5 +40,4 @@ func init() {
 	updateCmd.Flags().StringP("input", "i", "", "Input directory for root sd card, eg: E:\\")
 	updateCmd.Flags().StringP("camera", "c", "", "Camera type")
 	updateCmd.Flags().StringP("model", "m", "", "Model type (for insta360): oner, onex, onex2")
-
 }

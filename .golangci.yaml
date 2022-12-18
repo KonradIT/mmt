@@ -10,6 +10,5 @@ linters:
   - nilerr
   - nestif
   - goconst
-  - funlen
   - exhaustive
   - asasalint

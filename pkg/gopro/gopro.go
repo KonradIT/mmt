@@ -181,7 +181,6 @@ var MediaFolderRegex = regexp.MustCompile(`\d\d\dGOPRO`)
 var ffprobe = utils.NewFFprobe(nil)
 
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
-
 	/* Import method using SD card bay or SD card reader */
 
 	dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
@@ -233,7 +232,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			if err == nil {
 				dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
 			}
-
 		}
 	}
 
@@ -341,10 +339,8 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 
 			err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 				Callback: func(osPathname string, de *godirwalk.Dirent) error {
-
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
-
 							if sortoptions.ByDays {
 								t, err := times.Stat(osPathname)
 								if err != nil {
@@ -359,7 +355,6 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 									}
 
 									if len(sortoptions.DateRange) == 2 {
-
 										start := sortoptions.DateRange[0]
 										end := sortoptions.DateRange[1]
 										if d.Before(start) {
@@ -368,7 +363,6 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 										if d.After(end) {
 											return godirwalk.SkipThis
 										}
-
 									}
 
 									dayFolder := filepath.Join(output, mediaDate)
@@ -521,15 +515,12 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 			if err != nil {
 				result.Errors = append(result.Errors, err)
 			}
-
 		}
-
 	}
 	return result
 }
 
 func importFromGoProV2(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
-
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
 	/*
@@ -561,7 +552,6 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 			err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 				Callback: func(osPathname string, de *godirwalk.Dirent) error {
-
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
 							if sortoptions.ByDays {
@@ -574,12 +564,10 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 									mediaDate := d.Format("02-01-2006")
 									if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-
 										mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
 									}
 
 									if len(sortoptions.DateRange) == 2 {
-
 										start := sortoptions.DateRange[0]
 										end := sortoptions.DateRange[1]
 										if d.Before(start) {
@@ -588,7 +576,6 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 										if d.After(end) {
 											return godirwalk.SkipThis
 										}
-
 									}
 
 									dayFolder := filepath.Join(output, mediaDate)
@@ -744,15 +731,12 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 			if err != nil {
 				result.Errors = append(result.Errors, err)
 			}
-
 		}
-
 	}
 	return result
 }
 
 func importFromGoProV1(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
-
 	fileTypes := FileTypeMatches[V1]
 	var result utils.Result
 
@@ -770,10 +754,8 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 			err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 				Callback: func(osPathname string, de *godirwalk.Dirent) error {
-
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
-
 							if sortoptions.ByDays {
 								t, err := times.Stat(osPathname)
 								if err != nil {
@@ -788,7 +770,6 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 									}
 
 									if len(sortoptions.DateRange) == 2 {
-
 										start := sortoptions.DateRange[0]
 										end := sortoptions.DateRange[1]
 										if d.Before(start) {
@@ -797,7 +778,6 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 										if d.After(end) {
 											return godirwalk.SkipThis
 										}
-
 									}
 
 									dayFolder := filepath.Join(output, mediaDate)
@@ -980,9 +960,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 			if err != nil {
 				result.Errors = append(result.Errors, err)
 			}
-
 		}
-
 	}
 	return result
 }
@@ -1007,7 +985,6 @@ func readInfo(in string) (*GoProVersion, error) {
 	}
 	for _, f := range files {
 		if f.Name() == fmt.Sprint(MISC) {
-
 			filesInMisc, err := ioutil.ReadDir(in + "/MISC")
 			if err != nil {
 				return nil, err
@@ -1030,7 +1007,6 @@ func readInfo(in string) (*GoProVersion, error) {
 						return nil, err
 					}
 					return &gpVersion, nil
-
 				}
 			}
 		}

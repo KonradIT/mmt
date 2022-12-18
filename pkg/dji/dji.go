@@ -25,7 +25,6 @@ func getDeviceName() string {
 }
 
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
-
 	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
 
 	di, err := disk.GetInfo(in)
@@ -86,7 +85,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	for _, f := range folders {
 		if f.Name() == panoramaFolder {
-
 			panoramaBatches, err := ioutil.ReadDir(filepath.Join(root, panoramaFolder))
 			if err != nil {
 				result.Errors = append(result.Errors, err)
@@ -136,7 +134,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								continue
 							}
 						}
-
 					}
 					mediaDate := d.Format("02-01-2006")
 					if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
@@ -156,7 +153,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 				}
 			}
-
 		}
 
 		r := mediaFolderRegex.MatchString(f.Name())
@@ -169,7 +165,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 			Unsorted: true,
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
-
 				for _, ftype := range fileTypes {
 					if ftype.Regex.MatchString(de.Name()) {
 						t, err := times.Stat(osPathname)
@@ -207,7 +202,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							}
 
 							if len(dateRange) == 2 {
-
 								layout := replacer.Replace(dateFormat)
 
 								start, err1 := time.Parse(layout, dateRange[0])
@@ -220,7 +214,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 										return godirwalk.SkipThis
 									}
 								}
-
 							}
 
 							dayFolder := filepath.Join(out, mediaDate)
@@ -326,7 +319,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 									result.FilesImported += 1
 								}
 							case PanoramaIndex:
-
 							}
 						}
 					}
@@ -338,7 +330,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 		}
-
 	}
 	return &result, nil
 }

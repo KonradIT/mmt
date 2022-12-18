@@ -1,4 +1,4 @@
-package video_manipulation
+package videomanipulation
 
 import (
 	"io/ioutil"
@@ -21,7 +21,6 @@ func New() {
 
 //nolint:golint,unused,errcheck
 func extractGPMF(input string) (*[]byte, error) {
-
 	err := trans.InitializeEmptyTranscoder()
 	if err != nil {
 		return nil, err
@@ -30,7 +29,6 @@ func extractGPMF(input string) (*[]byte, error) {
 	err = trans.SetInputPath(input)
 	if err != nil {
 		return nil, err
-
 	}
 
 	r, err := trans.CreateOutputPipe("rawvideo")
@@ -56,7 +54,6 @@ func extractGPMF(input string) (*[]byte, error) {
 
 		extractData <- data
 		extractError <- err
-
 	}()
 
 	done := trans.Run(false)

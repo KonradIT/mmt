@@ -40,7 +40,6 @@ func handleKill() {
 	}()
 }
 func caller(ip, path string, object interface{}) error {
-
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
@@ -122,11 +121,8 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 	cameraName := gpInfo.Info.ModelName
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
-
 			for _, fileTypeMatch := range FileTypeMatches[verType] {
-
 				if fileTypeMatch.Regex.MatchString(goprofile.N) {
-
 					i, err := strconv.ParseInt(goprofile.Mod, 10, 64)
 					if err != nil {
 						continue
@@ -134,9 +130,9 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					tm := time.Unix(i, 0).UTC()
 					start := sortOptions.DateRange[0]
 					end := sortOptions.DateRange[1]
-                                        zoneName, _ := end.Zone()
-                                        newTime := strings.Replace(tm.Format(time.UnixDate), "UTC", zoneName, -1)
-                                        tm, _ = time.Parse(time.UnixDate, newTime)
+					zoneName, _ := end.Zone()
+					newTime := strings.Replace(tm.Format(time.UnixDate), "UTC", zoneName, -1)
+					tm, _ = time.Parse(time.UnixDate, newTime)
 					mediaDate := tm.Format("02-01-2006")
 
 					if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {

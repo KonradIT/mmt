@@ -32,7 +32,6 @@ func NewFFprobe(path *string) FFprobe {
 }
 
 func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
-
 	args := []string{
 		"-select_streams",
 		"v:0",

@@ -25,7 +25,6 @@ func GetTag(st interface{}, fieldName string, tagName string) (string, bool) {
 	return f.Tag.Lookup(tagName)
 }
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
-
 	// Tested on X2
 
 	di, err := disk.GetInfo(in)
@@ -128,7 +127,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 				Unsorted: true,
 				Callback: func(osPathname string, de *godirwalk.Dirent) error {
-
 					for _, ftype := range fileTypes {
 						if ftype.Regex.MatchString(de.Name()) {
 							t, err := times.Stat(osPathname)
@@ -147,7 +145,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								// check if is in date range
 
 								if len(dateRange) == 2 {
-
 									layout := replacer.Replace(dateFormat)
 
 									start, err1 := time.Parse(layout, dateRange[0])
@@ -160,7 +157,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 											return godirwalk.SkipThis
 										}
 									}
-
 								}
 
 								if len(dateRange) == 1 {
@@ -200,7 +196,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 									// get model first
 									if model == "" {
-
 										f, err := os.Open(osPathname)
 										if err != nil {
 											log.Fatal(err)
@@ -244,7 +239,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 										} else {
 											result.FilesImported += 1
 										}
-
 									} else {
 										x := de.Name()
 
@@ -276,7 +270,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 										} else {
 											result.FilesImported += 1
 										}
-
 									}
 								case Video, LowResolutionVideo:
 									slug := ""
@@ -320,7 +313,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 									}
 
 									return godirwalk.SkipThis
-
 								}
 							}
 						}

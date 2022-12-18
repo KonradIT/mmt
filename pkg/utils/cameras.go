@@ -224,7 +224,6 @@ func DownloadFile(filepath string, url string) error {
 }
 
 func Unzip(src string, dest string) error {
-
 	r, err := zip.OpenReader(src)
 	if err != nil {
 		return err
@@ -232,7 +231,6 @@ func Unzip(src string, dest string) error {
 	defer r.Close()
 
 	for _, f := range r.File {
-
 		// Store filename/path for returning and using later on
 		fpath := filepath.Join(dest, f.Name)
 
