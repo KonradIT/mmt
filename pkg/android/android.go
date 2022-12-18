@@ -131,16 +131,15 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".mp4") {
 			localPath = filepath.Join(dayFolder, "videos", entries.Entry().Name)
 		}
-		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") {
-			filename, folder := pixelNameSort(entries.Entry().Name)
-			if folder != "" {
-				if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
-					err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
-					if err != nil {
-						log.Fatal(err.Error())
-					}
+		filename, folder := pixelNameSort(entries.Entry().Name)
+		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") && folder != "" {
+			if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
+				err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
+				if err != nil {
+					log.Fatal(err.Error())
 				}
 			}
+
 			localPath = filepath.Join(dayFolder, "photos", folder, filename)
 		}
 		outFile, err := os.Create(localPath)

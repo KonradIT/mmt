@@ -166,165 +166,167 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			Unsorted: true,
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
-					if ftype.Regex.MatchString(de.Name()) {
-						t, err := times.Stat(osPathname)
-						if err != nil {
-							log.Fatal(err.Error())
+					if !ftype.Regex.MatchString(de.Name()) {
+						continue
+					}
+					t, err := times.Stat(osPathname)
+					if err != nil {
+						log.Fatal(err.Error())
+					}
+					if t.HasBirthTime() {
+						d := t.BirthTime()
+						replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
+
+						mediaDate := d.Format("02-01-2006")
+						if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
+							mediaDate = d.Format(replacer.Replace(dateFormat))
 						}
-						if t.HasBirthTime() {
-							d := t.BirthTime()
-							replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
-							mediaDate := d.Format("02-01-2006")
-							if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
-								mediaDate = d.Format(replacer.Replace(dateFormat))
+						// check if is in date range
+						if len(dateRange) == 1 {
+							dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+							dateEnd := time.Now()
+							switch dateRange[0] {
+							case "today":
+								dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+							case "yesterday":
+								dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
+							case "week":
+								dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
 							}
 
-							// check if is in date range
-							if len(dateRange) == 1 {
-								dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-								dateEnd := time.Now()
-								switch dateRange[0] {
-								case "today":
-									dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-								case "yesterday":
-									dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
-								case "week":
-									dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-								}
+							if d.Before(dateStart) {
+								return godirwalk.SkipThis
+							}
+							if d.After(dateEnd) {
+								return godirwalk.SkipThis
+							}
+						}
 
-								if d.Before(dateStart) {
+						if len(dateRange) == 2 {
+							layout := replacer.Replace(dateFormat)
+
+							start, err1 := time.Parse(layout, dateRange[0])
+							end, err2 := time.Parse(layout, dateRange[1])
+							if err1 == nil && err2 == nil {
+								if d.Before(start) {
 									return godirwalk.SkipThis
 								}
-								if d.After(dateEnd) {
+								if d.After(end) {
 									return godirwalk.SkipThis
 								}
 							}
+						}
 
-							if len(dateRange) == 2 {
-								layout := replacer.Replace(dateFormat)
+						dayFolder := filepath.Join(out, mediaDate)
+						if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
+							_ = os.Mkdir(dayFolder, 0755)
+						}
 
-								start, err1 := time.Parse(layout, dateRange[0])
-								end, err2 := time.Parse(layout, dateRange[1])
-								if err1 == nil && err2 == nil {
-									if d.Before(start) {
-										return godirwalk.SkipThis
-									}
-									if d.After(end) {
-										return godirwalk.SkipThis
-									}
-								}
-							}
+						if _, err := os.Stat(filepath.Join(dayFolder, getDeviceName())); os.IsNotExist(err) {
+							_ = os.Mkdir(filepath.Join(dayFolder, getDeviceName()), 0755)
+						}
+						dayFolder = filepath.Join(dayFolder, getDeviceName())
 
-							dayFolder := filepath.Join(out, mediaDate)
-							if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-								_ = os.Mkdir(dayFolder, 0755)
-							}
+						switch ftype.Type {
+						case Photo:
 
-							if _, err := os.Stat(filepath.Join(dayFolder, getDeviceName())); os.IsNotExist(err) {
-								_ = os.Mkdir(filepath.Join(dayFolder, getDeviceName()), 0755)
-							}
-							dayFolder = filepath.Join(dayFolder, getDeviceName())
+							x := de.Name()
 
-							switch ftype.Type {
-							case Photo:
+							color.Green(">>> %s", x)
 
-								x := de.Name()
-
-								color.Green(">>> %s", x)
-
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-
-								// Get Device Name
-
-								f, err := os.Open(osPathname)
+							if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
 								if err != nil {
 									log.Fatal(err.Error())
-									return godirwalk.SkipThis
 								}
-								exifData, err := exif.Decode(f)
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
-
-								camModel, err := exifData.Get(exif.Model)
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
-								s, err := camModel.StringVal()
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
-
-								// Rename directory
-								matchDeviceName, is := DeviceNames[s]
-								if is {
-									s = matchDeviceName
-								}
-								_ = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
-
-								DeviceName = s
-							case Video, Subtitle:
-
-								x := de.Name()
-
-								color.Green(">>> %s", x)
-
-								if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", x), bufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case RawPhoto:
-								x := de.Name()
-
-								color.Green(">>> %s", x)
-
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", x), bufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case PanoramaIndex:
-							case Audio:
-								// TODO get audio files
 							}
+
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
+							if err != nil {
+								result.Errors = append(result.Errors, err)
+								result.FilesNotImported = append(result.FilesNotImported, osPathname)
+							} else {
+								result.FilesImported++
+							}
+
+							// Get Device Name
+
+							f, err := os.Open(osPathname)
+							if err != nil {
+								log.Fatal(err.Error())
+								return godirwalk.SkipThis
+							}
+							exifData, err := exif.Decode(f)
+							if err != nil {
+								log.Fatal(err.Error())
+								return godirwalk.SkipThis
+							}
+
+							camModel, err := exifData.Get(exif.Model)
+							if err != nil {
+								log.Fatal(err.Error())
+								return godirwalk.SkipThis
+							}
+							s, err := camModel.StringVal()
+							if err != nil {
+								log.Fatal(err.Error())
+								return godirwalk.SkipThis
+							}
+
+							// Rename directory
+							matchDeviceName, is := DeviceNames[s]
+							if is {
+								s = matchDeviceName
+							}
+							_ = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
+
+							DeviceName = s
+						case Video, Subtitle:
+
+							x := de.Name()
+
+							color.Green(">>> %s", x)
+
+							if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+								if err != nil {
+									log.Fatal(err.Error())
+								}
+							}
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", x), bufferSize)
+							if err != nil {
+								result.Errors = append(result.Errors, err)
+								result.FilesNotImported = append(result.FilesNotImported, osPathname)
+							} else {
+								result.FilesImported++
+							}
+						case RawPhoto:
+							x := de.Name()
+
+							color.Green(">>> %s", x)
+
+							if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
+								if err != nil {
+									log.Fatal(err.Error())
+								}
+							}
+
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", x), bufferSize)
+							if err != nil {
+								result.Errors = append(result.Errors, err)
+								result.FilesNotImported = append(result.FilesNotImported, osPathname)
+							} else {
+								result.FilesImported++
+							}
+						case PanoramaIndex:
+						case Audio:
+							// TODO get audio files
 						}
 					}
 				}
+
 				return nil
 			},
 		})
