@@ -38,7 +38,6 @@ const (
 )
 
 type SortOptions struct {
-	ByDays             bool
 	ByLocation         bool
 	SkipAuxiliaryFiles bool
 	AddHiLightTags     bool

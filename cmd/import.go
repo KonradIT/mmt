@@ -54,7 +54,7 @@ var importCmd = &cobra.Command{
 				customCameraOpts["skip_aux"] = skipAuxFiles
 				sortBy := getFlagSlice(cmd, "sort_by")
 				if len(sortBy) == 0 {
-					customCameraOpts["sort_by"] = []string{"camera", "days"}
+					customCameraOpts["sort_by"] = []string{"camera"}
 				}
 
 				connection := getFlagString(cmd, "connection")

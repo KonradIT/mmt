@@ -12,6 +12,8 @@ linters:
   - goconst
   - asasalint
 linter-settings:
+  nestif:
+    min-complexity: 20
   gosec:
     excludes:
       - G107

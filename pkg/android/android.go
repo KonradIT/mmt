@@ -75,7 +75,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 		}
 
-		if len(dateRange) == 2 {
+		if len(dateRange) == 2 { //nolint
 			layout := replacer.Replace(dateFormat)
 
 			start, err1 := time.Parse(layout, dateRange[0])

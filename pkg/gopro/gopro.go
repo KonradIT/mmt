@@ -189,15 +189,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	dateEnd := time.Now()
 
-	byDays := false
 	byCamera := false
 
 	sortByOptions, found := cameraOptions["sort_by"]
 	if found {
 		for _, sortop := range sortByOptions.([]string) {
-			if sortop == "days" {
-				byDays = true
-			}
 			if sortop == "camera" {
 				byCamera = true
 			}
@@ -207,33 +203,31 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 		}
 	}
-	if len(dateRange) != 0 {
-		if len(dateRange) == 1 {
-			switch dateRange[0] {
-			case "today":
-				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-			case "yesterday":
-				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
-			case "week":
-				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-			}
+	if len(dateRange) == 1 {
+		switch dateRange[0] {
+		case "today":
+			dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+		case "yesterday":
+			dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
+		case "week":
+			dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
 		}
+	}
 
-		if len(dateRange) == 2 {
-			start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			if err == nil {
-				dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-			}
-			end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			if err == nil {
-				dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
-			}
+	if len(dateRange) == 2 {
+		start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		if err == nil {
+			dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+		}
+		end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		if err == nil {
+			dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
 		}
 	}
 
@@ -243,7 +237,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		skipAux = skipAuxOption.(bool)
 	}
 	sortOptions := SortOptions{
-		ByDays:             byDays,
 		SkipAuxiliaryFiles: skipAux,
 		AddHiLightTags:     true,
 		ByCamera:           byCamera,
@@ -344,165 +337,169 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
-					if ftype.Regex.MatchString(de.Name()) {
-						if sortoptions.ByDays {
-							d := getFileTime(osPathname, false)
-							mediaDate := d.Format("02-01-2006")
+					if !ftype.Regex.MatchString(de.Name()) {
+						continue
+					}
 
-							if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-								mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
-							}
+					d := getFileTime(osPathname, false)
+					mediaDate := d.Format("02-01-2006")
 
-							if len(sortoptions.DateRange) == 2 {
-								start := sortoptions.DateRange[0]
-								end := sortoptions.DateRange[1]
-								if d.Before(start) {
-									return godirwalk.SkipThis
-								}
-								if d.After(end) {
-									return godirwalk.SkipThis
-								}
-							}
+					if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
+						mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+					}
 
-							dayFolder := filepath.Join(output, mediaDate)
-							if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-								_ = os.Mkdir(dayFolder, 0755)
-							}
+					if len(sortoptions.DateRange) == 2 {
+						start := sortoptions.DateRange[0]
+						end := sortoptions.DateRange[1]
+						if d.Before(start) {
+							return godirwalk.SkipThis
+						}
+						if d.After(end) {
+							return godirwalk.SkipThis
+						}
+					}
 
-							if sortoptions.ByCamera {
-								if _, err := os.Stat(filepath.Join(dayFolder, "MAX")); os.IsNotExist(err) {
-									_ = os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
-								}
-								dayFolder = filepath.Join(dayFolder, "MAX")
-							}
+					dayFolder := filepath.Join(output, mediaDate)
+					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
+						_ = os.Mkdir(dayFolder, 0755)
+					}
 
-							switch ftype.Type {
-							case Video:
-								x := de.Name()
+					if sortoptions.ByCamera {
+						if _, err := os.Stat(filepath.Join(dayFolder, "MAX")); os.IsNotExist(err) {
+							_ = os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
+						}
+						dayFolder = filepath.Join(dayFolder, "MAX")
+					}
 
-								filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-								color.Green(">>> %s", x)
+					switch ftype.Type {
+					case Video:
+						x := de.Name()
 
-								foldersNeeded := []string{"videos/360", "videos/heromode"}
-								for _, fn := range foldersNeeded {
-									if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-								}
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						color.Green(">>> %s", x)
 
-								dest := foldersNeeded[1]
-								if !ftype.HeroMode {
-									dest = foldersNeeded[0]
-								}
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
+						foldersNeeded := []string{"videos/360", "videos/heromode"}
+						for _, fn := range foldersNeeded {
+							if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
 								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
+									log.Fatal(err.Error())
 								}
-							case Photo:
-								foldersNeeded := []string{"photos/360", "photos/heromode"}
-								for _, fn := range foldersNeeded {
-									if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-								}
-
-								dest := foldersNeeded[1]
-								if !ftype.HeroMode {
-									dest = foldersNeeded[0]
-								}
-								color.Green(">>> %s", de.Name())
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case PowerPano:
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos/powerpano")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos/powerpano"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s", de.Name())
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/powerpano", de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case LowResolutionVideo:
-								if !sortoptions.SkipAuxiliaryFiles {
-									foldersNeeded := []string{"videos/proxy/heromode", "videos/proxy/360"}
-									for _, fn := range foldersNeeded {
-										if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
-											err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
-											if err != nil {
-												log.Fatal(err.Error())
-											}
-										}
-									}
-									dest := foldersNeeded[1]
-									if ftype.HeroMode {
-										dest = foldersNeeded[0]
-									}
-									x := de.Name()
-
-									filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported++
-									}
-								}
-							case Thumbnail:
-								if !sortoptions.SkipAuxiliaryFiles {
-									foldersNeeded := []string{"videos/thumbnails/heromode", "videos/thumbnails/360"}
-									for _, fn := range foldersNeeded {
-										if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
-											err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
-											if err != nil {
-												log.Fatal(err.Error())
-											}
-										}
-									}
-									dest := foldersNeeded[1]
-									if ftype.HeroMode {
-										dest = foldersNeeded[0]
-									}
-									x := de.Name()
-
-									filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported++
-									}
-								}
-							default:
-								color.Red("Unsupported file %s", de.Name())
-								result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
-								result.FilesNotImported = append(result.FilesNotImported, osPathname)
 							}
 						}
+
+						dest := foldersNeeded[1]
+						if !ftype.HeroMode {
+							dest = foldersNeeded[0]
+						}
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case Photo:
+						foldersNeeded := []string{"photos/360", "photos/heromode"}
+						for _, fn := range foldersNeeded {
+							if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
+								if err != nil {
+									log.Fatal(err.Error())
+								}
+							}
+						}
+
+						dest := foldersNeeded[1]
+						if !ftype.HeroMode {
+							dest = foldersNeeded[0]
+						}
+						color.Green(">>> %s", de.Name())
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case PowerPano:
+						if _, err := os.Stat(filepath.Join(dayFolder, "photos/powerpano")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos/powerpano"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s", de.Name())
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/powerpano", de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case LowResolutionVideo:
+						if sortoptions.SkipAuxiliaryFiles {
+							continue
+						}
+						foldersNeeded := []string{"videos/proxy/heromode", "videos/proxy/360"}
+						for _, fn := range foldersNeeded {
+							if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
+								if err != nil {
+									log.Fatal(err.Error())
+								}
+							}
+						}
+						dest := foldersNeeded[1]
+						if ftype.HeroMode {
+							dest = foldersNeeded[0]
+						}
+						x := de.Name()
+
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case Thumbnail:
+						if sortoptions.SkipAuxiliaryFiles {
+							continue
+						}
+						foldersNeeded := []string{"videos/thumbnails/heromode", "videos/thumbnails/360"}
+						for _, fn := range foldersNeeded {
+							if _, err := os.Stat(filepath.Join(dayFolder, fn)); os.IsNotExist(err) {
+								err = os.MkdirAll(filepath.Join(dayFolder, fn), 0755)
+								if err != nil {
+									log.Fatal(err.Error())
+								}
+							}
+						}
+						dest := foldersNeeded[1]
+						if ftype.HeroMode {
+							dest = foldersNeeded[0]
+						}
+						x := de.Name()
+
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, dest, filename), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					default:
+						color.Red("Unsupported file %s", de.Name())
+						result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
+						result.FilesNotImported = append(result.FilesNotImported, osPathname)
 					}
 				}
 				return nil
@@ -552,179 +549,183 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
-					if ftype.Regex.MatchString(de.Name()) {
-						if sortoptions.ByDays {
-							d := getFileTime(osPathname, false)
+					if !ftype.Regex.MatchString(de.Name()) {
+						continue
+					}
 
-							mediaDate := d.Format("02-01-2006")
-							if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-								mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
-							}
+					d := getFileTime(osPathname, false)
 
-							if len(sortoptions.DateRange) == 2 {
-								start := sortoptions.DateRange[0]
-								end := sortoptions.DateRange[1]
-								if d.Before(start) {
-									return godirwalk.SkipThis
-								}
-								if d.After(end) {
-									return godirwalk.SkipThis
-								}
-							}
+					mediaDate := d.Format("02-01-2006")
+					if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
+						mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+					}
 
-							dayFolder := filepath.Join(output, mediaDate)
-							if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-								_ = os.Mkdir(dayFolder, 0755)
-							}
+					if len(sortoptions.DateRange) == 2 {
+						start := sortoptions.DateRange[0]
+						end := sortoptions.DateRange[1]
+						if d.Before(start) {
+							return godirwalk.SkipThis
+						}
+						if d.After(end) {
+							return godirwalk.SkipThis
+						}
+					}
 
-							if sortoptions.ByCamera {
-								if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-									_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
-								}
-								dayFolder = filepath.Join(dayFolder, cameraName)
-							}
+					dayFolder := filepath.Join(output, mediaDate)
+					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
+						_ = os.Mkdir(dayFolder, 0755)
+					}
 
-							switch ftype.Type {
-							case Video:
-								x := de.Name()
+					if sortoptions.ByCamera {
+						if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
+							_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+						}
+						dayFolder = filepath.Join(dayFolder, cameraName)
+					}
 
-								filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-								color.Green(">>> %s", filename)
+					switch ftype.Type {
+					case Video:
+						x := de.Name()
 
-								s, err := ffprobe.VideoSize(osPathname)
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						color.Green(">>> %s", filename)
 
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
+						s, err := ffprobe.VideoSize(osPathname)
 
-								eval := goval.NewEvaluator()
-								framerate, err := eval.Evaluate(s.Streams[0].RFrameRate, nil, nil)
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
-								fpsAsFloat := strconv.Itoa(framerate.(int))
+						if err != nil {
+							log.Fatal(err.Error())
+							return godirwalk.SkipThis
+						}
 
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
-								rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
-								if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
+						eval := goval.NewEvaluator()
+						framerate, err := eval.Evaluate(s.Streams[0].RFrameRate, nil, nil)
+						if err != nil {
+							log.Fatal(err.Error())
+							return godirwalk.SkipThis
+						}
+						fpsAsFloat := strconv.Itoa(framerate.(int))
 
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", rfpsFolder, filename), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case Photo:
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s", de.Name())
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-
-							case LowResolutionVideo:
-								if !sortoptions.SkipAuxiliaryFiles {
-									if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-
-									x := de.Name()
-
-									filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), sortoptions.BufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported++
-									}
-								}
-							case Thumbnail:
-								if !sortoptions.SkipAuxiliaryFiles {
-									if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-
-									x := de.Name()
-
-									filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), sortoptions.BufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported++
-									}
-								}
-							case Multishot:
-								filebaseroot := de.Name()[:4]
-								if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s/%s", filebaseroot, de.Name())
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", filebaseroot, de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case RawPhoto:
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s", de.Name())
-								// convert to DNG here
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-
-							default:
-								color.Red("Unsupported file %s", de.Name())
-								result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
-								result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						if err != nil {
+							log.Fatal(err.Error())
+							return godirwalk.SkipThis
+						}
+						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
 							}
 						}
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", rfpsFolder, filename), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case Photo:
+						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s", de.Name())
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case LowResolutionVideo:
+						if sortoptions.SkipAuxiliaryFiles {
+							continue
+						}
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						x := de.Name()
+
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case Thumbnail:
+						if sortoptions.SkipAuxiliaryFiles {
+							continue
+						}
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						x := de.Name()
+
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", filename), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case Multishot:
+						filebaseroot := de.Name()[:4]
+						if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s/%s", filebaseroot, de.Name())
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", filebaseroot, de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case RawPhoto:
+						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s", de.Name())
+						// convert to DNG here
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					default:
+						color.Red("Unsupported file %s", de.Name())
+						result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
+						result.FilesNotImported = append(result.FilesNotImported, osPathname)
 					}
 				}
 				return nil
@@ -760,195 +761,199 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
-					if ftype.Regex.MatchString(de.Name()) {
-						if sortoptions.ByDays {
-							d := getFileTime(osPathname, true)
+					if !ftype.Regex.MatchString(de.Name()) {
+						continue
+					}
 
-							mediaDate := d.Format("02-01-2006")
-							if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-								mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
-							}
+					d := getFileTime(osPathname, true)
 
-							if len(sortoptions.DateRange) == 2 {
-								start := sortoptions.DateRange[0]
-								end := sortoptions.DateRange[1]
-								if d.Before(start) {
-									return godirwalk.SkipThis
-								}
-								if d.After(end) {
-									return godirwalk.SkipThis
-								}
-							}
+					mediaDate := d.Format("02-01-2006")
+					if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
+						mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+					}
 
-							dayFolder := filepath.Join(output, mediaDate)
-							if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-								_ = os.Mkdir(dayFolder, 0755)
-							}
+					if len(sortoptions.DateRange) == 2 {
+						start := sortoptions.DateRange[0]
+						end := sortoptions.DateRange[1]
+						if d.Before(start) {
+							return godirwalk.SkipThis
+						}
+						if d.After(end) {
+							return godirwalk.SkipThis
+						}
+					}
 
-							if sortoptions.ByCamera {
-								if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-									_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
-								}
-								dayFolder = filepath.Join(dayFolder, cameraName)
-							}
+					dayFolder := filepath.Join(output, mediaDate)
+					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
+						_ = os.Mkdir(dayFolder, 0755)
+					}
 
-							switch ftype.Type {
-							case Video:
-								x := de.Name()
+					if sortoptions.ByCamera {
+						if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
+							_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+						}
+						dayFolder = filepath.Join(dayFolder, cameraName)
+					}
 
-								chaptered := regexp.MustCompile(`GP\d+.MP4`)
-								if chaptered.MatchString(de.Name()) {
-									x = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-								}
-								color.Green(">>> %s", x)
+					switch ftype.Type {
+					case Video:
+						x := de.Name()
 
-								if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
+						chaptered := regexp.MustCompile(`GP\d+.MP4`)
+						if chaptered.MatchString(de.Name()) {
+							x = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						}
+						color.Green(">>> %s", x)
 
-								s, err := ffprobe.VideoSize(osPathname)
-
-								if err != nil {
-									log.Fatal(err.Error())
-									return godirwalk.SkipThis
-								}
-
-								framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
-								rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
-								if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", rfpsFolder, x), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case ChapteredVideo:
-								x := de.Name()
-								name := fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-
-								color.Green(">>> %s", x)
-
-								if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", name), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case Photo:
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s", de.Name())
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-
-							case LowResolutionVideo:
-								if !sortoptions.SkipAuxiliaryFiles {
-									if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-
-									x := de.Name()
-
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), sortoptions.BufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported++
-									}
-								}
-							case Thumbnail:
-								if !sortoptions.SkipAuxiliaryFiles {
-									if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
-										err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
-										if err != nil {
-											log.Fatal(err.Error())
-										}
-									}
-
-									x := de.Name()
-									err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), sortoptions.BufferSize)
-									if err != nil {
-										result.Errors = append(result.Errors, err)
-										result.FilesNotImported = append(result.FilesNotImported, osPathname)
-									} else {
-										result.FilesImported++
-									}
-								}
-							case Multishot:
-								filebaseroot := de.Name()[:4]
-								if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s/%s", filebaseroot, de.Name())
-
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", filebaseroot, de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-							case RawPhoto:
-								if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
-									err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
-									if err != nil {
-										log.Fatal(err.Error())
-									}
-								}
-
-								color.Green(">>> %s", de.Name())
-								// convert to DNG here
-								err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), sortoptions.BufferSize)
-								if err != nil {
-									result.Errors = append(result.Errors, err)
-									result.FilesNotImported = append(result.FilesNotImported, osPathname)
-								} else {
-									result.FilesImported++
-								}
-
-							default:
-								color.Red("Unsupported file %s", de.Name())
-								result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
-								result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
 							}
 						}
+
+						s, err := ffprobe.VideoSize(osPathname)
+
+						if err != nil {
+							log.Fatal(err.Error())
+							return godirwalk.SkipThis
+						}
+
+						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
+						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", rfpsFolder, x), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case ChapteredVideo:
+						x := de.Name()
+						name := fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+
+						color.Green(">>> %s", x)
+
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", name), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case Photo:
+						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s", de.Name())
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case LowResolutionVideo:
+						if sortoptions.SkipAuxiliaryFiles {
+							continue
+						}
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						x := de.Name()
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case Thumbnail:
+						if sortoptions.SkipAuxiliaryFiles {
+							continue
+						}
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos/proxy")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos/proxy"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						x := de.Name()
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos/proxy", x), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					case Multishot:
+						filebaseroot := de.Name()[:4]
+						if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s/%s", filebaseroot, de.Name())
+
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "multishot", filebaseroot, de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+					case RawPhoto:
+						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						color.Green(">>> %s", de.Name())
+						// convert to DNG here
+						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", de.Name()), sortoptions.BufferSize)
+						if err != nil {
+							result.Errors = append(result.Errors, err)
+							result.FilesNotImported = append(result.FilesNotImported, osPathname)
+						} else {
+							result.FilesImported++
+						}
+
+					default:
+						color.Red("Unsupported file %s", de.Name())
+						result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
+						result.FilesNotImported = append(result.FilesNotImported, osPathname)
 					}
 				}
 				return nil
@@ -977,39 +982,22 @@ func cleanVersion(s string) string {
 }
 
 func readInfo(in string) (*Info, error) {
-	files, err := ioutil.ReadDir(in)
+	jsonFile, err := os.Open(filepath.Join(in, "MISC", fmt.Sprint(Version)))
 	if err != nil {
 		return nil, err
 	}
-	for _, f := range files {
-		if f.Name() == fmt.Sprint(MISC) {
-			filesInMisc, err := ioutil.ReadDir(in + "/MISC")
-			if err != nil {
-				return nil, err
-			}
-			for _, f := range filesInMisc {
-				if f.Name() == fmt.Sprint(Version) {
-					jsonFile, err := os.Open(in + "/MISC/" + fmt.Sprint(Version))
-					if err != nil {
-						return nil, err
-					}
-					inBytes, err := ioutil.ReadAll(jsonFile)
-					if err != nil {
-						return nil, err
-					}
-					text := string(inBytes)
-					clean := cleanVersion(text)
-					var gpVersion Info
-					err = json.Unmarshal([]byte(clean), &gpVersion)
-					if err != nil {
-						return nil, err
-					}
-					return &gpVersion, nil
-				}
-			}
-		}
+	inBytes, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("MISC not found")
+	text := string(inBytes)
+	clean := cleanVersion(text)
+	var gpVersion Info
+	err = json.Unmarshal([]byte(clean), &gpVersion)
+	if err != nil {
+		return nil, err
+	}
+	return &gpVersion, nil
 }
 
 func getFileTime(osPathname string, utcFix bool) time.Time {
