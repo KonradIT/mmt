@@ -127,6 +127,35 @@ func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
 	return ipsFound, nil
 }
 
+type ResultCounter struct {
+	mu               sync.Mutex
+	Errors           []error
+	FilesNotImported []string
+	FilesImported    int
+}
+
+func (rc *ResultCounter) SetFailure(err error, file string) {
+	rc.mu.Lock()
+	rc.Errors = append(rc.Errors, err)
+	rc.FilesNotImported = append(rc.FilesNotImported, file)
+	rc.mu.Unlock()
+}
+
+func (rc *ResultCounter) SetSuccess() {
+	rc.mu.Lock()
+	rc.FilesImported++
+	rc.mu.Unlock()
+}
+
+func (rc *ResultCounter) Get() utils.Result {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return utils.Result{
+		FilesImported:    rc.FilesImported,
+		FilesNotImported: rc.FilesNotImported,
+		Errors:           rc.Errors,
+	}
+}
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
 	var verType GoProType
 	var result utils.Result
@@ -174,6 +203,8 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
+
+	inlineCounter := ResultCounter{}
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 			for _, fileTypeMatch := range FileTypeMatches[verType] {
@@ -244,24 +275,19 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
-						var werr = make(chan error)
 						go func(outfile string, path string, result utils.Result) {
 							defer wg.Done()
 
-							werr <- utils.DownloadFile(
+							err := utils.DownloadFile(
 								outfile,
 								path,
 								bar)
-
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
 						}(filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
-
-						err = <-werr
-						if err != nil {
-							result.Errors = append(result.Errors, err)
-							result.FilesNotImported = append(result.FilesNotImported, filename)
-						} else {
-							result.FilesImported += 1
-						}
 
 					case Photo:
 						photoPath := filepath.Join(dayFolder, "photos")
@@ -273,24 +299,20 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
-						var werr = make(chan error)
 						go func(outfile, path string, result utils.Result) {
 							defer wg.Done()
 
-							werr <- utils.DownloadFile(
+							err := utils.DownloadFile(
 								outfile,
 								path,
 								bar,
 							)
-
+							if err != nil {
+								inlineCounter.SetFailure(err, goprofile.N)
+							} else {
+								inlineCounter.SetSuccess()
+							}
 						}(filepath.Join(photoPath, goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
-						err = <-werr
-						if err != nil {
-							result.Errors = append(result.Errors, err)
-							result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
-						} else {
-							result.FilesImported += 1
-						}
 
 						if hasRawPhoto {
 
@@ -311,24 +333,20 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 
 							rawPhotoBar := getNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName)
 
-							var werr = make(chan error)
 							go func(outfile, path string, result utils.Result) {
 								defer wg.Done()
 
-								werr <- utils.DownloadFile(
+								err := utils.DownloadFile(
 									outfile,
 									path,
 									rawPhotoBar,
 								)
-
+								if err != nil {
+									inlineCounter.SetFailure(err, rawPhotoName)
+								} else {
+									inlineCounter.SetSuccess()
+								}
 							}(filepath.Join(photoPath, rawPhotoName), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName), result)
-							err = <-werr
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
-							} else {
-								result.FilesImported += 1
-							}
 
 						}
 
@@ -352,25 +370,21 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 								log.Fatal(err.Error())
 							}
 							multiShotBar := getNewBar(progressBar, int64(multiShotTotal), filename)
-							var werr = make(chan error)
+
 							go func(outfile, path string, result utils.Result) {
 								defer wg.Done()
 
-								werr <- utils.DownloadFile(
+								err := utils.DownloadFile(
 									outfile, path,
 									multiShotBar,
 								)
-
+								if err != nil {
+									inlineCounter.SetFailure(err, goprofile.N)
+								} else {
+									inlineCounter.SetSuccess()
+								}
 							}(filepath.Join(dayFolder, "multishot", filebaseroot, filename),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename), result)
-
-							err = <-werr
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, filename)
-							} else {
-								result.FilesImported += 1
-							}
 						}
 
 					default:
@@ -390,6 +404,9 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 			color.Red("Could not exit turbo mode")
 		}
 	}
+	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
+	result.FilesImported += inlineCounter.Get().FilesImported
+	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
 
 	return &result, nil
 }
