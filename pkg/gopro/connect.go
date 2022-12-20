@@ -21,7 +21,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/utils"
-
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -64,7 +63,6 @@ func caller(ip, path string, object interface{}) error {
 }
 
 func head(path string) (int, error) {
-
 	client := &http.Client{}
 	req, err := http.NewRequest("HEAD", path, nil)
 	if err != nil {
@@ -97,7 +95,6 @@ func getNewBar(progressBar *mpb.Progress, total int64, filename string) *mpb.Bar
 
 func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 	ipsFound := []ConnectDevice{}
-
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return ipsFound, err
@@ -157,7 +154,7 @@ func (rc *ResultCounter) Get() utils.Result {
 	}
 }
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
-  var verType = V2
+	var verType Type
 	var result utils.Result
 	ipAddress = in
 
@@ -246,67 +243,77 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 					dayFolder = filepath.Join(dayFolder, cameraName)
 				}
 
+				total, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
+				if err != nil {
+					log.Fatal(err.Error())
+				}
+				wg.Add(1)
+				bar := getNewBar(progressBar, int64(total), goprofile.N)
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 					x := goprofile.N
 					filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-					color.Green(">>> %s", x)
 
 					var gpFileInfo = &goProMediaMetadata{}
 					err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, goprofile.N), gpFileInfo)
 					if err != nil {
 						return nil, err
 					}
-
-					total, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
-					if err != nil {
-						log.Fatal(err.Error())
+					framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
+					if framerate == 0 {
+						framerate = (gpFileInfo.FpsDenom / gpFileInfo.Fps)
 					}
-
-					wg.Add(1)
-					bar := getNewBar(progressBar, int64(total), goprofile.N)
-
-					switch fileTypeMatch.Type {
-					case Video, ChapteredVideo:
-						x := goprofile.N
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-
+					rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
 					if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
 						err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
 						if err != nil {
 							log.Fatal(err.Error())
 						}
-						framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
-						if framerate == 0 {
-							framerate = (gpFileInfo.FpsDenom / gpFileInfo.Fps)
+					}
 
+					go func(outfile string, path string, result utils.Result) {
+						defer wg.Done()
+
+						err := utils.DownloadFile(
+							outfile,
+							path,
+							bar)
+						if err != nil {
+							inlineCounter.SetFailure(err, filename)
+						} else {
+							inlineCounter.SetSuccess()
 						}
-						rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
+					}(filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
 
-						if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
-							if err != nil {
-								log.Fatal(err.Error())
-							}
+				case Photo:
+					photoPath := filepath.Join(dayFolder, "photos")
+					hasRawPhoto := goprofile.Raw == "1"
+					if _, err := os.Stat(photoPath); os.IsNotExist(err) {
+						err = os.MkdirAll(photoPath, 0755)
+						if err != nil {
+							log.Fatal(err.Error())
 						}
+					}
 
-						go func(outfile string, path string, result utils.Result) {
-							defer wg.Done()
+					go func(outfile, path string, result utils.Result) {
+						defer wg.Done()
 
-							err := utils.DownloadFile(
-								outfile,
-								path,
-								bar)
-							if err != nil {
-								inlineCounter.SetFailure(err, filename)
-							} else {
-								inlineCounter.SetSuccess()
-							}
-						}(filepath.Join(dayFolder, "videos", rfpsFolder, filename), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
+						err := utils.DownloadFile(
+							outfile,
+							path,
+							bar,
+						)
+						if err != nil {
+							inlineCounter.SetFailure(err, goprofile.N)
+						} else {
+							inlineCounter.SetSuccess()
+						}
+					}(filepath.Join(photoPath, goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
 
-					case Photo:
-						photoPath := filepath.Join(dayFolder, "photos")
-						hasRawPhoto := goprofile.Raw == "1"
+					if hasRawPhoto { //nolint:nestif
+						wg.Add(1)
+						rawPhotoName := strings.Replace(goprofile.N, ".JPG", ".GPR", -1)
+						photoPath = filepath.Join(dayFolder, "photos", "raw")
 						if _, err := os.Stat(photoPath); os.IsNotExist(err) {
 							err = os.MkdirAll(photoPath, 0755)
 							if err != nil {
@@ -314,102 +321,66 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 							}
 						}
 
+						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName))
+						if err != nil {
+							log.Fatal(err.Error())
+						}
+
+						rawPhotoBar := getNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName)
+
 						go func(outfile, path string, result utils.Result) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
 								outfile,
 								path,
-								bar,
+								rawPhotoBar,
+							)
+							if err != nil {
+								inlineCounter.SetFailure(err, rawPhotoName)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(filepath.Join(photoPath, rawPhotoName), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName), result)
+					}
+
+				case Multishot:
+					filebaseroot := goprofile.N[:4]
+					if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
+						err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
+						if err != nil {
+							log.Fatal(err.Error())
+						}
+					}
+
+					for i := goprofile.B; i <= goprofile.L; i++ {
+						if i > goprofile.B {
+							wg.Add(1)
+						}
+						filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
+
+						multiShotTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename))
+						if err != nil {
+							log.Fatal(err.Error())
+						}
+						multiShotBar := getNewBar(progressBar, int64(multiShotTotal), filename)
+
+						go func(outfile, path string, result utils.Result) {
+							defer wg.Done()
+
+							err := utils.DownloadFile(
+								outfile, path,
+								multiShotBar,
 							)
 							if err != nil {
 								inlineCounter.SetFailure(err, goprofile.N)
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(filepath.Join(photoPath, goprofile.N), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N), result)
-
-						if hasRawPhoto {
-
-							wg.Add(1)
-							rawPhotoName := strings.Replace(goprofile.N, ".JPG", ".GPR", -1)
-							photoPath = filepath.Join(dayFolder, "photos", "raw")
-							if _, err := os.Stat(photoPath); os.IsNotExist(err) {
-								err = os.MkdirAll(photoPath, 0755)
-								if err != nil {
-									log.Fatal(err.Error())
-								}
-							}
-
-							rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName))
-							if err != nil {
-								log.Fatal(err.Error())
-							}
-
-							rawPhotoBar := getNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName)
-
-							go func(outfile, path string, result utils.Result) {
-								defer wg.Done()
-
-								err := utils.DownloadFile(
-									outfile,
-									path,
-									rawPhotoBar,
-								)
-								if err != nil {
-									inlineCounter.SetFailure(err, rawPhotoName)
-								} else {
-									inlineCounter.SetSuccess()
-								}
-							}(filepath.Join(photoPath, rawPhotoName), fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName), result)
-
-						}
-
-					case Multishot:
-						filebaseroot := goprofile.N[:4]
-						if _, err := os.Stat(filepath.Join(dayFolder, "multishot", filebaseroot)); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "multishot", filebaseroot), 0755)
-							if err != nil {
-								log.Fatal(err.Error())
-							}
-						}
+						}(filepath.Join(dayFolder, "multishot", filebaseroot, filename),
+							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename), result)
 					}
 
-						for i := goprofile.B; i <= goprofile.L; i++ {
-							if i > goprofile.B {
-								wg.Add(1)
-							}
-							filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
-
-							multiShotTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename))
-							if err != nil {
-								log.Fatal(err.Error())
-							}
-							multiShotBar := getNewBar(progressBar, int64(multiShotTotal), filename)
-
-							go func(outfile, path string, result utils.Result) {
-								defer wg.Done()
-
-								err := utils.DownloadFile(
-									outfile, path,
-									multiShotBar,
-								)
-								if err != nil {
-									inlineCounter.SetFailure(err, goprofile.N)
-								} else {
-									inlineCounter.SetSuccess()
-								}
-							}(filepath.Join(dayFolder, "multishot", filebaseroot, filename),
-								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename), result)
-						}
-
-					default:
-						color.Red("Unsupported file %s", goprofile.N)
-						result.Errors = append(result.Errors, errors.New("Media format unrecognized"))
-						result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
-					} else {
-						result.FilesImported++
-					}
 				default:
 					color.Red("Unsupported file %s", goprofile.N)
 					result.Errors = append(result.Errors, errors.New("Media format unrecognized"))

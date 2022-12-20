@@ -204,13 +204,13 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	}
 	if len(dateRange) == 1 {
 		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-			switch dateRange[0] {
-			case "today":
-				dateStart = today
-			case "yesterday":
-				dateStart = today.Add(-24 * time.Hour)
-			case "week":
-				dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
+		switch dateRange[0] {
+		case "today":
+			dateStart = today
+		case "yesterday":
+			dateStart = today.Add(-24 * time.Hour)
+		case "week":
+			dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
 		}
 	}
 
