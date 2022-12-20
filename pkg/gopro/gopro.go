@@ -366,19 +366,19 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						if !ftype.HeroMode {
 							dest = foldersNeeded[0]
 						}
-                                                folder := filepath.Join(dayFolder, dest)
-                                                result = parse(folder, filename, osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, dest)
+						result = parse(folder, filename, osPathname, sortoptions, result)
 					case Photo:
 						foldersNeeded := []string{"photos/360", "photos/heromode"}
 						dest := foldersNeeded[1]
 						if !ftype.HeroMode {
 							dest = foldersNeeded[0]
 						}
-                                                folder := filepath.Join(dayFolder, dest)
-                                                result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, dest)
+						result = parse(folder, de.Name(), osPathname, sortoptions, result)
 					case PowerPano:
-                                                folder := filepath.Join(dayFolder, "photos/powerpano")
-                                                result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, "photos/powerpano")
+						result = parse(folder, de.Name(), osPathname, sortoptions, result)
 					case LowResolutionVideo:
 						if sortoptions.SkipAuxiliaryFiles {
 							continue
@@ -390,8 +390,8 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						}
 						x := de.Name()
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-                                                folder := filepath.Join(dayFolder, dest)
-                                                result = parse(folder, filename, osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, dest)
+						result = parse(folder, filename, osPathname, sortoptions, result)
 					case Thumbnail:
 						if sortoptions.SkipAuxiliaryFiles {
 							continue
@@ -403,8 +403,8 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						}
 						x := de.Name()
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-                                                folder := filepath.Join(dayFolder, dest)
-                                                result = parse(folder, filename, osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, dest)
+						result = parse(folder, filename, osPathname, sortoptions, result)
 					default:
 						result = unsupported(de, osPathname, result)
 					}
@@ -500,11 +500,11 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 							return godirwalk.SkipThis
 						}
 						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
-                                                folder := filepath.Join(dayFolder, "videos", rfpsFolder)
-                                                result = parse(folder, filename, osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, "videos", rfpsFolder)
+						result = parse(folder, filename, osPathname, sortoptions, result)
 					case Photo:
-                                                folder := filepath.Join(dayFolder, "photos")
-                                                result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, "photos")
+						result = parse(folder, de.Name(), osPathname, sortoptions, result)
 					case LowResolutionVideo:
 						if sortoptions.SkipAuxiliaryFiles {
 							continue
@@ -524,8 +524,8 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 						result = parse(folder, filename, osPathname, sortoptions, result)
 
 					case Multishot:
-                                                folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
-                                                result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
+						result = parse(folder, de.Name(), osPathname, sortoptions, result)
 
 					case RawPhoto:
 						folder := filepath.Join(dayFolder, "photos/raw")
@@ -714,7 +714,7 @@ func getDayFolder(cameraName string, output string, sortoptions SortOptions, med
 		}
 		dayFolder = filepath.Join(dayFolder, cameraName)
 	}
-        return dayFolder
+	return dayFolder
 }
 
 func getMediaDate(d time.Time, sortoptions SortOptions) string {
@@ -722,7 +722,7 @@ func getMediaDate(d time.Time, sortoptions SortOptions) string {
 	if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
 		mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
 	}
-        return mediaDate
+	return mediaDate
 }
 
 func parse(folder string, name string, osPathname string, sortoptions SortOptions, result utils.Result) utils.Result {
@@ -735,19 +735,19 @@ func parse(folder string, name string, osPathname string, sortoptions SortOption
 
 	color.Green(">>> %s", name)
 
-        err := utils.CopyFile(osPathname, filepath.Join(folder, name), sortoptions.BufferSize)
+	err := utils.CopyFile(osPathname, filepath.Join(folder, name), sortoptions.BufferSize)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		result.FilesNotImported = append(result.FilesNotImported, osPathname)
 	} else {
 		result.FilesImported++
 	}
-        return result
+	return result
 }
 
 func unsupported(de *godirwalk.Dirent, osPathname string, result utils.Result) utils.Result {
 	color.Red("Unsupported file %s", de.Name())
 	result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
 	result.FilesNotImported = append(result.FilesNotImported, osPathname)
-        return result
+	return result
 }
