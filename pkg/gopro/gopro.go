@@ -740,7 +740,7 @@ func parse(folder string, name string, osPathname string, sortoptions SortOption
 		result.Errors = append(result.Errors, err)
 		result.FilesNotImported = append(result.FilesNotImported, osPathname)
 	} else {
-		result.FilesImported += 1
+		result.FilesImported++
 	}
         return result
 }
