@@ -2,7 +2,6 @@ package gopro
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +15,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/maja42/goval"
 	"github.com/minio/minio/pkg/disk"
@@ -199,7 +199,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 
 			if sortop != "camera" && sortop != "days" {
-				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
+				return nil, fmt.Errorf("Unrecognized option for sort_by: %s", sortop)
 			}
 		}
 	}
@@ -254,7 +254,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		case string(utils.SDCard):
 			break
 		default:
-			return nil, errors.New("Unsupported connection")
+			return nil, mErrors.ErrUnsupportedConnection
 		}
 	}
 
@@ -747,7 +747,7 @@ func parse(folder string, name string, osPathname string, sortoptions SortOption
 
 func unsupported(de *godirwalk.Dirent, osPathname string, result utils.Result) utils.Result {
 	color.Red("Unsupported file %s", de.Name())
-	result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
+	result.Errors = append(result.Errors, mErrors.ErrUnrecognizedMediaFormat)
 	result.FilesNotImported = append(result.FilesNotImported, osPathname)
 	return result
 }

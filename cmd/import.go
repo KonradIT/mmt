@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/android"
 	"github.com/konradit/mmt/pkg/dji"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/gopro"
 	"github.com/konradit/mmt/pkg/insta360"
 	"github.com/konradit/mmt/pkg/utils"
@@ -121,6 +121,6 @@ func importFromCamera(c utils.Camera, input string, output string, dateFormat st
 	case utils.Android:
 		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
 	default:
-		return nil, errors.New("Unsupported camera")
+		return nil, mErrors.ErrUnsupportedCamera
 	}
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 )
 
 type Camera int
@@ -41,7 +42,7 @@ func CameraGet(s string) (Camera, error) {
 	case Android.toString():
 		return Android, nil
 	default:
-		return 10, errors.New("Unsupported camera")
+		return 10, mErrors.ErrUnsupportedCamera
 	}
 }
 
