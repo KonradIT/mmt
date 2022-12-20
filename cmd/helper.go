@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func get_flag_string(cmd *cobra.Command, name string) string {
+func getFlagString(cmd *cobra.Command, name string) string {
 	value, err := cmd.Flags().GetString(name)
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
@@ -19,7 +19,7 @@ func get_flag_string(cmd *cobra.Command, name string) string {
 	return value
 }
 
-func get_flag_slice(cmd *cobra.Command, name string) []string {
+func getFlagSlice(cmd *cobra.Command, name string) []string {
 	value, err := cmd.Flags().GetStringSlice(name)
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
@@ -30,7 +30,7 @@ func get_flag_slice(cmd *cobra.Command, name string) []string {
 	return value
 }
 
-func get_flag_int(cmd *cobra.Command, name string, default_int string) int {
+func getFlagInt(cmd *cobra.Command, name string, defaultInt string) int {
 	value, err := cmd.Flags().GetString(name)
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
@@ -39,7 +39,7 @@ func get_flag_int(cmd *cobra.Command, name string, default_int string) int {
 		value = viper.GetString(name)
 	}
 	if value == "" {
-		value = default_int
+		value = defaultInt
 	}
 	int1, err := strconv.Atoi(value)
 	if err != nil {
@@ -48,7 +48,7 @@ func get_flag_int(cmd *cobra.Command, name string, default_int string) int {
 	return int1
 }
 
-func get_flag_bool(cmd *cobra.Command, name string, default_bool string) bool {
+func getFlagBool(cmd *cobra.Command, name string, defaultBool string) bool {
 	value, err := cmd.Flags().GetString(name)
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
@@ -57,7 +57,7 @@ func get_flag_bool(cmd *cobra.Command, name string, default_bool string) bool {
 		value = viper.GetString(name)
 	}
 	if value == "" {
-		value = default_bool
+		value = defaultBool
 	}
 	bool1, err := strconv.ParseBool(value)
 	if err != nil {

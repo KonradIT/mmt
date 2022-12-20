@@ -13,11 +13,11 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 )
 
-var FIRMWARE_CATALOG = "https://firmware-api.gopro.com/v2/firmware/catalog"
+var FirmwareCatalogRemoteURL = "https://firmware-api.gopro.com/v2/firmware/catalog"
 
 func UpdateCamera(sdcard string) error {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", FIRMWARE_CATALOG, nil)
+	req, err := http.NewRequest("GET", FirmwareCatalogRemoteURL, nil)
 	if err != nil {
 		return err
 	}
@@ -36,35 +36,37 @@ func UpdateCamera(sdcard string) error {
 		return err
 	}
 
-	cameraId := fmt.Sprintf("%s.%s", strings.Split(gpVersion.FirmwareVersion, ".")[0], strings.Split(gpVersion.FirmwareVersion, ".")[1])
+	cameraID := fmt.Sprintf("%s.%s", strings.Split(gpVersion.FirmwareVersion, ".")[0], strings.Split(gpVersion.FirmwareVersion, ".")[1])
 
 	for _, camera := range response.Cameras {
-		if camera.ModelString == cameraId {
-			cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraId+".", "", 1)
+		if camera.ModelString != cameraID {
+			continue
+		}
+		cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraID+".", "", 1)
 
-			if cameraVersion != camera.Version {
-				color.Cyan("New update available!")
-				color.Cyan("🎥 Firmware [%s]:", cameraVersion)
-				color.Cyan("☁️ Firmware [%s]:", camera.Version)
-				color.Yellow(">> Firmware release date: %s", camera.ReleaseDate)
-				color.Yellow(html2text.HTML2Text(camera.ReleaseHTML))
+		if cameraVersion != camera.Version {
+			color.Cyan("New update available!")
+			color.Cyan("🎥 Firmware [%s]:", cameraVersion)
+			color.Cyan("☁️ Firmware [%s]:", camera.Version)
+			color.Yellow(">> Firmware release date: %s", camera.ReleaseDate)
+			color.Yellow(html2text.HTML2Text(camera.ReleaseHTML))
 
-				err = utils.DownloadFile(filepath.Join(sdcard, "UPDATE.zip"), camera.URL)
-				if err != nil {
-					return err
-				}
-				color.Cyan("Unzipping...")
-				err = utils.Unzip(filepath.Join(sdcard, "UPDATE.zip"), filepath.Join(sdcard, "UPDATE"))
-				if err != nil {
-					return err
-				}
-				color.Cyan("Firmware extracted to SD card!")
-				color.Cyan("Now eject the SD card and insert it into your camera")
-				color.Cyan("then turn your camera on and wait for it to update")
-			} else {
-				cui.Warning("Firmware version is up to date.")
+			err = utils.DownloadFile(filepath.Join(sdcard, "UPDATE.zip"), camera.URL)
+			if err != nil {
+				return err
 			}
+			color.Cyan("Unzipping...")
+			err = utils.Unzip(filepath.Join(sdcard, "UPDATE.zip"), filepath.Join(sdcard, "UPDATE"))
+			if err != nil {
+				return err
+			}
+			color.Cyan("Firmware extracted to SD card!")
+			color.Cyan("Now eject the SD card and insert it into your camera")
+			color.Cyan("then turn your camera on and wait for it to update")
+		} else {
+			cui.Warning("Firmware version is up to date.")
 		}
 	}
+
 	return nil
 }
