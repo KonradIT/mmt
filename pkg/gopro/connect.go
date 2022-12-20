@@ -375,7 +375,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 								multiShotBar,
 							)
 							if err != nil {
-								inlineCounter.SetFailure(err, goprofile.N)
+								inlineCounter.SetFailure(err, filepath.Base(outfile))
 							} else {
 								inlineCounter.SetSuccess()
 							}
