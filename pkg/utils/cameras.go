@@ -66,7 +66,7 @@ func CopyFile(src string, dst string, buffersize int) error {
 	}
 
 	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file.", src)
+		return fmt.Errorf("%s is not a regular file", src)
 	}
 
 	source, err := os.Open(src)
@@ -77,7 +77,7 @@ func CopyFile(src string, dst string, buffersize int) error {
 
 	_, err = os.Stat(dst)
 	if err == nil {
-		return fmt.Errorf("File %s already exists.", dst)
+		return fmt.Errorf("File %s already exists", dst)
 	}
 
 	destination, err := os.Create(dst)
@@ -198,7 +198,7 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar) error {
 	}
 
 	// Get the data
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // #nosec
 	if err != nil {
 		out.Close()
 		return err
@@ -233,7 +233,6 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar) error {
 }
 
 func Unzip(src string, dest string) error {
-
 	r, err := zip.OpenReader(src)
 	if err != nil {
 		return err
@@ -241,12 +240,9 @@ func Unzip(src string, dest string) error {
 	defer r.Close()
 
 	for _, f := range r.File {
-
 		// Store filename/path for returning and using later on
-		fpath := filepath.Join(dest, f.Name)
-
-		// Check for ZipSlip. More Info: http://bit.ly/2MsjAWE
-		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+		fpath := filepath.Join(dest, f.Name)                                          // #nosec
+		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) { // #nosec
 			return fmt.Errorf("%s: illegal file path", fpath)
 		}
 
@@ -273,8 +269,15 @@ func Unzip(src string, dest string) error {
 			return err
 		}
 
-		_, err = io.Copy(outFile, rc)
-
+		for {
+			_, err := io.CopyN(outFile, rc, 1024)
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return err
+			}
+		}
 		// Close the file without defer to close before next iteration of loop
 		outFile.Close()
 		rc.Close()

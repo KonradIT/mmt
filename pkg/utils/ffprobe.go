@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"os/exec"
 )
 
@@ -32,7 +33,6 @@ func NewFFprobe(path *string) FFprobe {
 }
 
 func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
-
 	args := []string{
 		"-select_streams",
 		"v:0",
@@ -42,11 +42,14 @@ func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
 		"json",
 		path,
 	}
-
-	cmd := exec.Command(f.ProgramPath, args...)
+	_, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(f.ProgramPath, args...) // #nosec
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return nil, err
 	}

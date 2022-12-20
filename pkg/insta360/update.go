@@ -12,7 +12,7 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 )
 
-var FIRMWARE_CATALOG = "https://openapi.insta360.com/website/appDownload/getGroupApp?group=%s&X-Language=en-us"
+var FirmwareCatalogRemoteURL = "https://openapi.insta360.com/website/appDownload/getGroupApp?group=%s&X-Language=en-us"
 
 func UpdateCamera(sdcard string, model string) error {
 	client := &http.Client{}
@@ -21,7 +21,7 @@ func UpdateCamera(sdcard string, model string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("GET", fmt.Sprintf(FIRMWARE_CATALOG, camera.String()), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf(FirmwareCatalogRemoteURL, camera.String()), nil)
 	if err != nil {
 		return err
 	}
@@ -43,8 +43,8 @@ func UpdateCamera(sdcard string, model string) error {
 				color.Yellow(">> Firmware release date: %s", item.UpdateTime)
 				color.White(html2text.HTML2Text(item.Description))
 
-				fwUrl := item.Channels[0].DownloadURL
-				err = utils.DownloadFile(filepath.Join(sdcard, strings.Split(fwUrl, "/")[len(strings.Split(fwUrl, "/"))-1]), fwUrl, nil)
+				fwURL := item.Channels[0].DownloadURL
+				err = utils.DownloadFile(filepath.Join(sdcard, strings.Split(fwURL, "/")[len(strings.Split(fwURL, "/"))-1]), fwURL, nil)
 				if err != nil {
 					return err
 				}

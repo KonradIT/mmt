@@ -44,7 +44,6 @@ func handleKill() {
 	}()
 }
 func caller(ip, path string, object interface{}) error {
-
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
@@ -96,8 +95,9 @@ func getNewBar(progressBar *mpb.Progress, total int64, filename string) *mpb.Bar
 	)
 }
 
-func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
-	ipsFound := []GoProConnectDevice{}
+func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
+	ipsFound := []ConnectDevice{}
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return ipsFound, err
@@ -117,7 +117,7 @@ func GetGoProNetworkAddresses() ([]GoProConnectDevice, error) {
 				if err != nil {
 					continue
 				}
-				ipsFound = append(ipsFound, GoProConnectDevice{
+				ipsFound = append(ipsFound, ConnectDevice{
 					IP:   correctIP,
 					Info: *gpInfo,
 				})
@@ -157,7 +157,7 @@ func (rc *ResultCounter) Get() utils.Result {
 	}
 }
 func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
-	var verType GoProType
+  var verType = V2
 	var result utils.Result
 	ipAddress = in
 
@@ -208,39 +208,54 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 			for _, fileTypeMatch := range FileTypeMatches[verType] {
+				if !fileTypeMatch.Regex.MatchString(goprofile.N) {
+					continue
+				}
+				i, err := strconv.ParseInt(goprofile.Mod, 10, 64)
+				if err != nil {
+					continue
+				}
+				tm := time.Unix(i, 0).UTC()
+				start := sortOptions.DateRange[0]
+				end := sortOptions.DateRange[1]
+				zoneName, _ := end.Zone()
+				newTime := strings.Replace(tm.Format(time.UnixDate), "UTC", zoneName, -1)
+				tm, _ = time.Parse(time.UnixDate, newTime)
+				mediaDate := tm.Format("02-01-2006")
 
-				if fileTypeMatch.Regex.MatchString(goprofile.N) {
+				if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {
+					mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
+				}
 
-					i, err := strconv.ParseInt(goprofile.Mod, 10, 64)
+				if tm.Before(start) {
+					continue
+				}
+				if tm.After(end) {
+					continue
+				}
+
+				dayFolder := filepath.Join(out, mediaDate)
+				if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
+					_ = os.Mkdir(dayFolder, 0755)
+				}
+
+				if sortOptions.ByCamera {
+					if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
+						_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+					}
+					dayFolder = filepath.Join(dayFolder, cameraName)
+				}
+
+				switch fileTypeMatch.Type {
+				case Video, ChapteredVideo:
+					x := goprofile.N
+					filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+					color.Green(">>> %s", x)
+
+					var gpFileInfo = &goProMediaMetadata{}
+					err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, goprofile.N), gpFileInfo)
 					if err != nil {
-						continue
-					}
-					tm := time.Unix(i, 0)
-					mediaDate := tm.Format("02-01-2006")
-
-					if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {
-						mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
-					}
-
-					start := sortOptions.DateRange[0]
-					end := sortOptions.DateRange[1]
-					if tm.Before(start) {
-						continue
-					}
-					if tm.After(end) {
-						continue
-					}
-
-					dayFolder := filepath.Join(out, mediaDate)
-					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						_ = os.Mkdir(dayFolder, 0755)
-					}
-
-					if sortOptions.ByCamera {
-						if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-							_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
-						}
-						dayFolder = filepath.Join(dayFolder, cameraName)
+						return nil, err
 					}
 
 					total, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
@@ -256,10 +271,10 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 						x := goprofile.N
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 
-						var gpFileInfo = &goProMediaMetadata{}
-						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, goprofile.N), gpFileInfo)
+					if _, err := os.Stat(filepath.Join(dayFolder, "videos", rfpsFolder)); os.IsNotExist(err) {
+						err = os.MkdirAll(filepath.Join(dayFolder, "videos", rfpsFolder), 0755)
 						if err != nil {
-							return nil, err
+							log.Fatal(err.Error())
 						}
 						framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
 						if framerate == 0 {
@@ -358,6 +373,7 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 								log.Fatal(err.Error())
 							}
 						}
+					}
 
 						for i := goprofile.B; i <= goprofile.L; i++ {
 							if i > goprofile.B {
@@ -391,7 +407,13 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 						color.Red("Unsupported file %s", goprofile.N)
 						result.Errors = append(result.Errors, errors.New("Media format unrecognized"))
 						result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
+					} else {
+						result.FilesImported++
 					}
+				default:
+					color.Red("Unsupported file %s", goprofile.N)
+					result.Errors = append(result.Errors, errors.New("Media format unrecognized"))
+					result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 				}
 			}
 		}

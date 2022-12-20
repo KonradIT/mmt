@@ -11,6 +11,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/k3a/html2text v1.0.7
 	github.com/karrick/godirwalk v1.16.1
+	github.com/maja42/goval v1.3.1 // indirect
 	github.com/minio/minio v0.0.0-20210220233218-48b212dd8e96
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
