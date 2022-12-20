@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -80,6 +81,12 @@ func merge(bar *mpb.Bar, videos ...string) error {
 	}
 
 	err = <-done
+	for _, file := range intermediates {
+		err := os.Remove(file)
+		if err != nil {
+			return err
+		}
+	}
 	return err
 }
 
@@ -157,6 +164,7 @@ func Merge(videos ...string) error {
 		log.Fatal(err.Error())
 	}
 	nonAsync.Wait()
+
 	return nil
 }
 
