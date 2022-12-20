@@ -19,7 +19,7 @@ type Item struct {
 	Platform         string `json:"platform"`
 	AppVisible       bool   `json:"app_visible"`
 	ItemID           int    `json:"itemId"`
-	UpdateTime       string `json:"update_time"`
+	UpdateTime       int64  `json:"update_time"`
 	VersionName      string `json:"version_name,omitempty"`
 	Channels         []struct {
 		Channel     string `json:"channel"`
@@ -87,11 +87,12 @@ const (
 	OneR  Camera = "insta360-oner"
 	OneX  Camera = "insta360-onex"
 	OneX2 Camera = "insta360-onex2"
+	OneX3 Camera = "insta360-x3"
 	Go2   Camera = "insta360-go2"
 )
 
 func (e Camera) String() string {
-	extensions := [...]string{"insta360-oner", "insta360-onex", "insta360-onex2", "insta360-go2"}
+	extensions := [...]string{"insta360-oner", "insta360-onex", "insta360-onex2", "insta360-go2", "insta360-x3"}
 
 	x := string(e)
 	for _, v := range extensions {
@@ -113,6 +114,8 @@ func CameraGet(s string) (Camera, error) {
 		return OneX, nil
 	case Go2.String():
 		return Go2, nil
+	case OneX3.String():
+		return OneX3, nil
 	}
 	return OneX, fmt.Errorf("camera %s is not supported", s)
 }
