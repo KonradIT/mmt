@@ -3,8 +3,10 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // FFprobe command wrapper
@@ -22,6 +24,13 @@ type VideoSizeResponse struct {
 	} `json:"streams"`
 }
 
+type FramesResponse struct {
+	Programs []interface{} `json:"programs"`
+	Streams  []struct {
+		Frames int `json:"nb_frames,string"`
+	} `json:"streams"`
+}
+
 func NewFFprobe(path *string) FFprobe {
 	ff := FFprobe{}
 	if path == nil {
@@ -32,12 +41,12 @@ func NewFFprobe(path *string) FFprobe {
 	return ff
 }
 
-func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
+func (f *FFprobe) executeGetInfo(path string, entries ...string) ([]byte, error) {
 	args := []string{
 		"-select_streams",
 		"v:0",
 		"-show_entries",
-		"stream=width,height,r_frame_rate",
+		fmt.Sprintf("stream=%s", strings.Join(entries, ",")),
 		"-of",
 		"json",
 		path,
@@ -53,9 +62,29 @@ func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	return out.Bytes(), nil
+}
 
+func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
 	result := VideoSizeResponse{}
-	err = json.Unmarshal(out.Bytes(), &result)
+	out, err := f.executeGetInfo(path, "width", "height", "r_frame_rate")
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(out, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (f *FFprobe) Frames(path string) (*FramesResponse, error) {
+	result := FramesResponse{}
+	out, err := f.executeGetInfo(path, "nb_frames")
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(out, &result)
 	if err != nil {
 		return nil, err
 	}
