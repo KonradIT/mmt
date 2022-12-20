@@ -342,11 +342,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 					}
 
 					d := getFileTime(osPathname, false)
-					mediaDate := d.Format("02-01-2006")
-
-					if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-						mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
-					}
+					mediaDate := getMediaDate(d, sortoptions)
 
 					if len(sortoptions.DateRange) == 2 {
 						start := sortoptions.DateRange[0]
@@ -359,17 +355,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						}
 					}
 
-					dayFolder := filepath.Join(output, mediaDate)
-					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						_ = os.Mkdir(dayFolder, 0755)
-					}
-
-					if sortoptions.ByCamera {
-						if _, err := os.Stat(filepath.Join(dayFolder, "MAX")); os.IsNotExist(err) {
-							_ = os.Mkdir(filepath.Join(dayFolder, "MAX"), 0755)
-						}
-						dayFolder = filepath.Join(dayFolder, "MAX")
-					}
+					dayFolder := getDayFolder("MAX", output, sortoptions, mediaDate)
 
 					switch ftype.Type {
 					case Video:
@@ -555,10 +541,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 
 					d := getFileTime(osPathname, false)
 
-					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-						mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
-					}
+					mediaDate := getMediaDate(d, sortoptions)
 
 					if len(sortoptions.DateRange) == 2 {
 						start := sortoptions.DateRange[0]
@@ -571,17 +554,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 						}
 					}
 
-					dayFolder := filepath.Join(output, mediaDate)
-					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						_ = os.Mkdir(dayFolder, 0755)
-					}
-
-					if sortoptions.ByCamera {
-						if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-							_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
-						}
-						dayFolder = filepath.Join(dayFolder, cameraName)
-					}
+					dayFolder := getDayFolder(cameraName, output, sortoptions, mediaDate)
 
 					switch ftype.Type {
 					case Video:
@@ -767,10 +740,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 
 					d := getFileTime(osPathname, true)
 
-					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-						mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
-					}
+					mediaDate := getMediaDate(d, sortoptions)
 
 					if len(sortoptions.DateRange) == 2 {
 						start := sortoptions.DateRange[0]
@@ -783,17 +753,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 						}
 					}
 
-					dayFolder := filepath.Join(output, mediaDate)
-					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						_ = os.Mkdir(dayFolder, 0755)
-					}
-
-					if sortoptions.ByCamera {
-						if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-							_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
-						}
-						dayFolder = filepath.Join(dayFolder, cameraName)
-					}
+					dayFolder := getDayFolder(cameraName, output, sortoptions, mediaDate)
 
 					switch ftype.Type {
 					case Video:
@@ -1013,4 +973,54 @@ func getFileTime(osPathname string, utcFix bool) time.Time {
 		d, _ = time.Parse(time.UnixDate, newTime)
 	}
 	return d
+}
+
+func getDayFolder(cameraName string, output string, sortoptions SortOptions, mediaDate string) string {
+	dayFolder := filepath.Join(output, mediaDate)
+	if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
+		_ = os.Mkdir(dayFolder, 0755)
+	}
+
+	if sortoptions.ByCamera {
+		if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
+			_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
+		}
+		dayFolder = filepath.Join(dayFolder, cameraName)
+	}
+        return dayFolder
+}
+
+func getMediaDate(d time.Time, sortoptions SortOptions) string {
+	mediaDate := d.Format("02-01-2006")
+	if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
+		mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+	}
+        return mediaDate
+}
+
+func parse(folder string, name string, osPathname string, sortoptions SortOptions, result utils.Result) utils.Result {
+	if _, err := os.Stat(folder); os.IsNotExist(err) {
+		err = os.MkdirAll(folder, 0755)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
+
+	color.Green(">>> %s", name)
+
+        err := utils.CopyFile(osPathname, filepath.Join(folder, name), sortoptions.BufferSize)
+	if err != nil {
+		result.Errors = append(result.Errors, err)
+		result.FilesNotImported = append(result.FilesNotImported, osPathname)
+	} else {
+		result.FilesImported += 1
+	}
+        return result
+}
+
+func unsupported(de *godirwalk.Dirent, osPathname string, result utils.Result) utils.Result {
+	color.Red("Unsupported file %s", de.Name())
+	result.Errors = append(result.Errors, errors.New("Unsupported file "+de.Name()))
+	result.FilesNotImported = append(result.FilesNotImported, osPathname)
+        return result
 }
