@@ -247,8 +247,10 @@ func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, erro
 				if err != nil {
 					log.Fatal(err.Error())
 				}
+
 				wg.Add(1)
 				bar := getNewBar(progressBar, int64(total), goprofile.N)
+
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 					x := goprofile.N
