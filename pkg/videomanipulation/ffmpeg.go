@@ -18,14 +18,24 @@ import (
 	"github.com/xfrr/goffmpeg/transcoder"
 )
 
-var trans *transcoder.Transcoder
+type VMan struct {
+	trans *transcoder.Transcoder
+}
 
-func New() {
-	trans = new(transcoder.Transcoder)
+// FFmpeg params
+const (
+	Copy   = "copy"
+	MpegTS = "mpegts"
+)
+
+func New() *VMan {
+	v := new(VMan)
+	v.trans = new(transcoder.Transcoder)
 	conf, _ := ffmpeg.Configure()
 	conf.FfprobeBin = strings.Trim(conf.FfprobeBin, "\r")
 	conf.FfmpegBin = strings.Trim(conf.FfmpegBin, "\r")
-	trans.SetConfiguration(conf)
+	v.trans.SetConfiguration(conf)
+	return v
 }
 
 func getBar(progressBar *mpb.Progress, total int, name string) *mpb.Bar {
@@ -42,38 +52,63 @@ func getBar(progressBar *mpb.Progress, total int, name string) *mpb.Bar {
 	)
 }
 
+func (v *VMan) NewDefaultConfig() FFConfig {
+	return FFConfig{
+		UseHWAccel: true,
+		AudioCodec: Copy,
+		VideoCodec: Copy,
+		OutArgs:    []string{"-bsf:v", "h264_mp4toannexb"},
+		OutFormat:  MpegTS,
+	}
+}
+
+type FFConfig struct {
+	UseHWAccel             bool
+	AudioCodec, VideoCodec string
+	InArgs, OutArgs        []string
+	OutFormat              string
+}
+
+func getIntermediateFilename(video string) string {
+	return strings.Replace(video, ".MP4", ".ts", -1)
+}
+
+func getMergedOutputFilename(video string) string {
+	return filepath.Join(filepath.Dir(video),
+		fmt.Sprintf("%s-merged%s", strings.Replace(filepath.Base(video), filepath.Ext(video), "", -1), filepath.Ext(video)),
+	)
+}
+
 //nolint:golint,unused,errcheck
-func merge(bar *mpb.Bar, videos ...string) error {
-	err := trans.InitializeEmptyTranscoder()
+func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...string) error {
+	err := v.trans.InitializeEmptyTranscoder()
 	if err != nil {
 		return err
 	}
 
-	trans.MediaFile().SetRawInputArgs([]string{"-hwaccel", "cuda"})
-	intermediates := []string{}
-
-	for _, x := range videos {
-		intermediates = append(intermediates, strings.Replace(x, ".MP4", ".ts", -1))
+	if ffConfig.UseHWAccel {
+		v.trans.MediaFile().SetRawInputArgs([]string{"-hwaccel", "cuda"})
 	}
-	err = trans.SetInputPath(fmt.Sprintf("concat:%s",
-		strings.Join(intermediates, "|"),
+
+	err = v.trans.SetInputPath(fmt.Sprintf("concat:%s",
+		strings.Join(videos, "|"),
 	),
 	)
 	if err != nil {
 		return err
 	}
 
-	err = trans.SetOutputPath(
-		strings.Replace(videos[0], "-01.MP4", "-merged.MP4", -1))
+	err = v.trans.SetOutputPath(
+		output)
 	if err != nil {
 		return err
 	}
-	trans.MediaFile().SetVideoCodec("copy")
-	trans.MediaFile().SetAudioCodec("copy")
+	v.trans.MediaFile().SetVideoCodec(ffConfig.VideoCodec)
+	v.trans.MediaFile().SetAudioCodec(ffConfig.AudioCodec)
 
-	done := trans.Run(true)
+	done := v.trans.Run(true)
 
-	progress := trans.Output()
+	progress := v.trans.Output()
 
 	for msg := range progress {
 		s, _ := strconv.Atoi(msg.FramesProcessed)
@@ -81,7 +116,7 @@ func merge(bar *mpb.Bar, videos ...string) error {
 	}
 
 	err = <-done
-	for _, file := range intermediates {
+	for _, file := range videos {
 		err := os.Remove(file)
 		if err != nil {
 			return err
@@ -91,31 +126,33 @@ func merge(bar *mpb.Bar, videos ...string) error {
 }
 
 //nolint:golint,unused,errcheck
-func convert(video string, bar *mpb.Bar) error {
-	err := trans.InitializeEmptyTranscoder()
+func (v *VMan) convert(video, output string, bar *mpb.Bar, ffConfig FFConfig) error {
+	err := v.trans.InitializeEmptyTranscoder()
 	if err != nil {
 		return err
 	}
 
-	trans.MediaFile().SetRawInputArgs([]string{"-hwaccel", "cuda"})
-	err = trans.SetInputPath(video)
+	if ffConfig.UseHWAccel {
+		v.trans.MediaFile().SetRawInputArgs([]string{"-hwaccel", "cuda"})
+	}
+	err = v.trans.SetInputPath(video)
 	if err != nil {
 		return err
 	}
 
-	err = trans.SetOutputPath(
-		strings.Replace(video, ".MP4", ".ts", -1))
+	err = v.trans.SetOutputPath(
+		output)
 	if err != nil {
 		return err
 	}
-	trans.MediaFile().SetVideoCodec("copy")
-	trans.MediaFile().SetAudioCodec("copy")
-	trans.MediaFile().SetRawOutputArgs([]string{"-bsf:v", "h264_mp4toannexb"})
-	trans.MediaFile().SetOutputFormat("mpegts")
+	v.trans.MediaFile().SetVideoCodec(ffConfig.VideoCodec)
+	v.trans.MediaFile().SetAudioCodec(ffConfig.AudioCodec)
+	v.trans.MediaFile().SetRawOutputArgs(ffConfig.OutArgs)
+	v.trans.MediaFile().SetOutputFormat(ffConfig.OutFormat)
 
-	done := trans.Run(true)
+	done := v.trans.Run(true)
 
-	progress := trans.Output()
+	progress := v.trans.Output()
 
 	for msg := range progress {
 		s, _ := strconv.Atoi(msg.FramesProcessed)
@@ -126,7 +163,7 @@ func convert(video string, bar *mpb.Bar) error {
 	return err
 }
 
-func Merge(videos ...string) error {
+func (v *VMan) Merge(videos ...string) error {
 	var wg sync.WaitGroup
 	p := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
@@ -134,6 +171,7 @@ func Merge(videos ...string) error {
 	nfiles := len(videos)
 
 	totalFrames := 0
+	intermediates := []string{}
 	for i := 0; i < nfiles; i++ {
 		ffprobe := utils.NewFFprobe(nil)
 
@@ -142,12 +180,15 @@ func Merge(videos ...string) error {
 			return err
 		}
 		totalFrames += head.Streams[0].Frames
-		bar := getBar(p, head.Streams[0].Frames, filepath.Base(videos[i]))
+
+		bar := getBar(p, head.Streams[0].Frames, fmt.Sprintf("%s%s", "✂️", filepath.Base(videos[i])))
 
 		wg.Add(1)
 		go func(current int) {
 			defer wg.Done()
-			err := convert(videos[current], bar)
+			intermediate := getIntermediateFilename(videos[current])
+			intermediates = append(intermediates, intermediate)
+			err := v.convert(videos[current], intermediate, bar, v.NewDefaultConfig())
 			if err != nil {
 				log.Fatal(err.Error())
 			}
@@ -158,8 +199,9 @@ func Merge(videos ...string) error {
 	nonAsync := mpb.New(
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
-	newBar := getBar(nonAsync, totalFrames, "Merging")
-	err := merge(newBar, videos...)
+	newBar := getBar(nonAsync, totalFrames, fmt.Sprintf("%s%s", "🐈", filepath.Base(videos[0])))
+
+	err := v.merge(getMergedOutputFilename(videos[0]), newBar, v.NewDefaultConfig(), intermediates...)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -169,25 +211,25 @@ func Merge(videos ...string) error {
 }
 
 //nolint:golint,unused,errcheck
-func extractGPMF(input string) (*[]byte, error) {
-	err := trans.InitializeEmptyTranscoder()
+func (v *VMan) extractGPMF(input string) (*[]byte, error) {
+	err := v.trans.InitializeEmptyTranscoder()
 	if err != nil {
 		return nil, err
 	}
 
-	err = trans.SetInputPath(input)
+	err = v.trans.SetInputPath(input)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := trans.CreateOutputPipe("rawvideo")
+	r, err := v.trans.CreateOutputPipe("rawvideo")
 	if err != nil {
 		return nil, err
 	}
 
-	trans.MediaFile().SetRawOutputArgs([]string{"-map", "0:3"})
-	trans.MediaFile().SetOutputFormat("rawvideo")
-	trans.MediaFile().SetVideoCodec("copy")
+	v.trans.MediaFile().SetRawOutputArgs([]string{"-map", "0:3"})
+	v.trans.MediaFile().SetOutputFormat("rawvideo")
+	v.trans.MediaFile().SetVideoCodec("copy")
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -205,7 +247,7 @@ func extractGPMF(input string) (*[]byte, error) {
 		extractError <- err
 	}()
 
-	done := trans.Run(false)
+	done := v.trans.Run(false)
 
 	err = <-done
 	if err != nil {

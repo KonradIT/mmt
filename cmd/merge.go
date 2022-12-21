@@ -10,9 +10,9 @@ var mergeCmd = &cobra.Command{
 	Use:   "merge",
 	Short: "Merge two or more videos together",
 	Run: func(cmd *cobra.Command, args []string) {
-		videomanipulation.New()
+		videoMan := videomanipulation.New()
 		videos := getFlagSlice(cmd, "input")
-		err := videomanipulation.Merge(videos...)
+		err := videoMan.Merge(videos...)
 		if err != nil {
 			cui.Error(err.Error())
 		}
@@ -21,5 +21,5 @@ var mergeCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(mergeCmd)
-	updateCmd.Flags().StringSlice("input", []string{}, "List of files to merge")
+	mergeCmd.Flags().StringSlice("input", []string{}, "File to merge")
 }
