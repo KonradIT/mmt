@@ -115,7 +115,6 @@ func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...s
 }
 
 func (v *VMan) Merge(bar *mpb.Bar, videos ...string) error {
-
 	mergeConfig := v.NewDefaultConfig()
 	mergeConfig.InArgs = append(mergeConfig.InArgs, []string{"-f", "concat", "-safe", "0"}...)
 	mergeConfig.OutArgs = append(mergeConfig.OutArgs, []string{"-map", "0:0", "-map", "0:1", "-map", "0:3"}...)
