@@ -13,8 +13,8 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
-  "github.com/vbauerster/mpb/v8"
 	mErrors "github.com/konradit/mmt/pkg/errors"
+	"github.com/vbauerster/mpb/v8"
 )
 
 type Camera int
