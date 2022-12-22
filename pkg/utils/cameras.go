@@ -13,6 +13,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
+  "github.com/vbauerster/mpb/v8"
 	mErrors "github.com/konradit/mmt/pkg/errors"
 )
 
@@ -189,7 +190,7 @@ func (wc WriteCounter) PrintProgress() {
 	fmt.Printf("\rDownloading... %s complete", humanize.Bytes(wc.Total))
 }
 
-func DownloadFile(filepath string, url string) error {
+func DownloadFile(filepath string, url string, progressbar *mpb.Bar) error {
 	// Create the file, but give it a tmp file extension, this means we won't overwrite a
 	// file until it's downloaded, but we'll remove the tmp extension once downloaded.
 	out, err := os.Create(filepath + ".tmp")
@@ -205,13 +206,21 @@ func DownloadFile(filepath string, url string) error {
 	}
 	defer resp.Body.Close()
 
-	// Create our progress reporter and pass it to be used alongside our writer
-	counter := &WriteCounter{}
-	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
-		out.Close()
-		return err
-	}
+	if progressbar != nil {
+		proxyReader := progressbar.ProxyReader(resp.Body)
+		defer proxyReader.Close()
 
+		if _, err = io.Copy(out, proxyReader); err != nil {
+			out.Close()
+			return err
+		}
+	} else {
+		counter := &WriteCounter{}
+		if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
+			out.Close()
+			return err
+		}
+	}
 	// The progress use the same line so print a new line once it's finished downloading
 	fmt.Print("\n")
 

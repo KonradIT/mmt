@@ -119,8 +119,8 @@ type goProMediaList struct {
 			Ls   string        `json:"ls,omitempty"`
 			S    string        `json:"s"`
 			G    string        `json:"g,omitempty"`
-			B    string        `json:"b,omitempty"`
-			L    string        `json:"l,omitempty"`
+			B    int           `json:"b,string,omitempty"`
+			L    int           `json:"l,string,omitempty"`
 			T    string        `json:"t,omitempty"`
 			M    []interface{} `json:"m,omitempty"`
 			Raw  string        `json:"raw,omitempty"`
