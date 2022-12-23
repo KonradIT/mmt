@@ -215,7 +215,16 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}
 					}
 
-					dayFolder := filepath.Join(out, mediaDate)
+					location := "NoLocation"
+					locationFromFile, locerr := GetLocation(osPathname)
+					if locerr == nil {
+						reverseLocation, reverseerr := utils.ReverseLocation(*locationFromFile)
+						if reverseerr == nil {
+							location = reverseLocation
+						}
+					}
+
+					dayFolder := filepath.Join(out, mediaDate, location)
 					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
 						_ = os.Mkdir(dayFolder, 0755)
 					}

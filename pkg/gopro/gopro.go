@@ -189,6 +189,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	dateEnd := time.Now()
 
 	byCamera := false
+	byLocation := false
 
 	sortByOptions, found := cameraOptions["sort_by"]
 	if found {
@@ -196,8 +197,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			if sortop == "camera" {
 				byCamera = true
 			}
+			if sortop == "location" {
+				byLocation = true
+			}
 
-			if sortop != "camera" && sortop != "days" {
+			if sortop != "camera" && sortop != "days" && sortop != "location" {
 				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
 			}
 		}
@@ -240,6 +244,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		SkipAuxiliaryFiles: skipAux,
 		AddHiLightTags:     true,
 		ByCamera:           byCamera,
+		ByLocation:         byLocation,
 		DateFormat:         dateFormat,
 		BufferSize:         bufferSize,
 		Prefix:             prefix,
@@ -355,7 +360,8 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						}
 					}
 
-					dayFolder := getDayFolder("MAX", output, sortoptions, mediaDate)
+					location := getLocation(osPathname)
+					dayFolder := getDayFolder("MAX", output, mediaDate, location, sortoptions)
 
 					switch ftype.Type {
 					case Video:
@@ -475,7 +481,8 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 						}
 					}
 
-					dayFolder := getDayFolder(cameraName, output, sortoptions, mediaDate)
+					location := getLocation(osPathname)
+					dayFolder := getDayFolder(cameraName, output, mediaDate, location, sortoptions)
 
 					switch ftype.Type {
 					case Video:
@@ -587,7 +594,8 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 						}
 					}
 
-					dayFolder := getDayFolder(cameraName, output, sortoptions, mediaDate)
+					location := getLocation(osPathname)
+					dayFolder := getDayFolder(cameraName, output, mediaDate, location, sortoptions)
 
 					switch ftype.Type {
 					case Video:
@@ -702,10 +710,30 @@ func getFileTime(osPathname string, utcFix bool) time.Time {
 	return d
 }
 
-func getDayFolder(cameraName string, output string, sortoptions SortOptions, mediaDate string) string {
+func getLocation(file string) string {
+	location := "NoLocation"
+	locationFromFile, locerr := GetLocation(file)
+	if locerr == nil {
+		reverseLocation, reverseerr := utils.ReverseLocation(*locationFromFile)
+		if reverseerr == nil {
+			location = reverseLocation
+		}
+	}
+	return location
+}
+
+func getDayFolder(cameraName, output, mediaDate, location string, sortoptions SortOptions) string {
+	// date + location + device
 	dayFolder := filepath.Join(output, mediaDate)
 	if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
 		_ = os.Mkdir(dayFolder, 0755)
+	}
+
+	if sortoptions.ByLocation {
+		if _, err := os.Stat(filepath.Join(dayFolder, location)); os.IsNotExist(err) {
+			_ = os.Mkdir(filepath.Join(dayFolder, location), 0755)
+		}
+		dayFolder = filepath.Join(dayFolder, location)
 	}
 
 	if sortoptions.ByCamera {

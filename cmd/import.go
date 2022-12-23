@@ -54,7 +54,7 @@ var importCmd = &cobra.Command{
 				customCameraOpts["skip_aux"] = skipAuxFiles
 				sortBy := getFlagSlice(cmd, "sort_by")
 				if len(sortBy) == 0 {
-					customCameraOpts["sort_by"] = []string{"camera"}
+					customCameraOpts["sort_by"] = []string{"camera", "location"}
 				}
 
 				connection := getFlagString(cmd, "connection")
@@ -107,7 +107,7 @@ func init() {
 	// GoPro-specific options
 
 	importCmd.Flags().StringP("skip_aux", "s", "", "GoPro: skip auxiliary files (THM, LRV)")
-	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera` and/or `days`")
+	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera`, `location` and/or `days`")
 }
 
 func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, camOpts map[string]interface{}) (*utils.Result, error) {
