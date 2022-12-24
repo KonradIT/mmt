@@ -6,7 +6,7 @@ import (
 	"github.com/rwcarlsen/goexif/exif"
 )
 
-func LocationFromPhoto(photoPath string) (*Location, error) {
+func LocationFromEXIF(photoPath string) (*Location, error) {
 	f, err := os.Open(photoPath)
 	if err != nil {
 		return nil, err

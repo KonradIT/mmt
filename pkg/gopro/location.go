@@ -22,7 +22,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	case strings.Contains(path, ".MP4"):
 		return fromMP4(path)
 	case strings.Contains(path, ".JPG"):
-		return utils.LocationFromPhoto(path)
+		return utils.LocationFromEXIF(path)
 	default:
 		return nil, errInvalidFile
 	}
