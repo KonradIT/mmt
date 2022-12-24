@@ -48,7 +48,7 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 		return nil, err
 	}
 
-	var latAsFloat, lonAsFloat = float64(0), float64(0)
+	latAsFloat, lonAsFloat := float64(0), float64(0)
 
 	for _, drone := range allDrones {
 		latMatches := drone.Latitude.FindAllStringSubmatch(string(content), -1)

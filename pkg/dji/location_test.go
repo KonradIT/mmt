@@ -59,6 +59,5 @@ func TestParseSRT(t *testing.T) {
 			require.NotEqual(t, returned.Latitude, returned.Longitude)
 			fmt.Printf("\n\treturned: %f %f\n", returned.Latitude, returned.Longitude)
 		}
-
 	}
 }
