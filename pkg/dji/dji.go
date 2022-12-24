@@ -1,7 +1,6 @@
 package dji
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,32 +28,7 @@ var locationService = LocationService{}
 
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
-	byCamera := false
-	byLocation := false
-
-	sortByOptions, found := cameraOptions["sort_by"]
-	if found {
-		for _, sortop := range sortByOptions.([]string) {
-			if sortop == "camera" {
-				byCamera = true
-			}
-			if sortop == "location" {
-				byLocation = true
-			}
-
-			if sortop != "camera" && sortop != "days" && sortop != "location" {
-				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
-			}
-		}
-	}
-
-	sortOptions := utils.SortOptions{
-		ByCamera:   byCamera,
-		ByLocation: byLocation,
-		DateFormat: dateFormat,
-		BufferSize: bufferSize,
-		Prefix:     prefix,
-	}
+	sortOptions := utils.ParseCliOptions(cameraOptions)
 
 	di, err := disk.GetInfo(in)
 	if err != nil {

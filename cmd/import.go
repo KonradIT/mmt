@@ -64,6 +64,7 @@ var importCmd = &cobra.Command{
 				}
 				customCameraOpts["connection"] = connection
 			case utils.DJI:
+			case utils.Android:
 				sortBy := getFlagSlice(cmd, "sort_by")
 				if len(sortBy) == 0 {
 					customCameraOpts["sort_by"] = []string{"camera", "location"}
@@ -125,7 +126,7 @@ func importFromCamera(c utils.Camera, input string, output string, dateFormat st
 	case utils.Insta360:
 		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
 	case utils.Android:
-		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
+		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	default:
 		return nil, errors.New("Unsupported camera")
 	}
