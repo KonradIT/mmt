@@ -13,5 +13,7 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.18
+    - uses: FedericoCarboni/setup-ffmpeg@v2
+      id: setup-ffmpeg
     - name: Test
       run: go test -v -race ./...
