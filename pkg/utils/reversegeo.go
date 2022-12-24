@@ -25,7 +25,7 @@ func fallbackFromConfig() string {
 
 func orderFromConfig() []string {
 	key := "location.order"
-	viper.SetDefault(key, []string{"date", "location", "device"})
+	viper.SetDefault(key, []string{"date", "location", "camera"})
 	return viper.GetStringSlice(key)
 }
 

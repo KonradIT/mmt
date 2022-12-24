@@ -63,8 +63,7 @@ var importCmd = &cobra.Command{
 					connection = "sd_card"
 				}
 				customCameraOpts["connection"] = connection
-			case utils.DJI:
-			case utils.Android:
+			case utils.DJI, utils.Android:
 				sortBy := getFlagSlice(cmd, "sort_by")
 				if len(sortBy) == 0 {
 					customCameraOpts["sort_by"] = []string{"camera", "location"}
@@ -110,11 +109,11 @@ func init() {
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
 	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
+	importCmd.Flags().StringSlice("sort_by", []string{}, "Sort files by: `camera`, `location`")
 
 	// GoPro-specific options
 
 	importCmd.Flags().StringP("skip_aux", "s", "", "GoPro: skip auxiliary files (THM, LRV)")
-	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera`, `location` and/or `days`")
 }
 
 func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, camOpts map[string]interface{}) (*utils.Result, error) {
