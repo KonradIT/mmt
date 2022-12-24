@@ -133,6 +133,11 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 		return nil, err
 	}
 
+	_, err = os.Stat(input)
+	if err != nil {
+		return nil, err
+	}
+
 	err = v.trans.SetInputPath(input)
 	if err != nil {
 		return nil, err

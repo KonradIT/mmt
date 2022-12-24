@@ -153,7 +153,7 @@ func (rc *ResultCounter) Get() utils.Result {
 		Errors:           rc.Errors,
 	}
 }
-func ImportConnect(in, out string, sortOptions SortOptions) (*utils.Result, error) {
+func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result, error) {
 	var verType Type
 	var result utils.Result
 	ipAddress = in

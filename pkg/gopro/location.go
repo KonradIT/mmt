@@ -13,8 +13,11 @@ import (
 
 var errNoGPS = errors.New("No GPS(5) data found")
 var errInvalidFile = errors.New("file invalid (not MP4 or JPG)")
+var noGPSFix = 9999
 
-func GetLocation(path string) (*utils.Location, error) {
+type LocationService struct{}
+
+func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	switch true {
 	case strings.Contains(path, ".MP4"):
 		return fromMP4(path)
@@ -56,6 +59,9 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 
 		telems := lastEvent.ShitJson()
 		for _, telem := range telems {
+			if telem.Latitude == 0 && telem.Longitude == 0 || telem.GpsAccuracy == uint16(noGPSFix) {
+				continue
+			}
 			return &utils.Location{
 				Latitude:  telem.Latitude,
 				Longitude: telem.Longitude,

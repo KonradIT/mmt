@@ -24,4 +24,4 @@
 /Godeps/
 
 # End of https://www.toptal.com/developers/gitignore/api/go
-*test.go
+/*test.go

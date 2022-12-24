@@ -1,6 +1,7 @@
 package dji
 
 import (
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,14 +19,42 @@ import (
 	"gopkg.in/djherbis/times.v1"
 )
 
-var DeviceName = "DJI Device"
+var deviceName = "DJI Device"
 
 func getDeviceName() string {
-	return DeviceName
+	return deviceName
 }
 
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
+var locationService = LocationService{}
+
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
+	byCamera := false
+	byLocation := false
+
+	sortByOptions, found := cameraOptions["sort_by"]
+	if found {
+		for _, sortop := range sortByOptions.([]string) {
+			if sortop == "camera" {
+				byCamera = true
+			}
+			if sortop == "location" {
+				byLocation = true
+			}
+
+			if sortop != "camera" && sortop != "days" && sortop != "location" {
+				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
+			}
+		}
+	}
+
+	sortOptions := utils.SortOptions{
+		ByCamera:   byCamera,
+		ByLocation: byLocation,
+		DateFormat: dateFormat,
+		BufferSize: bufferSize,
+		Prefix:     prefix,
+	}
 
 	di, err := disk.GetInfo(in)
 	if err != nil {
@@ -44,8 +73,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if err != nil {
 		return nil, err
 	}
-
-	panoramaFolder := "PANORAMA"
 
 	fileTypes := []FileTypeMatch{
 		{
@@ -84,75 +111,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	}
 
 	for _, f := range folders {
-		if f.Name() == panoramaFolder { //nolint
-			panoramaBatches, err := ioutil.ReadDir(filepath.Join(root, panoramaFolder))
-			if err != nil {
-				result.Errors = append(result.Errors, err)
-				return &result, nil
-			}
-
-			for _, panoramaID := range panoramaBatches {
-				t, err := times.Stat(filepath.Join(root, panoramaFolder, panoramaID.Name()))
-				if err != nil {
-					log.Fatal(err.Error())
-					continue
-				}
-				d := t.ModTime()
-				// check if is in date range
-				replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
-
-				if len(dateRange) == 1 {
-					dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-					dateEnd := time.Now()
-					switch dateRange[0] {
-					case "today":
-						dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-					case "yesterday":
-						dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
-					case "week":
-						dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-					}
-
-					if d.Before(dateStart) {
-						continue
-					}
-					if d.After(dateEnd) {
-						continue
-					}
-				}
-
-				if len(dateRange) == 2 {
-					layout := replacer.Replace(dateFormat)
-					start, err1 := time.Parse(layout, dateRange[0])
-					end, err2 := time.Parse(layout, dateRange[1])
-					if err1 == nil && err2 == nil {
-						if d.Before(start) {
-							continue
-						}
-						if d.After(end) {
-							continue
-						}
-					}
-				}
-				mediaDate := d.Format("02-01-2006")
-				if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
-					mediaDate = d.Format(replacer.Replace(dateFormat))
-				}
-
-				dayFolder := filepath.Join(out, mediaDate, getDeviceName(), "photos/panoramas")
-				if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-					_ = os.Mkdir(dayFolder, 0755)
-				}
-				err = utils.CopyDir(filepath.Join(root, panoramaFolder, panoramaID.Name()), filepath.Join(dayFolder, panoramaID.Name()), bufferSize)
-				if err != nil {
-					result.Errors = append(result.Errors, err)
-					result.FilesNotImported = append(result.FilesNotImported, panoramaID.Name())
-				} else {
-					result.FilesImported++
-				}
-			}
-		}
-
 		r := mediaFolderRegex.MatchString(f.Name())
 		if !r {
 			continue
@@ -215,25 +173,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}
 					}
 
-					location := "NoLocation"
-					locationFromFile, locerr := GetLocation(osPathname)
-					if locerr == nil {
-						reverseLocation, reverseerr := utils.ReverseLocation(*locationFromFile)
-						if reverseerr == nil {
-							location = reverseLocation
-						}
-					}
-
-					dayFolder := filepath.Join(out, mediaDate, location)
-					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						_ = os.Mkdir(dayFolder, 0755)
-					}
-
-					if _, err := os.Stat(filepath.Join(dayFolder, getDeviceName())); os.IsNotExist(err) {
-						_ = os.Mkdir(filepath.Join(dayFolder, getDeviceName()), 0755)
-					}
-					dayFolder = filepath.Join(dayFolder, getDeviceName())
-
+					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, getDeviceName())
 					switch ftype.Type {
 					case Photo:
 
@@ -285,9 +225,9 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						if is {
 							s = matchDeviceName
 						}
-						_ = os.Rename(dayFolder, strings.Replace(dayFolder, DeviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
+						_ = os.Rename(dayFolder, strings.Replace(dayFolder, deviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
 
-						DeviceName = s
+						deviceName = s
 					case Video, Subtitle:
 
 						x := de.Name()

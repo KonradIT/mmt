@@ -15,6 +15,7 @@ require (
 	github.com/minio/minio v0.0.0-20210220233218-48b212dd8e96
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/posener/gitfs v1.2.1 // indirect
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/shirou/gopsutil v3.21.7+incompatible
 	github.com/spf13/cobra v1.1.3
