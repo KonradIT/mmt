@@ -256,7 +256,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							filepath.Join(unsorted, origFilename),
 							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
 							bar)
-						if err != nil {
+						if err != nil { //nolint:nestif
 							inlineCounter.SetFailure(err, origFilename)
 						} else {
 							inlineCounter.SetSuccess()
@@ -304,7 +304,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
 							bar,
 						)
-						if err != nil {
+						if err != nil { //nolint:nestif
 							inlineCounter.SetFailure(err, origFilename)
 						} else {
 							inlineCounter.SetSuccess()
@@ -399,7 +399,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
 								multiShotBar,
 							)
-							if err != nil {
+							if err != nil { //nolint:nestif
 								inlineCounter.SetFailure(err, origFilename)
 							} else {
 								inlineCounter.SetSuccess()
