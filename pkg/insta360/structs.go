@@ -1,8 +1,9 @@
 package insta360
 
 import (
-	"fmt"
 	"regexp"
+
+	mErrors "github.com/konradit/mmt/pkg/errors"
 )
 
 type Metadata struct {
@@ -114,5 +115,5 @@ func CameraGet(s string) (Camera, error) {
 	case Go2.String():
 		return Go2, nil
 	}
-	return OneX, fmt.Errorf("camera %s is not supported", s)
+	return OneX, mErrors.ErrUnsupportedCamera(s)
 }

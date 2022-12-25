@@ -43,7 +43,7 @@ func CameraGet(s string) (Camera, error) {
 	case Android.toString():
 		return Android, nil
 	default:
-		return 10, mErrors.ErrUnsupportedCamera
+		return 10, mErrors.ErrUnsupportedCamera(s)
 	}
 }
 
@@ -318,7 +318,7 @@ func FindFolderInPath(entirePath, directory string) (string, error) {
 		return modified, nil
 	}
 	if entirePath == "." || modified == entirePath {
-		return "", fmt.Errorf("Unable to find %s", directory)
+		return "", mErrors.ErrNotFound(directory)
 	}
 	return FindFolderInPath(modified, directory)
 }

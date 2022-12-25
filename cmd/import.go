@@ -126,7 +126,6 @@ func importFromCamera(c utils.Camera, input string, output string, dateFormat st
 		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
 	case utils.Android:
 		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
-	default:
-		return nil, mErrors.ErrUnsupportedCamera
 	}
+	return nil, mErrors.ErrUnsupportedCamera("")
 }

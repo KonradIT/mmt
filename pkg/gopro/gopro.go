@@ -303,7 +303,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		result := importFromMAX(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions)
 		return &result, nil
 	default:
-		return nil, fmt.Errorf("Camera `%s` is not supported", gpVersion.CameraType)
+		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
 	}
 }
 
