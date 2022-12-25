@@ -310,3 +310,14 @@ func ParseCliOptions(cameraOptions map[string]interface{}) SortOptions {
 		ByLocation: byLocation,
 	}
 }
+
+func FindFolderInPath(entirePath, directory string) (string, error) {
+	modified := filepath.Dir(entirePath)
+	if filepath.Base(modified) == directory {
+		return modified, nil
+	}
+	if entirePath == "." || modified == entirePath {
+		return "", fmt.Errorf("Unable to find %s", directory)
+	}
+	return FindFolderInPath(modified, directory)
+}

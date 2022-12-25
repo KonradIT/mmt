@@ -37,9 +37,9 @@ type format1 struct{}
 
 func (format1) format(address *geo.Address) string {
 	if len(address.City) < 9 && address.State != "" {
-		return fmt.Sprintf("%s, %s, %s", address.City, address.State, address.Country)
+		return fmt.Sprintf("%s %s %s", address.City, address.State, address.Country)
 	}
-	return fmt.Sprintf("%s, %s", address.City, address.Country)
+	return fmt.Sprintf("%s %s", address.City, address.Country)
 }
 
 type format2 struct{}

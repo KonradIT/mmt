@@ -199,8 +199,13 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						if is {
 							s = matchDeviceName
 						}
-						_ = os.Rename(dayFolder, strings.Replace(dayFolder, deviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
 
+						modified, err := utils.FindFolderInPath(dayFolder, getDeviceName())
+						if err != nil {
+							log.Fatal(err.Error())
+							return godirwalk.SkipThis
+						}
+						_ = os.Rename(modified, strings.Replace(modified, deviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
 						deviceName = s
 					case Video, Subtitle:
 
