@@ -182,6 +182,8 @@ var MediaFolderRegex = regexp.MustCompile(`\d\d\dGOPRO`)
 
 var ffprobe = utils.NewFFprobe(nil)
 
+var locationService = LocationService{}
+
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	/* Import method using SD card bay or SD card reader */
 
@@ -189,6 +191,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	dateEnd := time.Now()
 
 	byCamera := false
+	byLocation := false
 
 	sortByOptions, found := cameraOptions["sort_by"]
 	if found {
@@ -196,8 +199,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			if sortop == "camera" {
 				byCamera = true
 			}
+			if sortop == "location" {
+				byLocation = true
+			}
 
-			if sortop != "camera" && sortop != "days" {
+			if sortop != "camera" && sortop != "days" && sortop != "location" {
 				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
 			}
 		}
@@ -236,10 +242,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if found {
 		skipAux = skipAuxOption.(bool)
 	}
-	sortOptions := SortOptions{
+	sortOptions := utils.SortOptions{
 		SkipAuxiliaryFiles: skipAux,
-		AddHiLightTags:     true,
 		ByCamera:           byCamera,
+		ByLocation:         byLocation,
 		DateFormat:         dateFormat,
 		BufferSize:         bufferSize,
 		Prefix:             prefix,
@@ -301,7 +307,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	}
 }
 
-func importFromMAX(root string, output string, sortoptions SortOptions) utils.Result {
+func importFromMAX(root string, output string, sortoptions utils.SortOptions) utils.Result {
 	fileTypes := FileTypeMatches[MAX]
 
 	var result utils.Result
@@ -355,7 +361,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 						}
 					}
 
-					dayFolder := getDayFolder("MAX", output, sortoptions, mediaDate)
+					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, "MAX")
 
 					switch ftype.Type {
 					case Video:
@@ -421,7 +427,7 @@ func importFromMAX(root string, output string, sortoptions SortOptions) utils.Re
 	return result
 }
 
-func importFromGoProV2(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
+func importFromGoProV2(root string, output string, sortoptions utils.SortOptions, cameraName string) utils.Result {
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
 	/*
@@ -475,13 +481,12 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 						}
 					}
 
-					dayFolder := getDayFolder(cameraName, output, sortoptions, mediaDate)
+					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
 					switch ftype.Type {
 					case Video:
 						x := de.Name()
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						color.Green(">>> %s", filename)
 						s, err := ffprobe.VideoSize(osPathname)
 						if err != nil {
 							log.Fatal(err.Error())
@@ -547,7 +552,7 @@ func importFromGoProV2(root string, output string, sortoptions SortOptions, came
 	return result
 }
 
-func importFromGoProV1(root string, output string, sortoptions SortOptions, cameraName string) utils.Result {
+func importFromGoProV1(root string, output string, sortoptions utils.SortOptions, cameraName string) utils.Result {
 	fileTypes := FileTypeMatches[V1]
 	var result utils.Result
 
@@ -587,7 +592,7 @@ func importFromGoProV1(root string, output string, sortoptions SortOptions, came
 						}
 					}
 
-					dayFolder := getDayFolder(cameraName, output, sortoptions, mediaDate)
+					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
 					switch ftype.Type {
 					case Video:
@@ -673,6 +678,7 @@ func readInfo(in string) (*Info, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer jsonFile.Close()
 	inBytes, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
 		return nil, err
@@ -702,22 +708,7 @@ func getFileTime(osPathname string, utcFix bool) time.Time {
 	return d
 }
 
-func getDayFolder(cameraName string, output string, sortoptions SortOptions, mediaDate string) string {
-	dayFolder := filepath.Join(output, mediaDate)
-	if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-		_ = os.Mkdir(dayFolder, 0755)
-	}
-
-	if sortoptions.ByCamera {
-		if _, err := os.Stat(filepath.Join(dayFolder, cameraName)); os.IsNotExist(err) {
-			_ = os.Mkdir(filepath.Join(dayFolder, cameraName), 0755)
-		}
-		dayFolder = filepath.Join(dayFolder, cameraName)
-	}
-	return dayFolder
-}
-
-func getMediaDate(d time.Time, sortoptions SortOptions) string {
+func getMediaDate(d time.Time, sortoptions utils.SortOptions) string {
 	mediaDate := d.Format("02-01-2006")
 	if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
 		mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
@@ -725,7 +716,7 @@ func getMediaDate(d time.Time, sortoptions SortOptions) string {
 	return mediaDate
 }
 
-func parse(folder string, name string, osPathname string, sortoptions SortOptions, result utils.Result) utils.Result {
+func parse(folder string, name string, osPathname string, sortoptions utils.SortOptions, result utils.Result) utils.Result {
 	if _, err := os.Stat(folder); os.IsNotExist(err) {
 		err = os.MkdirAll(folder, 0755)
 		if err != nil {

@@ -3,9 +3,12 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +34,14 @@ type FramesResponse struct {
 	} `json:"streams"`
 }
 
+type GPSLocation struct {
+	Format struct {
+		Tags struct {
+			Location string `json:"location"`
+		} `json:"tags"`
+	} `json:"format"`
+}
+
 func NewFFprobe(path *string) FFprobe {
 	ff := FFprobe{}
 	if path == nil {
@@ -39,6 +50,29 @@ func NewFFprobe(path *string) FFprobe {
 		ff.ProgramPath = *path
 	}
 	return ff
+}
+
+func (f *FFprobe) executeGetFormat(path string) ([]byte, error) {
+	args := []string{
+		"-select_streams",
+		"v:0",
+		"-show_format",
+		"-of",
+		"json",
+		path,
+	}
+	_, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(f.ProgramPath, args...) // #nosec
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err = cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }
 
 func (f *FFprobe) executeGetInfo(path string, entries ...string) ([]byte, error) {
@@ -89,4 +123,40 @@ func (f *FFprobe) Frames(path string) (*FramesResponse, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (f *FFprobe) GPSLocation(path string) (*Location, error) {
+	result := GPSLocation{}
+	out, err := f.executeGetFormat(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(out, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	baseCoordinates := regexp.MustCompile(`([+-]?(\d+\.?\d*)|(\.\d+))`)
+
+	parts := baseCoordinates.FindAllStringSubmatch(result.Format.Tags.Location, -1)
+
+	if len(parts) != 2 {
+		return nil, errors.New("Invalid coordinates format")
+	}
+
+	latitude, err := strconv.ParseFloat(parts[0][0], 32)
+	if err != nil {
+		return nil, err
+	}
+
+	longitude, err := strconv.ParseFloat(parts[1][0], 32)
+	if err != nil {
+		return nil, err
+	}
+
+	parsed := Location{
+		Latitude:  latitude,
+		Longitude: longitude,
+	}
+	return &parsed, nil
 }

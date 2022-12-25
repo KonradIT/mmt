@@ -20,7 +20,7 @@ Right now the script supports these cameras:
     - Fusion
     - HERO6 - HERO11
 -   Insta360: X2, GO2, X3
--   DJI: Osmo Pocket 1/2, Mavic (most of them)
+-   DJI: Osmo Pocket 1/2, DJI Osmo Action 1/2/3, Mavics, Minis
 -   Android: All, but with Pixel 6 (Google Camera) specific fixes
 
 Feel free to PR!
@@ -36,6 +36,9 @@ I plan have the tool read a directory, use a config file and act accordingly to 
 - Group *multi shots*/related files together, such as GoPro bursts, timelapses and Insta360 timelapse photos
 - Update camera firmware
 - Merge GoPro chaptered videos together
+- Sort files into folders depending on:
+  - Camera Name (eg: `HERO9 Black`, `Mavic Air 2`)
+  - Location (eg: `El Escorial, España`)
 
 ## Installing:
 
@@ -61,7 +64,29 @@ Download from the releases tab, additionally, a github action will run for every
 -   update - **updates your camera**
     -   `--input`: A directory pointing to your SD card, MTP or GoPro Connect not supported
     -   `--camera`: Type of device being updated. Values supported: `gopro, insta360`
+-   merge - **merges videos together**
+    -   `--input`: Files to merge. Specify multiple times
 -   list: - **list devices plugged in**
+
+## Configuration file:
+
+By default mmt will not use any config file, but you can change some aspects of the software only via this config file, as well put the values of the different CLI flags into the file to save time.
+
+The default location is: `~/.mmt.yaml`.
+
+```yaml
+input:
+camera:
+model:
+...
+location:
+  format: 1 # Different formats supported: 1 and 2 (default 1)
+  fallback: "NoLocation" # Leave empty to not make a folder for ungeolocated footage
+  order: # Default order is:
+  - date
+  - location
+  - device
+```
 
 ## How it looks:
 

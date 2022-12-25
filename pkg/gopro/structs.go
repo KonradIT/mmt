@@ -2,7 +2,6 @@ package gopro
 
 import (
 	"regexp"
-	"time"
 )
 
 type Info struct {
@@ -36,17 +35,6 @@ const (
 	GetStarted FileOfInterest = "Get_started_with_GoPro.url"
 	Version    FileOfInterest = "version.txt"
 )
-
-type SortOptions struct {
-	ByLocation         bool
-	SkipAuxiliaryFiles bool
-	AddHiLightTags     bool
-	ByCamera           bool
-	DateFormat         string
-	BufferSize         int
-	Prefix             string
-	DateRange          []time.Time
-}
 
 type FileType string
 
