@@ -678,6 +678,7 @@ func readInfo(in string) (*Info, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer jsonFile.Close()
 	inBytes, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
 		return nil, err

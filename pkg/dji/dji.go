@@ -177,6 +177,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							log.Fatal(err.Error())
 							return godirwalk.SkipThis
 						}
+						defer f.Close()
 						exifData, err := exif.Decode(f)
 						if err != nil {
 							log.Fatal(err.Error())
