@@ -127,9 +127,13 @@ func (v *VMan) Merge(bar *mpb.Bar, videos ...string) error {
 	return nil
 }
 
-//nolint:golint,unused,errcheck
-func (v *VMan) extractGPMF(input string) (*[]byte, error) {
+func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 	err := v.trans.InitializeEmptyTranscoder()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = os.Stat(input)
 	if err != nil {
 		return nil, err
 	}
@@ -155,11 +159,10 @@ func (v *VMan) extractGPMF(input string) (*[]byte, error) {
 	extractData := make(chan []byte)
 
 	go func() {
-		defer r.Close()
 		defer wg.Done()
+		defer r.Close()
 
 		data, err := ioutil.ReadAll(r)
-
 		extractData <- data
 		extractError <- err
 	}()
@@ -170,6 +173,7 @@ func (v *VMan) extractGPMF(input string) (*[]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	dataExtracted := <-extractData
 
 	if extractErr := <-extractError; extractErr != nil {
 		return nil, extractErr
@@ -177,6 +181,5 @@ func (v *VMan) extractGPMF(input string) (*[]byte, error) {
 
 	wg.Wait()
 
-	dataExtracted := <-extractData
 	return &dataExtracted, nil
 }

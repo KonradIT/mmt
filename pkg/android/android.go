@@ -2,6 +2,7 @@ package android
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,8 +24,13 @@ func pixelNameSort(filename string) (string, string) {
 	}
 	return filename, ""
 }
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
+
+var locationService = LocationService{}
+
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	var result utils.Result
+
+	sortOptions := utils.ParseCliOptions(cameraOptions)
 
 	client, err := adb.NewWithConfig(adb.ServerConfig{
 		Port: 5037,
@@ -45,7 +51,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if entries.Err() != nil {
 		return nil, err
 	}
-
+	deviceInfo, err := device.DeviceInfo()
+	if err != nil {
+		return nil, err
+	}
 	for entries.Next() {
 		replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 		mediaDate := entries.Entry().ModifiedAt.Format("02-01-2006")
@@ -90,19 +99,29 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 		}
 
-		dayFolder := filepath.Join(out, mediaDate)
-		if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-			_ = os.Mkdir(dayFolder, 0755)
+		readfile, err := device.OpenRead("/sdcard/DCIM/Camera/" + entries.Entry().Name)
+		if err != nil {
+			result.Errors = append(result.Errors, err)
+			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
+			return &result, nil
 		}
 
-		deviceInfo, err := device.DeviceInfo()
+		localFile, err := ioutil.TempFile(out, entries.Entry().Name)
 		if err != nil {
-			return nil, err
+			result.Errors = append(result.Errors, err)
+			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
+			return &result, nil
 		}
-		if _, err := os.Stat(filepath.Join(dayFolder, deviceInfo.Product)); os.IsNotExist(err) {
-			_ = os.Mkdir(filepath.Join(dayFolder, deviceInfo.Product), 0755)
+
+		_, err = io.Copy(localFile, readfile)
+		if err != nil {
+			result.Errors = append(result.Errors, err)
+			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
+			return &result, nil
 		}
-		dayFolder = filepath.Join(dayFolder, deviceInfo.Product)
+
+		dayFolder := utils.GetOrder(sortOptions, locationService, localFile.Name(), out, mediaDate, deviceInfo.Product)
+		defer os.Remove(filepath.Join(out, localFile.Name()))
 
 		if entries.Entry().Name == "." || entries.Entry().Name == ".." {
 			continue
@@ -121,12 +140,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 		}
 		color.Cyan(">>> " + entries.Entry().Name)
-		readfile, err := device.OpenRead("/sdcard/DCIM/Camera/" + entries.Entry().Name)
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
-		}
+
 		localPath := ""
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".mp4") {
 			localPath = filepath.Join(dayFolder, "videos", entries.Entry().Name)

@@ -199,7 +199,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							if err != nil {
 								log.Fatal(err)
 							}
-
+							defer f.Close()
 							exifObj, err := exif.Decode(f)
 							if err != nil {
 								log.Fatal(err)

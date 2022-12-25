@@ -49,12 +49,13 @@ var importCmd = &cobra.Command{
 			}
 
 			customCameraOpts := make(map[string]interface{})
-			if c == utils.GoPro {
+			switch c {
+			case utils.GoPro:
 				skipAuxFiles := getFlagBool(cmd, "skip_aux", "true")
 				customCameraOpts["skip_aux"] = skipAuxFiles
 				sortBy := getFlagSlice(cmd, "sort_by")
 				if len(sortBy) == 0 {
-					customCameraOpts["sort_by"] = []string{"camera"}
+					customCameraOpts["sort_by"] = []string{"camera", "location"}
 				}
 
 				connection := getFlagString(cmd, "connection")
@@ -62,6 +63,11 @@ var importCmd = &cobra.Command{
 					connection = "sd_card"
 				}
 				customCameraOpts["connection"] = connection
+			case utils.DJI, utils.Android:
+				sortBy := getFlagSlice(cmd, "sort_by")
+				if len(sortBy) == 0 {
+					customCameraOpts["sort_by"] = []string{"camera", "location"}
+				}
 			}
 			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, customCameraOpts)
 			if err != nil {
@@ -103,11 +109,11 @@ func init() {
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
 	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
+	importCmd.Flags().StringSlice("sort_by", []string{}, "Sort files by: `camera`, `location`")
 
 	// GoPro-specific options
 
 	importCmd.Flags().StringP("skip_aux", "s", "", "GoPro: skip auxiliary files (THM, LRV)")
-	importCmd.Flags().StringSlice("sort_by", []string{}, "GoPro: sort files by: `camera` and/or `days`")
 }
 
 func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, camOpts map[string]interface{}) (*utils.Result, error) {
@@ -115,11 +121,11 @@ func importFromCamera(c utils.Camera, input string, output string, dateFormat st
 	case utils.GoPro:
 		return gopro.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	case utils.DJI:
-		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
+		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	case utils.Insta360:
 		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
 	case utils.Android:
-		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
+		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	default:
 		return nil, mErrors.ErrUnsupportedCamera
 	}

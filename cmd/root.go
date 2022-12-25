@@ -37,6 +37,7 @@ func initConfig() {
 	} else {
 		home, err := homedir.Dir()
 		cobra.CheckErr(err)
+		viper.SetConfigType("yaml")
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".mmt")
 	}
