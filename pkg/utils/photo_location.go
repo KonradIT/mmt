@@ -11,6 +11,7 @@ func LocationFromEXIF(photoPath string) (*Location, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 	x, decodeerr := exif.Decode(f)
 	if decodeerr != nil {
 		return nil, decodeerr
