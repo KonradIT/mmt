@@ -105,7 +105,7 @@ type goProMediaList struct {
 			Mod  string        `json:"mod"`
 			Glrv string        `json:"glrv,omitempty"`
 			Ls   string        `json:"ls,omitempty"`
-			S    string        `json:"s"`
+			S    int64         `json:"s,string"`
 			G    string        `json:"g,omitempty"`
 			B    int           `json:"b,string,omitempty"`
 			L    int           `json:"l,string,omitempty"`
@@ -123,7 +123,7 @@ type ConnectDevice struct {
 
 type goProMediaMetadata struct {
 	Cre       string        `json:"cre"`
-	S         string        `json:"s"`
+	S         int64         `json:"s,string"`
 	Us        string        `json:"us"`
 	Mos       []interface{} `json:"mos"`
 	Eis       string        `json:"eis"`
