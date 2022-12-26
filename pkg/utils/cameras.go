@@ -2,7 +2,6 @@ package utils
 
 import (
 	"archive/zip"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
