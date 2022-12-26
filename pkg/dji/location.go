@@ -1,12 +1,12 @@
 package dji
 
 import (
-	"errors"
 	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
 
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 )
 
@@ -27,9 +27,6 @@ var allDrones = map[string]LatLongPair{
 	},
 }
 
-var errInvalidFormat = errors.New("SRT file invalid format (could not read from predefined presets)")
-var errInvalidFile = errors.New("file invalid (not JPG or SRT)")
-
 type LocationService struct{}
 
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
@@ -39,7 +36,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	case strings.Contains(path, ".JPG") || strings.Contains(path, ".DNG"):
 		return utils.LocationFromEXIF(path)
 	default:
-		return nil, errInvalidFile
+		return nil, mErrors.ErrInvalidFile
 	}
 }
 func fromSRT(srtPath string) (*utils.Location, error) {
@@ -73,5 +70,5 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 		}
 		return &utils.Location{Latitude: latAsFloat, Longitude: lonAsFloat}, nil
 	}
-	return nil, errInvalidFormat
+	return nil, mErrors.ErrNoRecognizedSRTFormat
 }

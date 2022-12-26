@@ -2,7 +2,6 @@ package gopro
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -17,6 +16,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/maja42/goval"
 	"github.com/minio/minio/pkg/disk"
@@ -57,7 +57,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 
 			if sortop != "camera" && sortop != "days" && sortop != "location" {
-				return nil, errors.New("Unrecognized option for sort_by: " + sortop)
+				return nil, fmt.Errorf("Unrecognized option for sort_by: %s", sortop)
 			}
 		}
 	}
@@ -113,7 +113,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		case string(utils.SDCard):
 			break
 		default:
-			return nil, errors.New("Unsupported connection")
+			return nil, mErrors.ErrUnsupportedConnection
 		}
 	}
 
@@ -153,7 +153,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
 		return &result, nil
 	default:
-		return nil, fmt.Errorf("Camera `%s` is not supported", gpVersion.CameraType)
+		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
 	}
 }
 

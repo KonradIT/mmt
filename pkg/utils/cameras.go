@@ -14,6 +14,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -44,7 +45,7 @@ func CameraGet(s string) (Camera, error) {
 	case Android.toString():
 		return Android, nil
 	default:
-		return 10, errors.New("Unsupported camera")
+		return 10, mErrors.ErrUnsupportedCamera(s)
 	}
 }
 
@@ -285,7 +286,7 @@ func FindFolderInPath(entirePath, directory string) (string, error) {
 		return entirePath, nil
 	}
 	if entirePath == "." || modified == entirePath {
-		return "", fmt.Errorf("Unable to find %s", directory)
+		return "", mErrors.ErrNotFound(directory)
 	}
 	return FindFolderInPath(modified, directory)
 }

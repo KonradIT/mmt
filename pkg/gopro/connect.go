@@ -4,7 +4,6 @@ package gopro
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/vbauerster/mpb/v8"
 )
@@ -148,7 +148,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 	}
 	// activate turbo
 
-	if verType == V2 {
+	if gpTurbo {
 		err = caller(in, "gp/gpTurbo?p=1", nil)
 		if err != nil {
 			color.Red("Error activating Turbo! Download speeds will be much slower")
@@ -172,6 +172,9 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 	if _, err := os.Stat(unsorted); os.IsNotExist(err) {
 		_ = os.Mkdir(unsorted, 0755)
 	}
+
+	chaptered := regexp.MustCompile(`GP\d+.MP4`)
+
 	for _, folder := range gpMediaList.Media {
 		for _, goprofile := range folder.Fs {
 			for _, fileTypeMatch := range FileTypeMatches[verType] {
@@ -201,13 +204,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 					continue
 				}
 
-				total, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, goprofile.N))
-				if err != nil {
-					log.Fatal(err.Error())
-				}
-
 				wg.Add(1)
-				bar := utils.GetNewBar(progressBar, int64(total), goprofile.N)
+				bar := utils.GetNewBar(progressBar, goprofile.S, goprofile.N)
 
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
@@ -215,7 +213,13 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 					go func(in, folder, origFilename, unsorted string, result utils.Result) {
 						defer wg.Done()
 						x := origFilename
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						filename := origFilename
+						if verType == V2 {
+							filename = fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						}
+						if verType == V1 && chaptered.MatchString(x) {
+							filename = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+						}
 
 						err := utils.DownloadFile(
 							filepath.Join(unsorted, origFilename),
@@ -336,11 +340,12 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						}
 						filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
 
-						multiShotTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, filename))
+						var gpFileInfo = &goProMediaMetadata{}
+						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
 						if err != nil {
 							log.Fatal(err.Error())
 						}
-						multiShotBar := utils.GetNewBar(progressBar, int64(multiShotTotal), filename)
+						multiShotBar := utils.GetNewBar(progressBar, int64(gpFileInfo.S), filename)
 
 						go func(in, folder, origFilename, unsorted string, result utils.Result) {
 							defer wg.Done()
@@ -372,7 +377,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 				default:
 					color.Red("Unsupported file %s", goprofile.N)
-					result.Errors = append(result.Errors, errors.New("Media format unrecognized"))
+					result.Errors = append(result.Errors, mErrors.ErrUnrecognizedMediaFormat)
 					result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 				}
 			}
@@ -381,7 +386,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 	wg.Wait()
 	progressBar.Shutdown()
-	if verType == V2 {
+	if gpTurbo {
 		if err := caller(in, "gp/gpTurbo?p=0", nil); err != nil {
 			color.Red("Could not exit turbo mode")
 		}
