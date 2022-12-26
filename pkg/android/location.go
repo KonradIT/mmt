@@ -1,13 +1,11 @@
 package android
 
 import (
-	"errors"
 	"strings"
 
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 )
-
-var errInvalidFile = errors.New("file invalid (not a video or photo)")
 
 type LocationService struct{}
 
@@ -20,6 +18,6 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	case strings.Contains(strings.ToLower(path), ".jpg"):
 		return utils.LocationFromEXIF(path)
 	default:
-		return nil, errInvalidFile
+		return nil, mErrors.ErrInvalidFile
 	}
 }

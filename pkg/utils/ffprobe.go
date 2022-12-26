@@ -3,13 +3,14 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+
+	mErrors "github.com/konradit/mmt/pkg/errors"
 )
 
 // FFprobe command wrapper
@@ -141,7 +142,7 @@ func (f *FFprobe) GPSLocation(path string) (*Location, error) {
 	parts := baseCoordinates.FindAllStringSubmatch(result.Format.Tags.Location, -1)
 
 	if len(parts) != 2 {
-		return nil, errors.New("Invalid coordinates format")
+		return nil, mErrors.ErrInvalidCoordinatesFormat
 	}
 
 	latitude, err := strconv.ParseFloat(parts[0][0], 32)

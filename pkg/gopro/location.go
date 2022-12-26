@@ -2,17 +2,15 @@ package gopro
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"strings"
 
 	"github.com/konradit/gopro-utils/telemetry"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/konradit/mmt/pkg/videomanipulation"
 )
 
-var errNoGPS = errors.New("No GPS(5) data found")
-var errInvalidFile = errors.New("file invalid (not MP4 or JPG)")
 var noGPSFix = 9999
 
 type LocationService struct{}
@@ -24,7 +22,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	case strings.Contains(path, ".JPG"):
 		return utils.LocationFromEXIF(path)
 	default:
-		return nil, errInvalidFile
+		return nil, mErrors.ErrInvalidFile
 	}
 }
 func fromMP4(videoPath string) (*utils.Location, error) {
@@ -70,5 +68,5 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 		*lastEvent = *event
 	}
 
-	return nil, errNoGPS
+	return nil, mErrors.ErrNoGPS
 }

@@ -4,7 +4,6 @@ package gopro
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
@@ -419,7 +419,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 				default:
 					color.Red("Unsupported file %s", goprofile.N)
-					result.Errors = append(result.Errors, errors.New("Media format unrecognized"))
+					result.Errors = append(result.Errors, mErrors.ErrUnrecognizedMediaFormat)
 					result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 				}
 			}
