@@ -22,7 +22,6 @@ import (
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/vbauerster/mpb/v8"
-	"github.com/vbauerster/mpb/v8/decor"
 )
 
 var ipAddress = ""
@@ -79,20 +78,6 @@ func head(path string) (int, error) {
 	return length, nil
 }
 
-func getNewBar(progressBar *mpb.Progress, total int64, filename string) *mpb.Bar {
-	return progressBar.AddBar(total,
-		mpb.PrependDecorators(
-			decor.Name(color.CyanString(fmt.Sprintf("%s: ", filename))),
-			decor.CountersKiloByte("% .2f / % .2f"),
-		),
-		mpb.AppendDecorators(
-			decor.OnComplete(
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncWidth), "✔️",
-			),
-		),
-	)
-}
-
 func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 	ipsFound := []ConnectDevice{}
 	ifaces, err := net.Interfaces()
@@ -133,35 +118,6 @@ func forceGetFolder(path string) {
 	}
 }
 
-type ResultCounter struct {
-	mu               sync.Mutex
-	Errors           []error
-	FilesNotImported []string
-	FilesImported    int
-}
-
-func (rc *ResultCounter) SetFailure(err error, file string) {
-	rc.mu.Lock()
-	rc.Errors = append(rc.Errors, err)
-	rc.FilesNotImported = append(rc.FilesNotImported, file)
-	rc.mu.Unlock()
-}
-
-func (rc *ResultCounter) SetSuccess() {
-	rc.mu.Lock()
-	rc.FilesImported++
-	rc.mu.Unlock()
-}
-
-func (rc *ResultCounter) Get() utils.Result {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-	return utils.Result{
-		FilesImported:    rc.FilesImported,
-		FilesNotImported: rc.FilesNotImported,
-		Errors:           rc.Errors,
-	}
-}
 func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result, error) {
 	var verType Type
 	var result utils.Result
@@ -210,7 +166,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := ResultCounter{}
+	inlineCounter := utils.ResultCounter{}
 
 	unsorted := filepath.Join(out, "unsorted")
 	if _, err := os.Stat(unsorted); os.IsNotExist(err) {
@@ -249,7 +205,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 				}
 
 				wg.Add(1)
-				bar := getNewBar(progressBar, goprofile.S, goprofile.N)
+				bar := utils.GetNewBar(progressBar, goprofile.S, goprofile.N)
 
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
@@ -281,7 +237,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							var gpFileInfo = &goProMediaMetadata{}
 							err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
 							if err != nil {
-								log.Fatal(err.Error())
+								inlineCounter.SetFailure(err, origFilename)
+								return
 							}
 
 							framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
@@ -293,12 +250,13 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 							forceGetFolder(filepath.Join(finalPath, "videos", rfpsFolder))
 
-							err = os.Rename(
+							err := os.Rename(
 								filepath.Join(unsorted, origFilename),
 								filepath.Join(finalPath, "videos", rfpsFolder, filename),
 							)
 							if err != nil {
-								log.Fatal(err.Error())
+								inlineCounter.SetFailure(err, origFilename)
+								return
 							}
 						}
 					}(in, folder.D, goprofile.N, unsorted, result)
@@ -326,10 +284,10 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName))
 						if err != nil {
-							log.Fatal(err.Error())
+							continue
 						}
 
-						rawPhotoBar := getNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName)
+						rawPhotoBar := utils.GetNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName)
 						totalPhotos = append(totalPhotos, photo{
 							Name:   rawPhotoName,
 							Folder: folder.D,
@@ -361,12 +319,13 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								}
 								forceGetFolder(photoPath)
 
-								err = os.Rename(
+								err := os.Rename(
 									filepath.Join(unsorted, nowPhoto.Name),
 									filepath.Join(photoPath, nowPhoto.Name),
 								)
 								if err != nil {
-									log.Fatal(err.Error())
+									inlineCounter.SetFailure(err, nowPhoto.Name)
+									return
 								}
 							}
 						}(in, item, unsorted, result)
@@ -386,7 +345,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						if err != nil {
 							log.Fatal(err.Error())
 						}
-						multiShotBar := getNewBar(progressBar, int64(gpFileInfo.S), filename)
+						multiShotBar := utils.GetNewBar(progressBar, int64(gpFileInfo.S), filename)
 
 						go func(in, folder, origFilename, unsorted string, result utils.Result) {
 							defer wg.Done()
@@ -401,17 +360,16 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							} else {
 								inlineCounter.SetSuccess()
 								// Move to actual folder
-
 								finalPath := utils.GetOrder(sortOptions, locationService, filepath.Join(unsorted, origFilename), out, mediaDate, cameraName)
-
 								forceGetFolder(filepath.Join(finalPath, "multishot", filebaseroot))
 
-								err = os.Rename(
+								err := os.Rename(
 									filepath.Join(unsorted, origFilename),
 									filepath.Join(finalPath, "multishot", filebaseroot, origFilename),
 								)
 								if err != nil {
-									log.Fatal(err.Error())
+									inlineCounter.SetFailure(err, origFilename)
+									return
 								}
 							}
 						}(in, folder.D, filename, unsorted, result)

@@ -7,10 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/utils"
+	"github.com/vbauerster/mpb/v8"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -26,7 +27,38 @@ func pixelNameSort(filename string) (string, string) {
 }
 
 var locationService = LocationService{}
+var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
+func prepare(out string, deviceFileName string, deviceModel string, mediaDate string, sortOptions utils.SortOptions, deviceFileReader io.ReadCloser, progressBar *mpb.Progress) (*mpb.Bar, string, error) {
+	localFile, err := ioutil.TempFile(out, deviceFileName)
+	if err != nil {
+		return nil, "", err
+	}
+
+	_, err = io.Copy(localFile, deviceFileReader)
+	if err != nil {
+		return nil, "", err
+	}
+
+	stat, err := localFile.Stat()
+	if err != nil {
+		return nil, "", err
+	}
+
+	bar := utils.GetNewBar(progressBar, stat.Size(), deviceFileName)
+
+	dayFolder := utils.GetOrder(sortOptions, locationService, filepath.Join(out, localFile.Name()), out, mediaDate, deviceModel)
+
+	err = localFile.Close()
+	if err != nil {
+		return nil, "", err
+	}
+	err = os.Remove(filepath.Join(out, localFile.Name()))
+	if err != nil {
+		return nil, "", err
+	}
+	return bar, dayFolder, nil
+}
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	var result utils.Result
 
@@ -43,7 +75,12 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		return nil, err
 	}
 
-	device := client.Device(adb.AnyUsbDevice())
+	deviceDescriptor := adb.AnyUsbDevice()
+	if in != "any" {
+		deviceDescriptor = adb.DeviceWithSerial(in)
+	}
+	device := client.Device(deviceDescriptor)
+
 	entries, err := device.ListDirEntries("/sdcard/DCIM/Camera")
 	if err != nil {
 		return nil, err
@@ -51,12 +88,20 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if entries.Err() != nil {
 		return nil, err
 	}
+
 	deviceInfo, err := device.DeviceInfo()
 	if err != nil {
 		return nil, err
 	}
+
+	var wg sync.WaitGroup
+	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
+		mpb.WithWidth(60),
+		mpb.WithRefreshRate(180*time.Millisecond))
+
+	inlineCounter := utils.ResultCounter{}
+
 	for entries.Next() {
-		replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 		mediaDate := entries.Entry().ModifiedAt.Format("02-01-2006")
 		if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
 			mediaDate = entries.Entry().ModifiedAt.Format(replacer.Replace(dateFormat))
@@ -99,29 +144,33 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			}
 		}
 
+		// Read Original file from device
+
 		readfile, err := device.OpenRead("/sdcard/DCIM/Camera/" + entries.Entry().Name)
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
+			return &result, nil //nolint
 		}
 
-		localFile, err := ioutil.TempFile(out, entries.Entry().Name)
+		bar, dayFolder, err := prepare(
+			out,
+			entries.Entry().Name,
+			deviceInfo.Product,
+			mediaDate,
+			sortOptions,
+			readfile,
+			progressBar,
+		)
+
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
+			return &result, nil //nolint
 		}
 
-		_, err = io.Copy(localFile, readfile)
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
-		}
-
-		dayFolder := utils.GetOrder(sortOptions, locationService, localFile.Name(), out, mediaDate, deviceInfo.Product)
-		defer os.Remove(filepath.Join(out, localFile.Name()))
+		// Add 1 to queue for concurrency
+		wg.Add(1)
 
 		if entries.Entry().Name == "." || entries.Entry().Name == ".." {
 			continue
@@ -139,38 +188,61 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 				log.Fatal(err.Error())
 			}
 		}
-		color.Cyan(">>> " + entries.Entry().Name)
 
 		localPath := ""
 		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".mp4") {
 			localPath = filepath.Join(dayFolder, "videos", entries.Entry().Name)
 		}
-		filename, folder := pixelNameSort(entries.Entry().Name)
-		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") && folder != "" {
-			if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
-				err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
-				if err != nil {
-					log.Fatal(err.Error())
-				}
-			}
 
-			localPath = filepath.Join(dayFolder, "photos", folder, filename)
+		filename, folder := pixelNameSort(entries.Entry().Name)
+		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") { //nolint:nestif
+			if folder != "" {
+				if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
+					err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
+					if err != nil {
+						log.Fatal(err.Error())
+					}
+				}
+
+				localPath = filepath.Join(dayFolder, "photos", folder, filename)
+			}
+		} else {
+			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 		}
-		outFile, err := os.Create(localPath)
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
-		}
-		defer outFile.Close()
-		_, err = io.Copy(outFile, readfile)
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
-		}
-		result.FilesImported++
+
+		go func(filename, localPath string, bar *mpb.Bar) {
+			defer wg.Done()
+			readfile, err = device.OpenRead("/sdcard/DCIM/Camera/" + filename)
+			if err != nil {
+				inlineCounter.SetFailure(err, filename)
+				return
+			}
+			defer readfile.Close()
+			outFile, err := os.Create(localPath)
+			if err != nil {
+				inlineCounter.SetFailure(err, filename)
+				return
+			}
+			defer outFile.Close()
+
+			proxyReader := bar.ProxyReader(readfile)
+			defer proxyReader.Close()
+
+			_, err = io.Copy(outFile, proxyReader)
+			if err != nil {
+				inlineCounter.SetFailure(err, localPath)
+				return
+			}
+			inlineCounter.SetSuccess()
+		}(entries.Entry().Name, localPath, bar)
 	}
+
+	wg.Wait()
+	progressBar.Shutdown()
+
+	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
+	result.FilesImported += inlineCounter.Get().FilesImported
+	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
 
 	return &result, nil
 }

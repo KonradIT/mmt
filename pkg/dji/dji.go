@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -15,13 +16,30 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/minio/minio/pkg/disk"
 	"github.com/rwcarlsen/goexif/exif"
+	"github.com/vbauerster/mpb/v8"
 	"gopkg.in/djherbis/times.v1"
 )
 
-var deviceName = "DJI Device"
+func getDeviceNameFromPhoto(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	exifData, err := exif.Decode(f)
+	if err != nil {
+		return "", err
+	}
 
-func getDeviceName() string {
-	return deviceName
+	camModel, err := exifData.Get(exif.Model)
+	if err != nil {
+		return "", err
+	}
+	s, err := camModel.StringVal()
+	if err != nil {
+		return "", err
+	}
+	return s, nil
 }
 
 var locationService = LocationService{}
@@ -42,38 +60,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		percentage,
 	)
 
-	mediaFolder := `\d+MEDIA`
-	mediaFolderRegex, err := regexp.Compile(mediaFolder)
-	if err != nil {
-		return nil, err
-	}
-
-	fileTypes := []FileTypeMatch{
-		{
-			Regex: regexp.MustCompile(`.JPG`),
-			Type:  Photo,
-		},
-		{
-			Regex: regexp.MustCompile(`.MP4`),
-			Type:  Video,
-		},
-		{
-			Regex: regexp.MustCompile(`.SRT`),
-			Type:  Subtitle,
-		},
-		{
-			Regex: regexp.MustCompile(`.DNG`),
-			Type:  RawPhoto,
-		},
-		{
-			Regex: regexp.MustCompile(`.html`),
-			Type:  PanoramaIndex,
-		},
-		{
-			Regex: regexp.MustCompile(`.AAC`),
-			Type:  Audio,
-		},
-	}
+	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA`)
 
 	root := filepath.Join(in, "DCIM")
 	var result utils.Result
@@ -82,6 +69,15 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return &result, nil
+	}
+
+	var wg sync.WaitGroup
+	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
+		mpb.WithWidth(60),
+		mpb.WithRefreshRate(180*time.Millisecond))
+
+	inlineCounter := utils.ResultCounter{
+		CameraName: "DJI Device",
 	}
 
 	for _, f := range folders {
@@ -101,7 +97,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 					t, err := times.Stat(osPathname)
 					if err != nil {
-						log.Fatal(err.Error())
+						return godirwalk.SkipThis
 					}
 					d := t.ModTime()
 					replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
@@ -147,91 +143,71 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}
 					}
 
-					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, getDeviceName())
+					info, err := os.Stat(osPathname)
+					if err != nil {
+						return godirwalk.SkipThis
+					}
+
+					wg.Add(1)
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
+
+					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, "DJI Device")
 					switch ftype.Type {
 					case Photo:
-
-						x := de.Name()
-
-						color.Green(">>> %s", x)
-
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
 							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
 							if err != nil {
-								log.Fatal(err.Error())
+								return godirwalk.SkipThis
 							}
 						}
 
-						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", x), bufferSize)
-						if err != nil {
-							result.Errors = append(result.Errors, err)
-							result.FilesNotImported = append(result.FilesNotImported, osPathname)
-						} else {
-							result.FilesImported++
-						}
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), bufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
 
-						// Get Device Name
+								// Get Device Name
 
-						f, err := os.Open(osPathname)
-						if err != nil {
-							log.Fatal(err.Error())
-							return godirwalk.SkipThis
-						}
-						defer f.Close()
-						exifData, err := exif.Decode(f)
-						if err != nil {
-							log.Fatal(err.Error())
-							return godirwalk.SkipThis
-						}
+								devName, err := getDeviceNameFromPhoto(osPathname)
+								if err != nil {
+									inlineCounter.SetFailure(err, filename)
+									return
+								}
+								// Rename directory
+								matchDeviceName, is := DeviceNames[devName]
+								if is {
+									devName = matchDeviceName
+								}
 
-						camModel, err := exifData.Get(exif.Model)
-						if err != nil {
-							log.Fatal(err.Error())
-							return godirwalk.SkipThis
-						}
-						s, err := camModel.StringVal()
-						if err != nil {
-							log.Fatal(err.Error())
-							return godirwalk.SkipThis
-						}
+								if err != nil {
+									inlineCounter.SetFailure(err, filename)
+									return
+								}
+								inlineCounter.SetCameraName(devName)
+							}
+						}(f.Name(), de.Name(), osPathname, bar)
 
-						// Rename directory
-						matchDeviceName, is := DeviceNames[s]
-						if is {
-							s = matchDeviceName
-						}
-
-						modified, err := utils.FindFolderInPath(dayFolder, getDeviceName())
-						if err != nil {
-							log.Fatal(err.Error())
-							return godirwalk.SkipThis
-						}
-						_ = os.Rename(modified, strings.Replace(modified, deviceName, s, 1)) // Could be a folder already exists... time to move the content to that folder.
-						deviceName = s
 					case Video, Subtitle:
-
-						x := de.Name()
-
-						color.Green(">>> %s", x)
-
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
 							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}
 						}
-						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", x), bufferSize)
-						if err != nil {
-							result.Errors = append(result.Errors, err)
-							result.FilesNotImported = append(result.FilesNotImported, osPathname)
-						} else {
-							result.FilesImported++
-						}
+
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), bufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(f.Name(), de.Name(), osPathname, bar)
 					case RawPhoto:
-						x := de.Name()
-
-						color.Green(">>> %s", x)
-
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
 							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
 							if err != nil {
@@ -239,13 +215,15 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							}
 						}
 
-						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", x), bufferSize)
-						if err != nil {
-							result.Errors = append(result.Errors, err)
-							result.FilesNotImported = append(result.FilesNotImported, osPathname)
-						} else {
-							result.FilesImported++
-						}
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), bufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(f.Name(), de.Name(), osPathname, bar)
 					case PanoramaIndex:
 					case Audio:
 						// TODO get audio files
@@ -257,8 +235,33 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		})
 
 		if err != nil {
-			result.Errors = append(result.Errors, err)
+			inlineCounter.SetFailure(err, "")
 		}
 	}
+
+	wg.Wait()
+	progressBar.Shutdown()
+
+	// Rename each folder
+
+	_ = godirwalk.Walk(out, &godirwalk.Options{
+		Unsorted: true,
+		Callback: func(osPathname string, de *godirwalk.Dirent) error {
+			if !de.ModeType().IsDir() {
+				return godirwalk.SkipThis
+			}
+
+			modified, err := utils.FindFolderInPath(osPathname, "DJI Device")
+			if err == nil {
+				_ = os.Rename(modified, strings.Replace(modified, "DJI Device", inlineCounter.CameraName, -1)) // Could be a folder already exists... time to move the content to that folder.
+			}
+			return nil
+		},
+	})
+
+	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
+	result.FilesImported += inlineCounter.Get().FilesImported
+	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
+
 	return &result, nil
 }

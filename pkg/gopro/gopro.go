@@ -2,6 +2,7 @@ package gopro
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -19,6 +21,7 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/maja42/goval"
 	"github.com/minio/minio/pkg/disk"
+	"github.com/vbauerster/mpb/v8"
 	"gopkg.in/djherbis/times.v1"
 )
 
@@ -28,155 +31,6 @@ https://community.gopro.com/t5/en/GoPro-Camera-File-Naming-Convention/ta-p/39022
 */
 
 var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
-
-var FileTypeMatches = map[Type][]FileTypeMatch{
-	V2: {
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GP\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GX\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GL\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GX\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GG\d+.MP4`), // Live Bursts...
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`G\d+.JPG`),
-			Type:     Multishot,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`.GPR`),
-			Type:     RawPhoto,
-			HeroMode: true,
-		},
-	},
-	MAX: {
-		{
-			Regex:    regexp.MustCompile(`GS\d+.360`),
-			Type:     Video,
-			HeroMode: false,
-		},
-		{
-			Regex:    regexp.MustCompile(`GS_+\d+.JPG`),
-			Type:     Photo,
-			HeroMode: false,
-		},
-		{
-			Regex:    regexp.MustCompile(`GP_+\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GX\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GPAA\d+.JPG`),
-			Type:     Multishot,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GS\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: false,
-		},
-		{
-			Regex:    regexp.MustCompile(`GS\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: false,
-		},
-		{
-			Regex:    regexp.MustCompile(`GSAA\d+.JPG`),
-			Type:     Multishot,
-			HeroMode: false,
-		},
-	},
-	V1: {
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.JPG`),
-			Type:     Photo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`G\d+.JPG`),
-			Type:     Multishot,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.MP4`),
-			Type:     Video,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GP\d+.MP4`),
-			Type:     ChapteredVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`.GPR`),
-			Type:     RawPhoto,
-			HeroMode: true,
-		},
-	},
-}
 
 var MediaFolderRegex = regexp.MustCompile(`\d\d\dGOPRO`)
 
@@ -268,10 +122,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if err != nil {
 		return nil, err
 	}
-	if prefix == "cameraname" {
-		prefix = gpVersion.CameraType
-		sortOptions.Prefix = prefix
-	}
 
 	di, err := disk.GetInfo(in)
 	if err != nil {
@@ -293,163 +143,33 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
 
 	switch root {
-	case "HD6", "HD7", "HD8", "HD9", "H21", "H22":
+	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22":
 		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
 		return &result, nil
 	case "HD2,", "HD3", "HD4", "HX", "HD5":
 		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
-		return &result, nil
-	case "H19":
-		result := importFromMAX(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions)
 		return &result, nil
 	default:
 		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
 	}
 }
 
-func importFromMAX(root string, output string, sortoptions utils.SortOptions) utils.Result {
-	fileTypes := FileTypeMatches[MAX]
-
-	var result utils.Result
-	/*
-		The idea is to have a result like:
-
-		20-02-2021/MAX/photos/
-							normal/
-						   			GS_0001.JPG
-							powerpano/
-						   			GP_0001.JPG
-					   /videos
-						   /heromode
-									/GH012345.MP4
-						   /360
-								/GS012345.MP4
-
-	*/
-	folders, err := ioutil.ReadDir(root)
-	if err != nil {
-		result.Errors = append(result.Errors, err)
-		return result
-	}
-
-	for _, f := range folders {
-		r := MediaFolderRegex.MatchString(f.Name())
-
-		if !r {
-			continue
-		}
-		color.Green("Looking at %s", f.Name())
-
-		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
-			Callback: func(osPathname string, de *godirwalk.Dirent) error {
-				for _, ftype := range fileTypes {
-					if !ftype.Regex.MatchString(de.Name()) {
-						continue
-					}
-
-					d := getFileTime(osPathname, false)
-					mediaDate := getMediaDate(d, sortoptions)
-
-					if len(sortoptions.DateRange) == 2 {
-						start := sortoptions.DateRange[0]
-						end := sortoptions.DateRange[1]
-						if d.Before(start) {
-							return godirwalk.SkipThis
-						}
-						if d.After(end) {
-							return godirwalk.SkipThis
-						}
-					}
-
-					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, "MAX")
-
-					switch ftype.Type {
-					case Video:
-						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						foldersNeeded := []string{"videos/360", "videos/heromode"}
-						dest := foldersNeeded[1]
-						if !ftype.HeroMode {
-							dest = foldersNeeded[0]
-						}
-						folder := filepath.Join(dayFolder, dest)
-						result = parse(folder, filename, osPathname, sortoptions, result)
-					case Photo:
-						foldersNeeded := []string{"photos/360", "photos/heromode"}
-						dest := foldersNeeded[1]
-						if !ftype.HeroMode {
-							dest = foldersNeeded[0]
-						}
-						folder := filepath.Join(dayFolder, dest)
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
-					case PowerPano:
-						folder := filepath.Join(dayFolder, "photos/powerpano")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
-					case LowResolutionVideo:
-						if sortoptions.SkipAuxiliaryFiles {
-							continue
-						}
-						foldersNeeded := []string{"videos/proxy/heromode", "videos/proxy/360"}
-						dest := foldersNeeded[1]
-						if ftype.HeroMode {
-							dest = foldersNeeded[0]
-						}
-						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						folder := filepath.Join(dayFolder, dest)
-						result = parse(folder, filename, osPathname, sortoptions, result)
-					case Thumbnail:
-						if sortoptions.SkipAuxiliaryFiles {
-							continue
-						}
-						foldersNeeded := []string{"videos/thumbnails/heromode", "videos/thumbnails/360"}
-						dest := foldersNeeded[1]
-						if ftype.HeroMode {
-							dest = foldersNeeded[0]
-						}
-						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						folder := filepath.Join(dayFolder, dest)
-						result = parse(folder, filename, osPathname, sortoptions, result)
-					default:
-						result = unsupported(de, osPathname, result)
-					}
-				}
-				return nil
-			},
-			Unsorted: true,
-		})
-
-		if err != nil {
-			result.Errors = append(result.Errors, err)
-		}
-	}
-	return result
-}
-
 func importFromGoProV2(root string, output string, sortoptions utils.SortOptions, cameraName string) utils.Result {
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
-	/*
-		The idea is to have a result like:
 
-		20-02-2021/HERO9_Black/photos/
-							GOPR00001.JPG
-					   /videos
-							single/
-								GH010001.MP4
-							proxy/
-								GL010001.LRV
-							thumbnails/
-								GL010001.THM
-
-
-	*/
 	folders, err := ioutil.ReadDir(root)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return result
 	}
+
+	var wg sync.WaitGroup
+	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
+		mpb.WithWidth(60),
+		mpb.WithRefreshRate(180*time.Millisecond))
+
+	inlineCounter := utils.ResultCounter{}
 
 	for _, f := range folders {
 		r := MediaFolderRegex.MatchString(f.Name())
@@ -463,7 +183,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
 					if !ftype.Regex.MatchString(de.Name()) {
-						continue
+						return godirwalk.SkipThis
 					}
 
 					d := getFileTime(osPathname, false)
@@ -481,7 +201,15 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						}
 					}
 
+					info, err := os.Stat(osPathname)
+					if err != nil {
+						return godirwalk.SkipThis
+					}
+
 					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
+
+					wg.Add(1)
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
 
 					switch ftype.Type {
 					case Video:
@@ -499,45 +227,84 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							return godirwalk.SkipThis
 						}
 						fpsAsFloat := strconv.Itoa(framerate.(int))
+						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
 
-						if err != nil {
-							log.Fatal(err.Error())
+						additionalDir := ""
+						if !ftype.HeroMode {
+							additionalDir = "360"
+						}
+						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, filename, osPathname, bar)
+					case Photo:
+						additionalDir := ""
+						if !ftype.HeroMode {
+							additionalDir = "360"
+						}
+						folder := filepath.Join(dayFolder, "photos", additionalDir)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
+					case LowResolutionVideo, Thumbnail:
+						if sortoptions.SkipAuxiliaryFiles {
 							return godirwalk.SkipThis
 						}
-						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
-						folder := filepath.Join(dayFolder, "videos", rfpsFolder)
-						result = parse(folder, filename, osPathname, sortoptions, result)
-					case Photo:
-						folder := filepath.Join(dayFolder, "photos")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
-					case LowResolutionVideo:
-						if sortoptions.SkipAuxiliaryFiles {
-							continue
-						}
 						x := de.Name()
 						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 						folder := filepath.Join(dayFolder, "videos/proxy")
-						result = parse(folder, filename, osPathname, sortoptions, result)
-
-					case Thumbnail:
-						if sortoptions.SkipAuxiliaryFiles {
-							continue
-						}
-						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						folder := filepath.Join(dayFolder, "videos/proxy")
-						result = parse(folder, filename, osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, filename, osPathname, bar)
 
 					case Multishot:
-						folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						additionalDir := ""
+						if !ftype.HeroMode {
+							additionalDir = "360"
+						}
+						folder := filepath.Join(dayFolder, "multishot", additionalDir, de.Name()[:4])
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
 
 					case RawPhoto:
 						folder := filepath.Join(dayFolder, "photos/raw")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
 
 					default:
-						result = unsupported(de, osPathname, result)
+						inlineCounter.SetFailure(errors.New("Unsupported file"), de.Name())
 					}
 				}
 				return nil
@@ -546,9 +313,17 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 		})
 
 		if err != nil {
-			result.Errors = append(result.Errors, err)
+			inlineCounter.SetFailure(err, "")
 		}
 	}
+
+	wg.Wait()
+	progressBar.Shutdown()
+
+	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
+	result.FilesImported += inlineCounter.Get().FilesImported
+	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
+
 	return result
 }
 
@@ -562,6 +337,13 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 		return result
 	}
 
+	var wg sync.WaitGroup
+	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
+		mpb.WithWidth(60),
+		mpb.WithRefreshRate(180*time.Millisecond))
+
+	inlineCounter := utils.ResultCounter{}
+
 	for _, f := range folders {
 		r := MediaFolderRegex.MatchString(f.Name())
 
@@ -574,7 +356,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
 					if !ftype.Regex.MatchString(de.Name()) {
-						continue
+						return godirwalk.SkipThis
 					}
 
 					d := getFileTime(osPathname, true)
@@ -591,6 +373,14 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							return godirwalk.SkipThis
 						}
 					}
+
+					info, err := os.Stat(osPathname)
+					if err != nil {
+						return godirwalk.SkipThis
+					}
+
+					wg.Add(1)
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
 
 					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
@@ -610,42 +400,83 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
 						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
 						folder := filepath.Join(dayFolder, "videos", rfpsFolder)
-						result = parse(folder, x, osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, x, osPathname, bar)
 
 					case ChapteredVideo:
 						x := de.Name()
 						name := fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 						folder := filepath.Join(dayFolder, "videos")
-						result = parse(folder, name, osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, name, osPathname, bar)
 
 					case Photo:
 						folder := filepath.Join(dayFolder, "photos")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
 
-					case LowResolutionVideo:
+					case LowResolutionVideo, Thumbnail:
 						if sortoptions.SkipAuxiliaryFiles {
-							continue
+							return godirwalk.SkipThis
 						}
 						folder := filepath.Join(dayFolder, "videos/proxy")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
-
-					case Thumbnail:
-						if sortoptions.SkipAuxiliaryFiles {
-							continue
-						}
-						folder := filepath.Join(dayFolder, "videos/proxy")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
 
 					case Multishot:
 						folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
 
 					case RawPhoto:
 						folder := filepath.Join(dayFolder, "photos/raw")
-						result = parse(folder, de.Name(), osPathname, sortoptions, result)
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
 
 					default:
-						result = unsupported(de, osPathname, result)
+						inlineCounter.SetFailure(errors.New("Unsupported file"), de.Name())
 					}
 				}
 				return nil
@@ -654,9 +485,17 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 		})
 
 		if err != nil {
-			result.Errors = append(result.Errors, err)
+			inlineCounter.SetFailure(err, "")
 		}
 	}
+
+	wg.Wait()
+	progressBar.Shutdown()
+
+	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
+	result.FilesImported += inlineCounter.Get().FilesImported
+	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
+
 	return result
 }
 
@@ -716,7 +555,7 @@ func getMediaDate(d time.Time, sortoptions utils.SortOptions) string {
 	return mediaDate
 }
 
-func parse(folder string, name string, osPathname string, sortoptions utils.SortOptions, result utils.Result) utils.Result {
+func parse(folder string, name string, osPathname string, sortoptions utils.SortOptions, result utils.Result, bar *mpb.Bar) error {
 	if _, err := os.Stat(folder); os.IsNotExist(err) {
 		err = os.MkdirAll(folder, 0755)
 		if err != nil {
@@ -724,21 +563,5 @@ func parse(folder string, name string, osPathname string, sortoptions utils.Sort
 		}
 	}
 
-	color.Green(">>> %s", name)
-
-	err := utils.CopyFile(osPathname, filepath.Join(folder, name), sortoptions.BufferSize)
-	if err != nil {
-		result.Errors = append(result.Errors, err)
-		result.FilesNotImported = append(result.FilesNotImported, osPathname)
-	} else {
-		result.FilesImported++
-	}
-	return result
-}
-
-func unsupported(de *godirwalk.Dirent, osPathname string, result utils.Result) utils.Result {
-	color.Red("Unsupported file %s", de.Name())
-	result.Errors = append(result.Errors, mErrors.ErrUnrecognizedMediaFormat)
-	result.FilesNotImported = append(result.FilesNotImported, osPathname)
-	return result
+	return utils.CopyFile(osPathname, filepath.Join(folder, name), sortoptions.BufferSize, bar)
 }

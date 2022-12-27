@@ -22,9 +22,8 @@ const (
 type Type string
 
 const (
-	V2  Type = "v2"
-	MAX Type = "max"
-	V1  Type = "v1"
+	V2 Type = "v2"
+	V1 Type = "v1"
 
 	UNKNOWN Type = "unknown"
 )

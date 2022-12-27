@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -46,8 +47,8 @@ func UpdateCamera(sdcard string) error {
 
 		if cameraVersion != camera.Version {
 			color.Cyan("New update available!")
-			color.Cyan("🎥 Firmware [%s]:", cameraVersion)
-			color.Cyan("☁️ Firmware [%s]:", camera.Version)
+			color.Cyan("🎥 Firmware: [%s]", cameraVersion)
+			color.Cyan("☁️ Firmware: [%s]", camera.Version)
 			color.Yellow(">> Firmware release date: %s", camera.ReleaseDate)
 			color.Yellow(html2text.HTML2Text(camera.ReleaseHTML))
 
@@ -57,6 +58,10 @@ func UpdateCamera(sdcard string) error {
 			}
 			color.Cyan("Unzipping...")
 			err = utils.Unzip(filepath.Join(sdcard, "UPDATE.zip"), filepath.Join(sdcard, "UPDATE"))
+			if err != nil {
+				return err
+			}
+			err = os.Remove(filepath.Join(sdcard, "UPDATE.zip"))
 			if err != nil {
 				return err
 			}

@@ -2,19 +2,20 @@ package utils
 
 import (
 	"archive/zip"
-	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/dustin/go-humanize"
+	"github.com/fatih/color"
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 type Camera int
@@ -60,7 +61,7 @@ const (
 	Connect ConnectionType = "connect"
 )
 
-func CopyFile(src string, dst string, buffersize int) error {
+func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -91,11 +92,31 @@ func CopyFile(src string, dst string, buffersize int) error {
 		panic(err)
 	}
 
-	bar := pb.StartNew(int(sourceFileStat.Size()/1000) + 1)
+	if progressbar == nil {
+		p := mpb.New(
+			mpb.WithWidth(60),
+			mpb.WithRefreshRate(180*time.Millisecond),
+		)
+
+		progressbar = p.New(sourceFileStat.Size(),
+			mpb.BarStyle().Rbound("|"),
+			mpb.PrependDecorators(
+				decor.CountersKibiByte("% .2f / % .2f"),
+			),
+			mpb.AppendDecorators(
+				decor.EwmaETA(decor.ET_STYLE_GO, 90),
+				decor.Name(" ] "),
+				decor.EwmaSpeed(decor.UnitKiB, "% .2f", 60),
+			),
+		)
+	}
 
 	buf := make([]byte, buffersize)
+	proxyReader := progressbar.ProxyReader(source)
+
+	defer proxyReader.Close()
 	for {
-		n, err := source.Read(buf)
+		n, err := proxyReader.Read(buf)
 		if err != nil && err != io.EOF {
 			return err
 		}
@@ -103,66 +124,9 @@ func CopyFile(src string, dst string, buffersize int) error {
 		if n == 0 {
 			break
 		}
-		bar.Increment()
 
 		if _, err := destination.Write(buf[:n]); err != nil {
 			return err
-		}
-	}
-	bar.Finish()
-	return err
-}
-
-// MIT Licensed code: https://gist.github.com/r0l1/92462b38df26839a3ca324697c8cba04
-func CopyDir(src string, dst string, bufferSize int) (err error) {
-	src = filepath.Clean(src)
-	dst = filepath.Clean(dst)
-
-	si, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	if !si.IsDir() {
-		return errors.New("source is not a directory")
-	}
-
-	_, err = os.Stat(dst)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	if err == nil {
-		return errors.New("destination already exists")
-	}
-
-	err = os.MkdirAll(dst, si.Mode())
-	if err != nil {
-		return err
-	}
-
-	entries, err := ioutil.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			err = CopyDir(srcPath, dstPath, bufferSize)
-			if err != nil {
-				return
-			}
-		} else {
-			// Skip symlinks.
-			if entry.Mode()&os.ModeSymlink != 0 {
-				continue
-			}
-
-			err = CopyFile(srcPath, dstPath, bufferSize)
-			if err != nil {
-				return
-			}
 		}
 	}
 
@@ -317,8 +281,68 @@ func FindFolderInPath(entirePath, directory string) (string, error) {
 	if filepath.Base(modified) == directory {
 		return modified, nil
 	}
+	if filepath.Base(entirePath) == directory {
+		return entirePath, nil
+	}
 	if entirePath == "." || modified == entirePath {
 		return "", mErrors.ErrNotFound(directory)
 	}
 	return FindFolderInPath(modified, directory)
+}
+
+type ResultCounter struct {
+	mu               sync.Mutex
+	CameraName       string
+	Errors           []error
+	FilesNotImported []string
+	FilesImported    int
+}
+
+func (rc *ResultCounter) SetFailure(err error, file string) {
+	rc.mu.Lock()
+	rc.Errors = append(rc.Errors, err)
+	rc.FilesNotImported = append(rc.FilesNotImported, file)
+	rc.mu.Unlock()
+}
+
+func (rc *ResultCounter) SetCameraName(camName string) {
+	rc.mu.Lock()
+	rc.CameraName = camName
+	rc.mu.Unlock()
+}
+
+func (rc *ResultCounter) GetCameraName() string {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return rc.CameraName
+}
+
+func (rc *ResultCounter) SetSuccess() {
+	rc.mu.Lock()
+	rc.FilesImported++
+	rc.mu.Unlock()
+}
+
+func (rc *ResultCounter) Get() Result {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return Result{
+		FilesImported:    rc.FilesImported,
+		FilesNotImported: rc.FilesNotImported,
+		Errors:           rc.Errors,
+	}
+}
+
+func GetNewBar(progressBar *mpb.Progress, total int64, filename string) *mpb.Bar {
+	return progressBar.AddBar(total,
+		mpb.PrependDecorators(
+			decor.Name(color.CyanString(fmt.Sprintf("%s: ", filename))),
+			decor.CountersKiloByte("% .2f / % .2f"),
+		),
+		mpb.AppendDecorators(
+			decor.OnComplete(
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncWidth), "✔️",
+			),
+		),
+	)
 }

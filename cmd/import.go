@@ -123,7 +123,7 @@ func importFromCamera(c utils.Camera, input string, output string, dateFormat st
 	case utils.DJI:
 		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	case utils.Insta360:
-		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange)
+		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	case utils.Android:
 		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
 	}

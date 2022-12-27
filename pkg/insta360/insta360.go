@@ -1,12 +1,15 @@
 package insta360
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -14,13 +17,31 @@ import (
 	"github.com/karrick/godirwalk"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/minio/minio/pkg/disk"
-	"github.com/rwcarlsen/goexif/exif"
+	"github.com/vbauerster/mpb/v8"
 	"gopkg.in/djherbis/times.v1"
 )
 
-//nolint:nestif
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string) (*utils.Result, error) {
-	// Tested on X2
+func getDeviceName(manifest string) string {
+	name := "Insta360 Camera"
+	file, err := os.ReadFile(manifest)
+	if err != nil {
+		return name
+	}
+
+	endBytes := []byte{0x1A, 0x0F}
+
+	res := bytes.Split(file, append([]byte{0x12, 0x0B}, []byte("Insta360")...))
+	if len(res) == 1 {
+		return name
+	}
+	modelName := bytes.Split(res[1], endBytes)
+	if len(modelName) == 1 {
+		return name
+	}
+	return fmt.Sprintf("Insta360%s", modelName[0])
+}
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+	sortOptions := utils.ParseCliOptions(cameraOptions)
 
 	di, err := disk.GetInfo(in)
 	if err != nil {
@@ -34,75 +55,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		percentage,
 	)
 
-	model := ""
-
 	mediaFolder := `Camera\d+`
 	mediaFolderRegex := regexp.MustCompile(mediaFolder)
-	fileTypes := []FileTypeMatch{
-		{
-			Regex:         regexp.MustCompile(`IMG_\d+_\d+_\d\d_\d+.jpg`),
-			Type:          Photo,
-			SteadyCamMode: false,
-			OSCMode:       true,
-			ProMode:       false,
-		},
-		{
-			Regex:         regexp.MustCompile(`IMG_\d+_\d+_\d\d_\d+.insp`),
-			Type:          Photo,
-			SteadyCamMode: false,
-			OSCMode:       false,
-			ProMode:       false,
-		},
-		{
-			Regex:         regexp.MustCompile(`IMG_\d+_\d+_\d\d_\d+.dng`),
-			Type:          RawPhoto,
-			SteadyCamMode: false,
-			OSCMode:       false,
-			ProMode:       false,
-		},
-		{
-			Regex:         regexp.MustCompile(`LRV_\d+_\d+_\d\d_\d+.mp4`),
-			Type:          LowResolutionVideo,
-			SteadyCamMode: true,
-			OSCMode:       false,
-			ProMode:       false,
-		},
-		{
-			Regex:         regexp.MustCompile(`PRO_LRV_\d+_\d+_\d\d_\d+.mp4`),
-			Type:          LowResolutionVideo,
-			SteadyCamMode: true,
-			OSCMode:       false,
-			ProMode:       true,
-		},
-		{
-			Regex:         regexp.MustCompile(`PRO_VID_\d+_\d+_\d\d_\d+.mp4`),
-			Type:          Video,
-			SteadyCamMode: true,
-			OSCMode:       false,
-			ProMode:       true,
-		},
-		{
-			Regex:         regexp.MustCompile(`VID_\d+_\d+_\d\d_\d+.mp4`),
-			Type:          Video,
-			SteadyCamMode: true,
-			OSCMode:       false,
-			ProMode:       false,
-		},
-		{
-			Regex:         regexp.MustCompile(`VID_\d+_\d+_\d\d_\d+.insv`),
-			Type:          Video,
-			SteadyCamMode: false,
-			OSCMode:       false,
-			ProMode:       false,
-		},
-		{
-			Regex:         regexp.MustCompile(`LRV_\d+_\d+_\d\d_\d+.insv`),
-			Type:          LowResolutionVideo,
-			SteadyCamMode: false,
-			OSCMode:       false,
-			ProMode:       false,
-		},
-	}
 
 	root := filepath.Join(in, "DCIM")
 	var result utils.Result
@@ -113,14 +67,19 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		return &result, nil
 	}
 
+	var wg sync.WaitGroup
+	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
+		mpb.WithWidth(60),
+		mpb.WithRefreshRate(180*time.Millisecond))
+
+	inlineCounter := utils.ResultCounter{}
+
 	for _, f := range folders {
 		r := mediaFolderRegex.MatchString(f.Name())
 		if !r {
 			continue
 		}
-		if model != "" {
-			color.Green("Looking at %s", f.Name())
-		}
+
 		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
 			Unsorted: true,
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
@@ -130,7 +89,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 					t, err := times.Stat(osPathname)
 					if err != nil {
-						log.Fatal(err.Error())
+						return godirwalk.SkipThis
 					}
 
 					d := t.ModTime()
@@ -143,7 +102,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					// check if is in date range
 
-					if len(dateRange) == 2 {
+					if len(dateRange) == 2 { //nolint:nestif
 						layout := replacer.Replace(dateFormat)
 
 						start, err1 := time.Parse(layout, dateRange[0])
@@ -158,7 +117,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}
 					}
 
-					if len(dateRange) == 1 {
+					if len(dateRange) == 1 { //nolint:nestif
 						dateEnd := time.Now()
 						dateStart := dateEnd
 						switch dateRange[0] {
@@ -180,96 +139,37 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}
 					}
 
-					dayFolder := filepath.Join(out, mediaDate)
-					if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-						_ = os.Mkdir(dayFolder, 0755)
+					info, err := os.Stat(osPathname)
+					if err != nil {
+						return godirwalk.SkipThis
 					}
 
-					if _, err := os.Stat(filepath.Join(dayFolder, "Insta360 Camera")); os.IsNotExist(err) {
-						_ = os.Mkdir(filepath.Join(dayFolder, "Insta360 Camera"), 0755)
-					}
-					dayFolder = filepath.Join(dayFolder, "Insta360 Camera")
+					wg.Add(1)
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
+					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, getDeviceName(filepath.Join(in, "DCIM", "fileinfo_list.list")))
+
+					x := de.Name()
 
 					switch ftype.Type {
 					case Photo, RawPhoto:
-
-						// get model first
-						if model == "" {
-							f, err := os.Open(osPathname)
+						id := x[3+8+2 : 3+8+6+2]
+						if _, err := os.Stat(filepath.Join(dayFolder, "photos", id)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0755)
 							if err != nil {
-								log.Fatal(err)
-							}
-							defer f.Close()
-							exifObj, err := exif.Decode(f)
-							if err != nil {
-								log.Fatal(err)
-							}
-
-							camModel, err := exifObj.Get(exif.Model)
-							if err == nil {
-								if m, err := camModel.StringVal(); err == nil {
-									model = m
-								}
-							}
-
-							color.Cyan("\t🎥 [%s]:", model)
-						}
-						if ftype.OSCMode {
-							x := de.Name()
-
-							color.Green(">>> %s", x)
-
-							// 3 = IMG
-							// 8 = date
-							// 2 = jump to next + "_"
-							// 6 = id
-							id := x[3+8+2 : 3+8+6+2]
-							if _, err := os.Stat(filepath.Join(dayFolder, "photos/osc_mode", id)); os.IsNotExist(err) {
-								err = os.MkdirAll(filepath.Join(dayFolder, "photos/osc_mode", id), 0755)
-								if err != nil {
-									log.Fatal(err.Error())
-								}
-							}
-
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/osc_mode", id, x), bufferSize)
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, osPathname)
-							} else {
-								result.FilesImported++
-							}
-						} else {
-							x := de.Name()
-
-							color.Green(">>> %s", x)
-
-							if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-								err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
-								if err != nil {
-									log.Fatal(err.Error())
-								}
-							}
-
-							// 3 = IMG
-							// 8 = date
-							// 2 = jump to next + "_"
-							// 6 = id
-							id := x[3+8+2 : 3+8+6+2]
-							if _, err := os.Stat(filepath.Join(dayFolder, "photos", id)); os.IsNotExist(err) {
-								err = os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0755)
-								if err != nil {
-									log.Fatal(err.Error())
-								}
-							}
-
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), bufferSize)
-							if err != nil {
-								result.Errors = append(result.Errors, err)
-								result.FilesNotImported = append(result.FilesNotImported, osPathname)
-							} else {
-								result.FilesImported++
+								log.Fatal(err.Error())
 							}
 						}
+
+						go func(id, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), bufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(id, x, osPathname, bar)
 					case Video, LowResolutionVideo:
 						slug := ""
 						if ftype.SteadyCamMode {
@@ -280,21 +180,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						} else {
 							slug = "videos/360"
 						}
-
-						x := de.Name()
-
-						color.Green(">>> %s", x)
-
-						// 3 = IMG
-						// 8 = date
-						// 2 = jump to next + "_"
-						// 6 = id
 						id := x[3+8+2 : 3+8+6+2]
 						if ftype.ProMode {
-							// 3 = IMG
-							// 8 = date
-							// 2 = jump to next + "_"
-							// 6 = id
 							id = x[3+3+8+2+1 : 3+3+8+6+2+1]
 						}
 						if _, err := os.Stat(filepath.Join(dayFolder, slug, id)); os.IsNotExist(err) {
@@ -303,15 +190,17 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								log.Fatal(err.Error())
 							}
 						}
-						err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), bufferSize)
-						if err != nil {
-							result.Errors = append(result.Errors, err)
-							result.FilesNotImported = append(result.FilesNotImported, osPathname)
-						} else {
-							result.FilesImported++
-						}
 
-						return godirwalk.SkipThis
+						go func(id, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), bufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(id, x, osPathname, bar)
 					}
 				}
 				return nil
@@ -319,8 +208,15 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		})
 
 		if err != nil {
-			result.Errors = append(result.Errors, err)
+			inlineCounter.SetFailure(err, "")
 		}
 	}
+	wg.Wait()
+	progressBar.Shutdown()
+
+	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
+	result.FilesImported += inlineCounter.Get().FilesImported
+	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
+
 	return &result, nil
 }
