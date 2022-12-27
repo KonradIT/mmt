@@ -1,6 +1,8 @@
 package insta360
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,6 +21,25 @@ import (
 	"gopkg.in/djherbis/times.v1"
 )
 
+func getDeviceName(manifest string) string {
+	name := "Insta360 Camera"
+	file, err := os.ReadFile(manifest)
+	if err != nil {
+		return name
+	}
+
+	endBytes := []byte{0x1A, 0x0F}
+
+	res := bytes.Split(file, append([]byte{0x12, 0x0B}, []byte("Insta360")...))
+	if len(res) == 1 {
+		return name
+	}
+	modelName := bytes.Split(res[1], endBytes)
+	if len(modelName) == 1 {
+		return name
+	}
+	return fmt.Sprintf("Insta360%s", modelName[0])
+}
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	sortOptions := utils.ParseCliOptions(cameraOptions)
 
@@ -125,7 +146,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					wg.Add(1)
 					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
-					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, "Insta360")
+					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, getDeviceName(filepath.Join(in, "DCIM", "fileinfo_list.list")))
 
 					x := de.Name()
 

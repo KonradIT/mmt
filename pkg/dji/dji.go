@@ -60,11 +60,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		percentage,
 	)
 
-	mediaFolder := `\d+MEDIA`
-	mediaFolderRegex, err := regexp.Compile(mediaFolder)
-	if err != nil {
-		return nil, err
-	}
+	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA`)
 
 	root := filepath.Join(in, "DCIM")
 	var result utils.Result

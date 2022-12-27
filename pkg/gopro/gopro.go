@@ -122,10 +122,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	if err != nil {
 		return nil, err
 	}
-	if prefix == "cameraname" {
-		prefix = gpVersion.CameraType
-		sortOptions.Prefix = prefix
-	}
 
 	di, err := disk.GetInfo(in)
 	if err != nil {

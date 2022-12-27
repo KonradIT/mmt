@@ -30,6 +30,9 @@ func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out
 			dayFolder = filepath.Join(dayFolder, mediaDate)
 		case "camera":
 			if sortoptions.ByCamera {
+				if sortoptions.Prefix != "" {
+					deviceName = sortoptions.Prefix + " " + deviceName
+				}
 				dayFolder = filepath.Join(dayFolder, deviceName)
 			}
 		case "location":
