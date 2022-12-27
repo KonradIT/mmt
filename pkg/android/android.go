@@ -30,7 +30,6 @@ var locationService = LocationService{}
 var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
 func prepare(out string, deviceFileName string, deviceModel string, mediaDate string, sortOptions utils.SortOptions, deviceFileReader io.ReadCloser, progressBar *mpb.Progress) (*mpb.Bar, string, error) {
-
 	localFile, err := ioutil.TempFile(out, deviceFileName)
 	if err != nil {
 		return nil, "", err
@@ -59,7 +58,6 @@ func prepare(out string, deviceFileName string, deviceModel string, mediaDate st
 		return nil, "", err
 	}
 	return bar, dayFolder, nil
-
 }
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	var result utils.Result
@@ -104,7 +102,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	inlineCounter := utils.ResultCounter{}
 
 	for entries.Next() {
-
 		mediaDate := entries.Entry().ModifiedAt.Format("02-01-2006")
 		if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
 			mediaDate = entries.Entry().ModifiedAt.Format(replacer.Replace(dateFormat))
@@ -153,7 +150,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
+			return &result, nil //nolint
 		}
 
 		bar, dayFolder, err := prepare(
@@ -169,7 +166,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
-			return &result, nil
+			return &result, nil //nolint
 		}
 
 		// Add 1 to queue for concurrency
@@ -198,7 +195,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		}
 
 		filename, folder := pixelNameSort(entries.Entry().Name)
-		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") {
+		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") { //nolint:nestif
 			if folder != "" {
 				if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
 					err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
@@ -208,9 +205,9 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 				}
 
 				localPath = filepath.Join(dayFolder, "photos", folder, filename)
-			} else {
-				localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 			}
+		} else {
+			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 		}
 
 		go func(filename, localPath string, bar *mpb.Bar) {
@@ -235,9 +232,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			if err != nil {
 				inlineCounter.SetFailure(err, localPath)
 				return
-			} else {
-				inlineCounter.SetSuccess()
 			}
+			inlineCounter.SetSuccess()
 		}(entries.Entry().Name, localPath, bar)
 	}
 
