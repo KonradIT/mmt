@@ -57,10 +57,10 @@ Download from the releases tab, additionally, a github action will run for every
     -   `--buffersize`: Buffer size for copying files. Default is `1000 bytes`
     -   `--date`: Date format. Default is `dd-mm-yyyy`
     -   `--range`: Date range, for example: `12-03-2021,15-03-2021`
+    -   `skip_aux`: Skips `.THM`, `.LRV` files on GoPro cameras and .SRT files on DJI systems
+    -   `sort_by`: Sort by: `camera, location` (default: `camera, location` true)
     -   GoPro specific:
         -   `connection`: `sd_card`/`connect`
-        -   `skip_aux`: Skips `.THM`, `.LRV` files
-        -   `sort_by`: Sort by: `camera` (default: `camera` true)
 -   update - **updates your camera**
     -   `--input`: A directory pointing to your SD card, MTP or GoPro Connect not supported
     -   `--camera`: Type of device being updated. Values supported: `gopro, insta360`

@@ -190,7 +190,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							}
 						}(f.Name(), de.Name(), osPathname, bar)
 
-					case Video, Subtitle:
+					case Video:
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
 							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
 							if err != nil {
@@ -201,6 +201,30 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), bufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(f.Name(), de.Name(), osPathname, bar)
+					case Subtitle:
+						extraPath := srtFolderFromConfig()
+						if sortOptions.SkipAuxiliaryFiles {
+							wg.Done()
+							bar.Abort(true)
+							break
+						}
+
+						if _, err := os.Stat(filepath.Join(dayFolder, "videos", extraPath)); os.IsNotExist(err) {
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0755)
+							if err != nil {
+								log.Fatal(err.Error())
+							}
+						}
+
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), bufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {

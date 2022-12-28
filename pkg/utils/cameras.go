@@ -257,7 +257,11 @@ func Unzip(src string, dest string) error {
 func ParseCliOptions(cameraOptions map[string]interface{}) SortOptions {
 	byCamera := false
 	byLocation := false
-
+	skipAux := false
+	skipAuxOption, found := cameraOptions["skip_aux"]
+	if found {
+		skipAux = skipAuxOption.(bool)
+	}
 	sortByOptions, found := cameraOptions["sort_by"]
 	if found {
 		for _, sortop := range sortByOptions.([]string) {
@@ -271,8 +275,9 @@ func ParseCliOptions(cameraOptions map[string]interface{}) SortOptions {
 	}
 
 	return SortOptions{
-		ByCamera:   byCamera,
-		ByLocation: byLocation,
+		ByCamera:           byCamera,
+		ByLocation:         byLocation,
+		SkipAuxiliaryFiles: skipAux,
 	}
 }
 
