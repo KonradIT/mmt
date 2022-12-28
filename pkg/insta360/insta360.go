@@ -145,7 +145,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
 					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, getDeviceName(filepath.Join(in, "DCIM", "fileinfo_list.list")))
 
 					x := de.Name()

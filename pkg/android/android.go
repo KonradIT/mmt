@@ -45,7 +45,7 @@ func prepare(out string, deviceFileName string, deviceModel string, mediaDate st
 		return nil, "", err
 	}
 
-	bar := utils.GetNewBar(progressBar, stat.Size(), deviceFileName)
+	bar := utils.GetNewBar(progressBar, stat.Size(), deviceFileName, utils.IoTX)
 
 	dayFolder := utils.GetOrder(sortOptions, locationService, filepath.Join(out, localFile.Name()), out, mediaDate, deviceModel)
 

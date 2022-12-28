@@ -183,3 +183,45 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 
 	return &dataExtracted, nil
 }
+
+func (v *VMan) Convert(input, output string, resolution string, bitrate string, bar *mpb.Bar) error {
+	config := v.NewDefaultConfig()
+	config.VideoCodec = "libx264"
+
+	err := v.trans.InitializeEmptyTranscoder()
+	if err != nil {
+		return err
+	}
+
+	if config.UseHWAccel {
+		config.InArgs = append(config.InArgs, []string{"-hwaccel", "cuda"}...)
+	}
+	err = v.trans.SetInputPath(input)
+	if err != nil {
+		return err
+	}
+
+	err = v.trans.SetOutputPath(
+		output)
+	if err != nil {
+		return err
+	}
+	v.trans.MediaFile().SetVideoCodec(config.VideoCodec)
+	v.trans.MediaFile().SetAudioCodec(config.AudioCodec)
+	v.trans.MediaFile().SetRawInputArgs(config.InArgs)
+	v.trans.MediaFile().SetRawOutputArgs(config.OutArgs)
+	v.trans.MediaFile().SetVideoBitRate(bitrate)
+	v.trans.MediaFile().SetResolution(resolution)
+
+	done := v.trans.Run(true)
+
+	progress := v.trans.Output()
+
+	for msg := range progress {
+		s, _ := strconv.Atoi(msg.FramesProcessed)
+		bar.SetCurrent(int64(s))
+	}
+
+	err = <-done
+	return err
+}

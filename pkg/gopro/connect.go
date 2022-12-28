@@ -205,20 +205,21 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 				}
 
 				wg.Add(1)
-				bar := utils.GetNewBar(progressBar, goprofile.S, goprofile.N)
+				bar := utils.GetNewBar(progressBar, goprofile.S, goprofile.N, utils.IoTX)
 
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 
-					go func(in, folder, origFilename, unsorted string, result utils.Result) {
+					go func(in, folder, origFilename, unsorted string, lrvSize int, bar *mpb.Bar, result utils.Result) {
 						defer wg.Done()
 						x := origFilename
 						filename := origFilename
+
 						if verType == V2 {
-							filename = fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+							filename = fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], "MP4")
 						}
 						if verType == V1 && chaptered.MatchString(x) {
-							filename = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
+							filename = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], "MP4")
 						}
 
 						err := utils.DownloadFile(
@@ -227,39 +228,68 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							bar)
 						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)
-						} else {
-							inlineCounter.SetSuccess()
+							return
+						}
 
-							// Move to actual folder
+						inlineCounter.SetSuccess()
 
-							finalPath := utils.GetOrder(sortOptions, locationService, filepath.Join(unsorted, origFilename), out, mediaDate, cameraName)
+						// Move to actual folder
 
-							var gpFileInfo = &goProMediaMetadata{}
-							err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
+						finalPath := utils.GetOrder(sortOptions, locationService, filepath.Join(unsorted, origFilename), out, mediaDate, cameraName)
+						var gpFileInfo = &goProMediaMetadata{}
+						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
+						if err != nil {
+							inlineCounter.SetFailure(err, origFilename)
+							return
+						}
+
+						framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
+						if framerate == 0 {
+							framerate = (gpFileInfo.FpsDenom / gpFileInfo.Fps)
+						}
+
+						rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
+
+						forceGetFolder(filepath.Join(finalPath, "videos", rfpsFolder))
+
+						err = os.Rename(
+							filepath.Join(unsorted, origFilename),
+							filepath.Join(finalPath, "videos", rfpsFolder, filename),
+						)
+						if err != nil {
+							inlineCounter.SetFailure(err, origFilename)
+							return
+						}
+
+						// download proxy
+						if lrvSize > 0 && !sortOptions.SkipAuxiliaryFiles {
+							proxyVideoName := "GL" + strings.Replace(origFilename[2:], ".MP4", ".LRV", -1)
+							if verType == V1 {
+								proxyVideoName = strings.Replace(origFilename, ".MP4", ".LRV", -1)
+							}
+
+							proxyVideoBar := utils.GetNewBar(progressBar, int64(lrvSize), proxyVideoName, utils.IoTX)
+							err := utils.DownloadFile(
+								filepath.Join(unsorted, proxyVideoName),
+								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, proxyVideoName),
+								proxyVideoBar)
 							if err != nil {
 								inlineCounter.SetFailure(err, origFilename)
 								return
 							}
+							forceGetFolder(filepath.Join(finalPath, "videos", "proxy", rfpsFolder))
 
-							framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
-							if framerate == 0 {
-								framerate = (gpFileInfo.FpsDenom / gpFileInfo.Fps)
-							}
-
-							rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
-
-							forceGetFolder(filepath.Join(finalPath, "videos", rfpsFolder))
-
-							err := os.Rename(
-								filepath.Join(unsorted, origFilename),
-								filepath.Join(finalPath, "videos", rfpsFolder, filename),
+							err = os.Rename(
+								filepath.Join(unsorted, proxyVideoName),
+								filepath.Join(finalPath, "videos", "proxy", rfpsFolder, filename),
 							)
 							if err != nil {
 								inlineCounter.SetFailure(err, origFilename)
 								return
 							}
+							inlineCounter.SetSuccess()
 						}
-					}(in, folder.D, goprofile.N, unsorted, result)
+					}(in, folder.D, goprofile.N, unsorted, goprofile.Glrv, bar, result)
 
 				case Photo:
 					type photo struct {
@@ -287,7 +317,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							continue
 						}
 
-						rawPhotoBar := utils.GetNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName)
+						rawPhotoBar := utils.GetNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName, utils.IoTX)
 						totalPhotos = append(totalPhotos, photo{
 							Name:   rawPhotoName,
 							Folder: folder.D,
@@ -345,7 +375,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						if err != nil {
 							log.Fatal(err.Error())
 						}
-						multiShotBar := utils.GetNewBar(progressBar, int64(gpFileInfo.S), filename)
+						multiShotBar := utils.GetNewBar(progressBar, int64(gpFileInfo.S), filename, utils.IoTX)
 
 						go func(in, folder, origFilename, unsorted string, result utils.Result) {
 							defer wg.Done()

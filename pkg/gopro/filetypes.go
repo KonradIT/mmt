@@ -25,21 +25,6 @@ var FileTypeMatches = map[Type][]FileTypeMatch{
 			HeroMode: true,
 		},
 		{
-			Regex:    regexp.MustCompile(`GL\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GH\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GX\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: true,
-		},
-		{
 			Regex:    regexp.MustCompile(`GG\d+.MP4`), // Live Bursts...
 			Type:     Video,
 			HeroMode: true,
@@ -76,16 +61,6 @@ var FileTypeMatches = map[Type][]FileTypeMatch{
 			HeroMode: true,
 		},
 		{
-			Regex:    regexp.MustCompile(`GS\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: false,
-		},
-		{
-			Regex:    regexp.MustCompile(`GS\d+.THM`),
-			Type:     Thumbnail,
-			HeroMode: false,
-		},
-		{
 			Regex:    regexp.MustCompile(`GSAA\d+.JPG`),
 			Type:     Multishot,
 			HeroMode: false,
@@ -110,16 +85,6 @@ var FileTypeMatches = map[Type][]FileTypeMatch{
 		{
 			Regex:    regexp.MustCompile(`GP\d+.MP4`),
 			Type:     ChapteredVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.LRV`),
-			Type:     LowResolutionVideo,
-			HeroMode: true,
-		},
-		{
-			Regex:    regexp.MustCompile(`GOPR\d+.THM`),
-			Type:     Thumbnail,
 			HeroMode: true,
 		},
 		{
