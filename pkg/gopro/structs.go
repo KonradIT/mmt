@@ -102,7 +102,7 @@ type goProMediaList struct {
 			N    string        `json:"n"`
 			Cre  string        `json:"cre"`
 			Mod  string        `json:"mod"`
-			Glrv string        `json:"glrv,omitempty"`
+			Glrv int           `json:"glrv,string,omitempty"`
 			Ls   string        `json:"ls,omitempty"`
 			S    int64         `json:"s,string"`
 			G    string        `json:"g,omitempty"`

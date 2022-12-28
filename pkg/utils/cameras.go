@@ -338,11 +338,22 @@ func (rc *ResultCounter) Get() Result {
 	}
 }
 
-func GetNewBar(progressBar *mpb.Progress, total int64, filename string) *mpb.Bar {
+type BarType int
+
+const (
+	IoTX BarType = iota
+	Percentage
+)
+
+func GetNewBar(progressBar *mpb.Progress, total int64, filename string, barType BarType) *mpb.Bar {
+	decorator := decor.CountersKiloByte("% .2f / % .2f")
+	if barType == Percentage {
+		decorator = decor.Percentage(decor.WCSyncSpace)
+	}
 	return progressBar.AddBar(total,
 		mpb.PrependDecorators(
 			decor.Name(color.CyanString(fmt.Sprintf("%s: ", filename))),
-			decor.CountersKiloByte("% .2f / % .2f"),
+			decorator,
 		),
 		mpb.AppendDecorators(
 			decor.OnComplete(

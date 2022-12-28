@@ -38,6 +38,19 @@ var ffprobe = utils.NewFFprobe(nil)
 
 var locationService = LocationService{}
 
+func getRfpsFolder(pathName string) (string, error) {
+	s, err := ffprobe.VideoSize(pathName)
+	if err != nil {
+		return "", err
+	}
+	eval := goval.NewEvaluator()
+	framerate, err := eval.Evaluate(s.Streams[0].RFrameRate, nil, nil)
+	if err != nil {
+		return "", err
+	}
+	fpsAsFloat := strconv.Itoa(framerate.(int))
+	return fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat), nil
+}
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	/* Import method using SD card bay or SD card reader */
 
@@ -146,7 +159,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22":
 		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
 		return &result, nil
-	case "HD2,", "HD3", "HD4", "HX", "HD5":
+	case "HD2", "HD3", "HD4", "HX", "HD5":
 		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
 		return &result, nil
 	default:
@@ -183,7 +196,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
 					if !ftype.Regex.MatchString(de.Name()) {
-						return godirwalk.SkipThis
+						continue
 					}
 
 					d := getFileTime(osPathname, false)
@@ -209,26 +222,16 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
 
 					switch ftype.Type {
 					case Video:
 						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						s, err := ffprobe.VideoSize(osPathname)
+						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], "MP4")
+						rfpsFolder, err := getRfpsFolder(osPathname)
 						if err != nil {
-							log.Fatal(err.Error())
 							return godirwalk.SkipThis
 						}
-						eval := goval.NewEvaluator()
-						framerate, err := eval.Evaluate(s.Streams[0].RFrameRate, nil, nil)
-						if err != nil {
-							log.Fatal(err.Error())
-							return godirwalk.SkipThis
-						}
-						fpsAsFloat := strconv.Itoa(framerate.(int))
-						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat)
-
 						additionalDir := ""
 						if !ftype.HeroMode {
 							additionalDir = "360"
@@ -243,6 +246,26 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 								inlineCounter.SetSuccess()
 							}
 						}(folder, filename, osPathname, bar)
+
+						// Get LRV
+						if sortoptions.SkipAuxiliaryFiles {
+							return godirwalk.SkipThis
+						}
+
+						wg.Add(1)
+						folder = filepath.Join(dayFolder, "videos/proxy", rfpsFolder)
+						lrvReplacer := strings.NewReplacer("GX", "GL", "GH", "GL", "GM", "GL", "MP4", "LRV")
+						lrvFullpath := filepath.Join(filepath.Dir(osPathname), lrvReplacer.Replace(de.Name()))
+						lrvStat, err := os.Stat(lrvFullpath)
+						if err != nil {
+							return godirwalk.SkipThis
+						}
+						proxyVideoBar := utils.GetNewBar(progressBar, lrvStat.Size(), lrvReplacer.Replace(de.Name()), utils.IoTX)
+
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							_ = parse(folder, filename, osPathname, sortoptions, result, bar)
+						}(folder, filename, lrvFullpath, proxyVideoBar)
 					case Photo:
 						additionalDir := ""
 						if !ftype.HeroMode {
@@ -258,22 +281,6 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 								inlineCounter.SetSuccess()
 							}
 						}(folder, de.Name(), osPathname, bar)
-					case LowResolutionVideo, Thumbnail:
-						if sortoptions.SkipAuxiliaryFiles {
-							return godirwalk.SkipThis
-						}
-						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						folder := filepath.Join(dayFolder, "videos/proxy")
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
-							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
-							if err != nil {
-								inlineCounter.SetFailure(err, filename)
-							} else {
-								inlineCounter.SetSuccess()
-							}
-						}(folder, filename, osPathname, bar)
 
 					case Multishot:
 						additionalDir := ""
@@ -380,7 +387,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name())
+					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
 
 					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
@@ -410,10 +417,35 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							}
 						}(folder, x, osPathname, bar)
 
+						if sortoptions.SkipAuxiliaryFiles {
+							return godirwalk.SkipThis
+						}
+
+						wg.Add(1)
+						folder = filepath.Join(dayFolder, "videos/proxy", rfpsFolder)
+						lrvFullpath := filepath.Join(filepath.Dir(osPathname), strings.Replace(de.Name(), ".MP4", ".LRV", -1))
+						lrvStat, err := os.Stat(lrvFullpath)
+						if err != nil {
+							return godirwalk.SkipThis
+						}
+						proxyVideoBar := utils.GetNewBar(progressBar, lrvStat.Size(), strings.Replace(de.Name(), ".MP4", ".LRV", -1), utils.IoTX)
+
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							_ = parse(folder, filename, osPathname, sortoptions, result, bar)
+						}(folder, x, lrvFullpath, proxyVideoBar)
+
 					case ChapteredVideo:
 						x := de.Name()
 						name := fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
-						folder := filepath.Join(dayFolder, "videos")
+						s, err := ffprobe.VideoSize(osPathname)
+						if err != nil {
+							log.Fatal(err.Error())
+							return godirwalk.SkipThis
+						}
+						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
+						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
+						folder := filepath.Join(dayFolder, "videos", rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
@@ -424,6 +456,23 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							}
 						}(folder, name, osPathname, bar)
 
+						if sortoptions.SkipAuxiliaryFiles {
+							return godirwalk.SkipThis
+						}
+
+						wg.Add(1)
+						folder = filepath.Join(dayFolder, "videos/proxy", rfpsFolder)
+						lrvFullpath := filepath.Join(filepath.Dir(osPathname), strings.Replace(de.Name(), ".MP4", ".LRV", -1))
+						lrvStat, err := os.Stat(lrvFullpath)
+						if err != nil {
+							return godirwalk.SkipThis
+						}
+						proxyVideoBar := utils.GetNewBar(progressBar, lrvStat.Size(), strings.Replace(de.Name(), ".MP4", ".LRV", -1), utils.IoTX)
+
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							_ = parse(folder, filename, osPathname, sortoptions, result, bar)
+						}(folder, x, lrvFullpath, proxyVideoBar)
 					case Photo:
 						folder := filepath.Join(dayFolder, "photos")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
@@ -436,7 +485,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							}
 						}(folder, de.Name(), osPathname, bar)
 
-					case LowResolutionVideo, Thumbnail:
+					case LowResolutionVideo:
 						if sortoptions.SkipAuxiliaryFiles {
 							return godirwalk.SkipThis
 						}
