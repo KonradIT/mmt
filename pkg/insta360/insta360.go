@@ -171,6 +171,11 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							}
 						}(id, x, osPathname, bar)
 					case Video, LowResolutionVideo:
+						if sortOptions.SkipAuxiliaryFiles && ftype.Type == LowResolutionVideo {
+							wg.Done()
+							bar.Abort(true)
+							break
+						}
 						slug := ""
 						if ftype.SteadyCamMode {
 							slug = "videos/flat"

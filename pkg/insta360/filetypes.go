@@ -66,4 +66,11 @@ var fileTypes = []FileTypeMatch{
 		OSCMode:       false,
 		ProMode:       false,
 	},
+	{
+		Regex:         regexp.MustCompile(`LRV_\d+_\d+_\d\d_\d+.lrv`),
+		Type:          LowResolutionVideo,
+		SteadyCamMode: false,
+		OSCMode:       false,
+		ProMode:       false,
+	},
 }
