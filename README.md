@@ -27,6 +27,10 @@ Feel free to PR!
 
 I plan have the tool read a directory, use a config file and act accordingly to offload media from any type of drive
 
+## To-do:
+
+Refer to [Issues](https://github.com/KonradIT/mmt/issues)
+
 ## Features:
 
 - Import videos and photos from the most popular action cameras (GoPro, Insta360, DJI)
@@ -39,59 +43,18 @@ I plan have the tool read a directory, use a config file and act accordingly to 
 - Sort files into folders depending on:
   - Camera Name (eg: `HERO9 Black`, `Mavic Air 2`)
   - Location (eg: `El Escorial, España`)
+- Apply LUT profiles to photos
 
 ## Installing:
 
-Download from the releases tab, additionally, a github action will run for every push.
+Download binary from [the releaser Github Action](https://github.com/KonradIT/mmt/actions/workflows/build-artifacts.yaml)
 
 ## Running:
 
--   import - **import camera footage**
-    -   `--input`: Either one of these:
-        -   A directory pointing to your SD card, on Windows it would be a letter (eg: `E:\`)
-        -   USB Ethernet IP (v4) bound to a GoPro Connect connection (GoPro HERO8, HERO9) / OpenGoPro (>HERO9)
-        -   `10.5.5.9` if connected to a GoPro wirelessly
-    -   `--output`: Destination folder, a hard drive, etc...
-    -   `--name`: Project name, eg: `Paragliding Weekend Winter 2021`
-    -   `--camera`: Type of device being imported. Values supported: `gopro, insta360, dji, android`
-    -   `--buffersize`: Buffer size for copying files. Default is `1000 bytes`
-    -   `--date`: Date format. Default is `dd-mm-yyyy`
-    -   `--range`: Date range, for example: `12-03-2021,15-03-2021`
-    -   `skip_aux`: Skips `.THM`, `.LRV` files on GoPro cameras and .SRT files on DJI systems
-    -   `sort_by`: Sort by: `camera, location` (default: `camera, location` true)
-    -   GoPro specific:
-        -   `connection`: `sd_card`/`connect`
--   update - **updates your camera**
-    -   `--input`: A directory pointing to your SD card, MTP or GoPro Connect not supported
-    -   `--camera`: Type of device being updated. Values supported: `gopro, insta360`
--   merge - **merges videos together**
-    -   `--input`: Files to merge. Specify multiple times
--   list: - **list devices plugged in**
+Different commands are supported, [refer to the wiki](https://github.com/KonradIT/mmt/wiki/commands)
 
-## Configuration file:
-
-By default mmt will not use any config file, but you can change some aspects of the software only via this config file, as well put the values of the different CLI flags into the file to save time.
-
-The default location is: `~/.mmt.yaml`.
-
-```yaml
-input:
-camera:
-model:
-...
-location:
-  format: 1 # Different formats supported: 1 and 2 (default 1)
-  fallback: "NoLocation" # Leave empty to not make a folder for ungeolocated footage
-  order: # Default order is:
-  - date
-  - location
-  - device
-```
+[How to configure mmt](https://github.com/KonradIT/mmt/wiki/configfile)
 
 ## How it looks:
 
-![](https://i.imgur.com/04m55zg.png)
-
-## To-do:
-
-Refer to [Issues](https://github.com/KonradIT/mmt/issues)
+![](https://i.imgur.com/MjYKhfj.png)
