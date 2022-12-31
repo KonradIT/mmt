@@ -42,7 +42,9 @@ func handleKill() {
 	}()
 }
 func caller(ip, path string, object interface{}) error {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
 		return err
@@ -243,18 +245,24 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							return
 						}
 
-						framerate := gpFileInfo.Fps / gpFileInfo.FpsDenom
+						importanceName := getImportanceName(gpFileInfo.Hi, gpFileInfo.Dur, sortOptions.TagNames)
+
+						denom := gpFileInfo.FpsDenom
+						if denom == 0 {
+							denom = 1
+						}
+						framerate := gpFileInfo.Fps / denom
 						if framerate == 0 {
-							framerate = (gpFileInfo.FpsDenom / gpFileInfo.Fps)
+							framerate = (denom / gpFileInfo.Fps)
 						}
 
 						rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
 
-						forceGetFolder(filepath.Join(finalPath, "videos", rfpsFolder))
+						forceGetFolder(filepath.Join(finalPath, "videos", importanceName, rfpsFolder))
 
 						err = os.Rename(
 							filepath.Join(unsorted, origFilename),
-							filepath.Join(finalPath, "videos", rfpsFolder, filename),
+							filepath.Join(finalPath, "videos", importanceName, rfpsFolder, filename),
 						)
 						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)

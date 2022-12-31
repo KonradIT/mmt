@@ -117,6 +117,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		BufferSize:         bufferSize,
 		Prefix:             prefix,
 		DateRange:          []time.Time{dateStart, dateEnd},
+		TagNames:           cameraOptions["tag_names"].([]string),
 	}
 
 	connectionType, found := cameraOptions["connection"]
