@@ -1,0 +1,6 @@
+input: 10.5.5.9
+camera: gopro
+output: C:\Users\konrad\Videos\Projects
+range: week
+skip_aux: false
+connection: connect
