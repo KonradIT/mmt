@@ -237,6 +237,12 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						if !ftype.HeroMode {
 							additionalDir = "360"
 						}
+
+						if hilights, err := getHiLights(osPathname); err == nil {
+							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
+								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
+							}
+						}
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()

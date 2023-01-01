@@ -3,6 +3,7 @@ module github.com/konradit/mmt
 go 1.15
 
 require (
+	github.com/abema/go-mp4 v0.9.0
 	github.com/codingsince1985/geo-golang v1.8.3
 	github.com/dustin/go-humanize v1.0.0
 	github.com/erdaltsksn/cui v0.6.0
