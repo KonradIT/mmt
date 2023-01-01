@@ -134,8 +134,8 @@ type goProMediaMetadata struct {
 	Ls        string        `json:"ls"`
 	Cl        string        `json:"cl"`
 	Hc        string        `json:"hc"`
-	Hi        []interface{} `json:"hi"`
-	Dur       string        `json:"dur"`
+	Hi        []int         `json:"hi"`
+	Dur       int           `json:"dur,string"`
 	W         string        `json:"w"`
 	H         string        `json:"h"`
 	Fps       int           `json:"fps,string"`

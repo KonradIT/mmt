@@ -35,6 +35,13 @@ type FramesResponse struct {
 	} `json:"streams"`
 }
 
+type DurationResponse struct {
+	Programs []interface{} `json:"programs"`
+	Streams  []struct {
+		Duration float32 `json:"duration,string"`
+	} `json:"streams"`
+}
+
 type GPSLocation struct {
 	Format struct {
 		Tags struct {
@@ -116,6 +123,19 @@ func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {
 func (f *FFprobe) Frames(path string) (*FramesResponse, error) {
 	result := FramesResponse{}
 	out, err := f.executeGetInfo(path, "nb_frames")
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(out, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (f *FFprobe) Duration(path string) (*DurationResponse, error) {
+	result := DurationResponse{}
+	out, err := f.executeGetInfo(path, "duration")
 	if err != nil {
 		return nil, err
 	}

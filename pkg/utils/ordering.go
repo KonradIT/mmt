@@ -18,6 +18,7 @@ type SortOptions struct {
 	BufferSize         int
 	Prefix             string
 	DateRange          []time.Time
+	TagNames           []string
 }
 
 func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out, mediaDate, deviceName string) string {
