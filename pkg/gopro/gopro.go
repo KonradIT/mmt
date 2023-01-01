@@ -413,7 +413,15 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						}
 						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
 						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
-						folder := filepath.Join(dayFolder, "videos", rfpsFolder)
+
+						additionalDir := ""
+						if hilights, err := getHiLights(osPathname); err == nil {
+							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
+								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
+							}
+						}
+
+						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
@@ -452,7 +460,15 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						}
 						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
 						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
-						folder := filepath.Join(dayFolder, "videos", rfpsFolder)
+
+						additionalDir := ""
+						if hilights, err := getHiLights(osPathname); err == nil {
+							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
+								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
+							}
+						}
+
+						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
