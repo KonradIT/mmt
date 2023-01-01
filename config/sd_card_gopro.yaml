@@ -1,0 +1,6 @@
+input: "F:\\"
+camera: gopro
+output: C:\Users\konrad\Videos\Projects
+range: week
+skip_aux: false
+connection: sd_card

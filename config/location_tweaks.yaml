@@ -1,0 +1,7 @@
+location:
+  format: 1
+  fallback: ''
+  order:
+  - camera
+  - date
+  - location
