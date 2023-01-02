@@ -10,7 +10,6 @@ import (
 )
 
 func TestCameraInfoParse(t *testing.T) {
-
 	fileContents := `{
 		"info version":"2.0"
 		,"firmware version":"H22.01.02.01.00"
@@ -39,5 +38,4 @@ func TestCameraInfoParse(t *testing.T) {
 	require.Equal(t, "H22.01.02.01.00", gpVersion.FirmwareVersion)
 	require.Equal(t, "24000000000", gpVersion.WifiMac)
 	require.Equal(t, "2.0", gpVersion.InfoVersion)
-
 }
