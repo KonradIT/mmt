@@ -27,7 +27,7 @@ const (
 	Android
 )
 
-func (c Camera) toString() string {
+func (c Camera) ToString() string {
 	extensions := [...]string{"gopro", "dji", "insta360", "android"}
 
 	return extensions[c]
@@ -35,17 +35,30 @@ func (c Camera) toString() string {
 
 func CameraGet(s string) (Camera, error) {
 	switch s {
-	case GoPro.toString():
+	case GoPro.ToString():
 		return GoPro, nil
-	case DJI.toString():
+	case DJI.ToString():
 		return DJI, nil
-	case Insta360.toString():
+	case Insta360.ToString():
 		return Insta360, nil
-	case Android.toString():
+	case Android.ToString():
 		return Android, nil
 	default:
 		return 10, mErrors.ErrUnsupportedCamera(s)
 	}
+}
+
+func CameraGuess(input string) string {
+	_, err := os.Stat(filepath.Join(input, "MISC", "version.txt"))
+	if err == nil {
+		return GoPro.ToString()
+	}
+
+	_, err = os.Stat(filepath.Join(input, "DCIM", "fileinfo_list.list"))
+	if err == nil {
+		return Insta360.ToString()
+	}
+	return ""
 }
 
 type Result struct {

@@ -84,6 +84,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			dateStart = today.Add(-24 * time.Hour)
 		case "week":
 			dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
+		case "week-back":
+			dateStart = today.Add((-24 * 7) * time.Hour)
 		}
 	}
 

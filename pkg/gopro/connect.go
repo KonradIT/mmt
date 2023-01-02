@@ -43,7 +43,7 @@ func handleKill() {
 }
 func caller(ip, path string, object interface{}) error {
 	client := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 10 * time.Second,
 	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
@@ -199,10 +199,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 					mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
 				}
 
-				if tm.Before(start) {
-					continue
-				}
-				if tm.After(end) {
+				if tm.Before(start) || tm.After(end) {
 					continue
 				}
 

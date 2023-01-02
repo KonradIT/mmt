@@ -6,6 +6,7 @@ import (
 	"github.com/erdaltsksn/cui"
 	"github.com/fatih/color"
 	"github.com/konradit/mmt/pkg/gopro"
+	"github.com/konradit/mmt/pkg/utils"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/spf13/cobra"
 )
@@ -19,8 +20,8 @@ var listDevicesCmd = &cobra.Command{
 		if len(partitions) >= 1 {
 			color.Yellow("📷 Devices:")
 		}
-		for i, partition := range partitions {
-			color.Cyan(fmt.Sprintf("\t🎥 %v - %v (%v)\n", i, partition.Device, partition.Mountpoint))
+		for _, partition := range partitions {
+			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Device, utils.CameraGuess(partition.Device)))
 		}
 
 		networkDevices, err := gopro.GetGoProNetworkAddresses()
