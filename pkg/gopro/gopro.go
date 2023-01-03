@@ -84,6 +84,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			dateStart = today.Add(-24 * time.Hour)
 		case "week":
 			dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
+		case "week-back":
+			dateStart = today.Add((-24 * 7) * time.Hour)
 		}
 	}
 
@@ -132,7 +134,12 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		}
 	}
 
-	gpVersion, err := readInfo(in)
+	versionContent, err := os.ReadFile(filepath.Join(in, "MISC", fmt.Sprint(Version)))
+	if err != nil {
+		return nil, err
+	}
+
+	gpVersion, err := readInfo(versionContent)
 	if err != nil {
 		return nil, err
 	}
@@ -584,20 +591,11 @@ func cleanVersion(s string) string {
 	return excludingLast
 }
 
-func readInfo(in string) (*Info, error) {
-	jsonFile, err := os.Open(filepath.Join(in, "MISC", fmt.Sprint(Version)))
-	if err != nil {
-		return nil, err
-	}
-	defer jsonFile.Close()
-	inBytes, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		return nil, err
-	}
+func readInfo(inBytes []byte) (*Info, error) {
 	text := string(inBytes)
 	clean := cleanVersion(text)
 	var gpVersion Info
-	err = json.Unmarshal([]byte(clean), &gpVersion)
+	err := json.Unmarshal([]byte(clean), &gpVersion)
 	if err != nil {
 		return nil, err
 	}

@@ -42,13 +42,31 @@ var importCmd = &cobra.Command{
 		prefix := getFlagString(cmd, "prefix")
 		dateRange := getFlagSlice(cmd, "range")
 
+		customCameraOpts := make(map[string]interface{})
+
+		if useGoPro, err := cmd.Flags().GetBool("use_gopro"); err == nil && useGoPro {
+			detectedGoPro, connectionType, err := gopro.Detect()
+			if err != nil {
+				cui.Error(err.Error())
+			}
+			input = detectedGoPro
+			customCameraOpts["connection"] = string(connectionType)
+			camera = "gopro"
+		} else if useInsta360, err := cmd.Flags().GetBool("use_insta360"); err == nil && useInsta360 {
+			detectedInsta360, connectionType, err := insta360.Detect()
+			if err != nil {
+				cui.Error(err.Error())
+			}
+			input = detectedInsta360
+			customCameraOpts["connection"] = string(connectionType)
+			camera = "insta360"
+		}
+
 		if camera != "" && output != "" {
 			c, err := utils.CameraGet(camera)
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
-
-			customCameraOpts := make(map[string]interface{})
 
 			skipAuxFiles := getFlagBool(cmd, "skip_aux", "true")
 			customCameraOpts["skip_aux"] = skipAuxFiles
@@ -60,12 +78,13 @@ var importCmd = &cobra.Command{
 			}
 			switch c {
 			case utils.GoPro:
-				connection := getFlagString(cmd, "connection")
-				if connection == "" {
-					connection = "sd_card"
+				if customCameraOpts["connection"] == "" {
+					connection := getFlagString(cmd, "connection")
+					if connection == "" {
+						connection = "sd_card"
+					}
+					customCameraOpts["connection"] = connection
 				}
-				customCameraOpts["connection"] = connection
-
 				customCameraOpts["tag_names"] = getFlagSlice(cmd, "tag_names")
 			}
 			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, customCameraOpts)
@@ -111,6 +130,10 @@ func init() {
 	importCmd.Flags().StringSlice("sort_by", []string{}, "Sort files by: `camera`, `location`")
 	importCmd.Flags().StringSlice("tag_names", []string{}, "Tag names for number of HiLight tags in last 10s of video, each position being the amount, eg: 'marked 1,good stuff,important' => num of tags: 1,2,3")
 	importCmd.Flags().StringP("skip_aux", "s", "true", "Skip auxiliary files (GoPro: THM, LRV. DJI: SRT)")
+
+	// Camera helpers
+	importCmd.Flags().Bool("use_gopro", false, "Detect GoPro camera attached")
+	importCmd.Flags().Bool("use_insta360", false, "Detect Insta360 camera attached")
 }
 
 func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, camOpts map[string]interface{}) (*utils.Result, error) {

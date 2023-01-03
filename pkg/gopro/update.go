@@ -32,7 +32,13 @@ func UpdateCamera(sdcard string) error {
 	if err != nil {
 		return err
 	}
-	gpVersion, err := readInfo(sdcard)
+
+	versionContent, err := os.ReadFile(filepath.Join(sdcard, "MISC", fmt.Sprint(Version)))
+	if err != nil {
+		return err
+	}
+
+	gpVersion, err := readInfo(versionContent)
 	if err != nil {
 		return err
 	}
