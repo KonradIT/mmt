@@ -245,7 +245,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							additionalDir = "360"
 						}
 
-						if hilights, err := getHiLights(osPathname); err == nil {
+						if hilights, err := GetHiLights(osPathname); err == nil {
 							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
 								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
 							}
@@ -422,7 +422,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
 
 						additionalDir := ""
-						if hilights, err := getHiLights(osPathname); err == nil {
+						if hilights, err := GetHiLights(osPathname); err == nil {
 							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
 								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
 							}
@@ -469,7 +469,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						rfpsFolder := fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, framerate)
 
 						additionalDir := ""
-						if hilights, err := getHiLights(osPathname); err == nil {
+						if hilights, err := GetHiLights(osPathname); err == nil {
 							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
 								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
 							}
