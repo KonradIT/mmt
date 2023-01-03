@@ -8,8 +8,8 @@ import (
 )
 
 type HiLights struct {
-	Count      int
-	Timestamps []int
+	Count      int   `json:"count"`
+	Timestamps []int `json:"timestamps"`
 }
 
 func BoxTypeHMMT() mp4.BoxType { return mp4.StrToBoxType("HMMT") }
@@ -28,7 +28,7 @@ func (h *HMMT) GetFieldLength(name string, ctx mp4.Context) uint {
 	return uint(h.Count)
 }
 
-func getHiLights(path string) (*HiLights, error) {
+func GetHiLights(path string) (*HiLights, error) {
 	mp4.AddBoxDef(&HMMT{}, 0)
 
 	f, err := os.Open(path)
