@@ -46,7 +46,7 @@ var fileTypes = []FileTypeMatch{
 		ProMode:       true,
 	},
 	{
-		Regex:         regexp.MustCompile(`VID_\d+_\d+_\d\d_\d+.mp4`),
+		Regex:         regexp.MustCompile(`^VID_\d+_\d+_\d\d_\d+.mp4`),
 		Type:          Video,
 		SteadyCamMode: true,
 		OSCMode:       false,
@@ -67,10 +67,10 @@ var fileTypes = []FileTypeMatch{
 		ProMode:       false,
 	},
 	{
-		Regex:         regexp.MustCompile(`LRV_\d+_\d+_\d\d_\d+.lrv`),
+		Regex:         regexp.MustCompile(`PRO_LRV_\d+_\d+_\d\d_\d+.lrv`),
 		Type:          LowResolutionVideo,
-		SteadyCamMode: false,
+		SteadyCamMode: true,
 		OSCMode:       false,
-		ProMode:       false,
+		ProMode:       true,
 	},
 }
