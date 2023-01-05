@@ -12,8 +12,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var noGPSFix = 9999
-
 type LocationService struct{}
 
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
