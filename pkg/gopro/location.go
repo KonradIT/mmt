@@ -57,7 +57,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 
 		telems := lastEvent.ShitJson()
 		for _, telem := range telems {
-			if telem.Latitude == 0 && telem.Longitude == 0 || telem.GpsAccuracy == uint16(noGPSFix) {
+			if telem.Latitude == 0 || telem.Longitude == 0 || telem.GpsAccuracy == uint16(noGPSFix) || telem.GpsFix == 0 {
 				continue
 			}
 			return &utils.Location{
