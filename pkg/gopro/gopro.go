@@ -39,6 +39,9 @@ var ffprobe = utils.NewFFprobe(nil)
 var locationService = LocationService{}
 
 func getRfpsFolder(pathName string) (string, error) {
+	if filepath.Ext(pathName) == ".360" {
+		return "", nil
+	}
 	s, err := ffprobe.VideoSize(pathName)
 	if err != nil {
 		return "", err
@@ -235,7 +238,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 					switch ftype.Type {
 					case Video:
 						x := de.Name()
-						filename := fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], "MP4")
+						filename := fmt.Sprintf("%s%s-%s%s", x[:2], x[4:][:4], x[2:][:2], filepath.Ext(x))
 						rfpsFolder, err := getRfpsFolder(osPathname)
 						if err != nil {
 							return godirwalk.SkipThis

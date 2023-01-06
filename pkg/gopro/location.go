@@ -9,9 +9,8 @@ import (
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/konradit/mmt/pkg/videomanipulation"
+	"golang.org/x/exp/slices"
 )
-
-var noGPSFix = 9999
 
 type LocationService struct{}
 
@@ -57,7 +56,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 
 		telems := lastEvent.ShitJson()
 		for _, telem := range telems {
-			if telem.Latitude == 0 && telem.Longitude == 0 || telem.GpsAccuracy == uint16(noGPSFix) {
+			if telem.Latitude == 0 || telem.Longitude == 0 || telem.GpsAccuracy > gpsMinAccuracyFromConfig() || !slices.Contains(gpsLockTypesFromConfig(), int(telem.GpsFix)) {
 				continue
 			}
 			return &utils.Location{

@@ -56,12 +56,12 @@ var FileTypeMatches = map[Type][]FileTypeMatch{
 			HeroMode: true,
 		},
 		{
-			Regex:    regexp.MustCompile(`GPAA\d+.JPG`),
+			Regex:    regexp.MustCompile(`GPA[A-Z]\d+.JPG`),
 			Type:     Multishot,
 			HeroMode: true,
 		},
 		{
-			Regex:    regexp.MustCompile(`GSAA\d+.JPG`),
+			Regex:    regexp.MustCompile(`GSA[A-Z]\d+.JPG`),
 			Type:     Multishot,
 			HeroMode: false,
 		},

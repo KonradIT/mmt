@@ -7,10 +7,18 @@ import (
 	"os"
 	"testing"
 
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/posener/gitfs"
 	"github.com/posener/gitfs/fsutil"
 	"github.com/stretchr/testify/require"
 )
+
+var videoTests = map[string]bool{
+	"hero5.mp4":     true,
+	"hero6+ble.mp4": false,
+	"hero6.mp4":     true,
+	"hero6a.mp4":    true,
+}
 
 func TestParseGPMF(t *testing.T) {
 	ctx := context.Background()
@@ -47,10 +55,14 @@ func TestParseGPMF(t *testing.T) {
 		require.NoError(t, err)
 
 		returned, err := fromMP4(localFile.Name())
-		require.NoError(t, err)
-		require.NotZero(t, returned.Latitude)
-		require.NotZero(t, returned.Longitude)
-		require.NotEqual(t, returned.Latitude, returned.Longitude)
-		fmt.Printf("\n\treturned: %f %f\n", returned.Latitude, returned.Longitude)
+		if videoTests[walk.Path()] {
+			require.NoError(t, err)
+			require.NotZero(t, returned.Latitude)
+			require.NotZero(t, returned.Longitude)
+			require.NotEqual(t, returned.Latitude, returned.Longitude)
+			fmt.Printf("\n\treturned: %f %f\n", returned.Latitude, returned.Longitude)
+		} else {
+			require.ErrorIs(t, err, mErrors.ErrNoGPS)
+		}
 	}
 }
