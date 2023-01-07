@@ -18,13 +18,18 @@ var videoTests = map[string]bool{
 	"hero6+ble.mp4": false,
 	"hero6.mp4":     true,
 	"hero6a.mp4":    true,
+
+	"hero7.mp4":        false,
+	"hero8.mp4":        false,
+	"max-360mode.mp4":  true,
+	"max-heromode.mp4": true,
 }
 
 func TestParseGPMF(t *testing.T) {
 	ctx := context.Background()
 
 	fs, err := gitfs.New(ctx, "github.com/gopro/gpmf-parser/samples",
-		gitfs.OptGlob("hero[5..6]*.mp4"))
+		gitfs.OptGlob("*.mp4"))
 	require.NoError(t, err)
 
 	walk := fsutil.Walk(fs, "")
@@ -32,6 +37,10 @@ func TestParseGPMF(t *testing.T) {
 		if walk.Path() == "" {
 			walk.Step()
 		}
+		if _, found := videoTests[walk.Path()]; !found {
+			walk.Step()
+		}
+
 		fmt.Printf("\tTesting [%s]", walk.Path())
 
 		remoteFile, err := fs.Open(walk.Path())
@@ -43,7 +52,7 @@ func TestParseGPMF(t *testing.T) {
 		stat, err := remoteFile.Stat()
 		require.NoError(t, err)
 
-		buf := make([]byte, stat.Size()) // roughly 290 bytes per SRT entry
+		buf := make([]byte, stat.Size())
 
 		_, err = remoteFile.Read(buf)
 		require.NoError(t, err)
