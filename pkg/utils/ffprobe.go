@@ -50,6 +50,13 @@ type GPSLocation struct {
 	} `json:"format"`
 }
 
+type StreamsResponse struct {
+	Streams []struct {
+		Index          int    `json:"index"`
+		CodecTagString string `json:"codec_tag_string"`
+	} `json:"streams"`
+}
+
 func NewFFprobe(path *string) FFprobe {
 	ff := FFprobe{}
 	if path == nil {
@@ -105,6 +112,33 @@ func (f *FFprobe) executeGetInfo(path string, entries ...string) ([]byte, error)
 		return nil, err
 	}
 	return out.Bytes(), nil
+}
+
+func (f *FFprobe) Streams(path string) (*StreamsResponse, error) {
+	result := StreamsResponse{}
+
+	args := []string{
+		"-show_streams",
+		"-of",
+		"json",
+		path,
+	}
+	_, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(f.ProgramPath, args...) // #nosec
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err = cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(out.Bytes(), &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 func (f *FFprobe) VideoSize(path string) (*VideoSizeResponse, error) {

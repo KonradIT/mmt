@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/konradit/mmt/pkg/utils"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/xfrr/goffmpeg/ffmpeg"
 	"github.com/xfrr/goffmpeg/transcoder"
@@ -147,8 +148,19 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	ffprobe := utils.NewFFprobe(nil)
 
-	v.trans.MediaFile().SetRawOutputArgs([]string{"-map", "0:3"})
+	streams, err := ffprobe.Streams(input)
+	if err != nil {
+		return nil, err
+	}
+	gpmfStream := 3
+	for _, stream := range streams.Streams {
+		if stream.CodecTagString == "gpmd" {
+			gpmfStream = stream.Index
+		}
+	}
+	v.trans.MediaFile().SetRawOutputArgs([]string{"-map", fmt.Sprintf("0:%d", gpmfStream)})
 	v.trans.MediaFile().SetOutputFormat("rawvideo")
 	v.trans.MediaFile().SetVideoCodec("copy")
 
