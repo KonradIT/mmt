@@ -380,7 +380,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
 					if !ftype.Regex.MatchString(de.Name()) {
-						return godirwalk.SkipThis
+						continue
 					}
 
 					d := getFileTime(osPathname, true)
