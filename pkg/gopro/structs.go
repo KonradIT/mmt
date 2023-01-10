@@ -143,3 +143,48 @@ type goProMediaMetadata struct {
 	Prog      string        `json:"prog"`
 	Subsample string        `json:"subsample"`
 }
+
+type goProStatus struct {
+        batteryPresent          int `json:"1"`
+        batteryLevel            int `json:"2"`
+        currentMode             int `json:"43"`
+        currentSubMode          int `json:"44"`
+        currentRecVidDuration   int `json:"13"`
+        multiShotNumber         int `json:"39"`
+        clients                 int `json:"31"`
+        streaming               int `json:"32"`
+        sdCard                  int `json:"33"`
+        photosRemaining         string `json:"34,string"`
+        videoRemaining          string `json:"35,string"`
+        batchNumber             int `json:"36"`
+        videoCount              int `json:"37"`
+        photoCount              int `json:"38"`
+        videoAllCount           int `json:"39"`
+        processing              int `json:"8"`
+        cardSpace               int `json:"54"`
+}
+
+type goProSettings struct {
+        subModeVideo            int `json:"68"`
+        vidRes                  int `json:"2"`
+        frameRes                int `json:"3"`
+        fovVid                  int `json:"4"`
+        timeLapseInt            int `json:"5"`
+        loopVidInt              int `json:"6"`
+        interval                int `json:"7"`
+        lowLight                bool `json:"8"`
+        spotMeter               bool `json:"9"`
+        proTune                 bool `json:"10"`
+        whiteBalance            int `json:"11"`
+        color                   int `json:"12"`
+        exposure                int `json:"73"`
+        isoMode                 int `json:"74"`
+        isoLimet                int `json:"13"`
+        sharpness               int `json:"14"`
+        evComp                  int `json:"15"`
+}
+
+type goProCameraStatus struct {
+        Status []goProStatus `json:"status"`
+        Settings []goProSettings `json:"settings"`
+}
