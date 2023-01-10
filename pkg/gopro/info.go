@@ -12,7 +12,7 @@ import (
 )
 
 func GetInfo(in string) error {
-	var gpStatus = &goProCameraStatus{}
+	var gpStatus = &CameraStatus{}
 	err := caller(in, "gp/gpControl/status", gpStatus)
 	if err != nil {
                fmt.Println(err)
