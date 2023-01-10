@@ -1,8 +1,7 @@
 package gopro
 
 import (
-  "fmt"
-	mErrors "github.com/konradit/mmt/pkg/errors"
+        mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/shirou/gopsutil/disk"
 )
@@ -28,7 +27,4 @@ func Detect() (string, utils.ConnectionType, error) {
 	}
 
 	return "", "", mErrors.ErrNoCameraDetected
-}
-func Test() {
-  fmt.Println("aa")
 }
