@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/erdaltsksn/cui"
 	"github.com/konradit/mmt/pkg/gopro"
 	"github.com/spf13/cobra"
@@ -31,8 +29,7 @@ var infoCmd = &cobra.Command{
 			}
 			switch c {
 			case utils.GoPro:
-                                fmt.Println(camera)
-                                fmt.Println(input)
+                            err = gopro.GetInfo(input)
                         }
                 }
         },
