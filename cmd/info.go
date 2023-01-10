@@ -3,12 +3,12 @@ package cmd
 import (
 	"github.com/erdaltsksn/cui"
 	"github.com/konradit/mmt/pkg/gopro"
-	"github.com/spf13/cobra"
 	"github.com/konradit/mmt/pkg/utils"
+	"github.com/spf13/cobra"
 )
 
 var infoCmd = &cobra.Command{
-	Use:   "info",
+	Use: "info",
 	Run: func(cmd *cobra.Command, args []string) {
 		input := getFlagString(cmd, "input")
 		camera := getFlagString(cmd, "camera")
@@ -29,10 +29,10 @@ var infoCmd = &cobra.Command{
 			}
 			switch c {
 			case utils.GoPro:
-                            err = gopro.GetInfo(input)
-                        }
-                }
-        },
+				err = gopro.GetInfo(input)
+			}
+		}
+	},
 }
 
 func init() {

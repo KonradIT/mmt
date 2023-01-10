@@ -12,14 +12,13 @@ import (
 )
 
 func GetInfo(in string) error {
-	var gpStatus = &goProStatus{}
+	var gpStatus = &goProCameraStatus{}
 	err := caller(in, "gp/gpControl/status", gpStatus)
 	if err != nil {
-              fmt.Println(err)
+               fmt.Println(err)
                return err
 	}
         fmt.Println(gpStatus)
-        fmt.Println("aoeua")
         return nil
 }
 

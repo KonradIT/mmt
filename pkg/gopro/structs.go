@@ -154,8 +154,8 @@ type goProStatus struct {
         clients                 int `json:"31"`
         streaming               int `json:"32"`
         sdCard                  int `json:"33"`
-        photosRemaining         string `json:"34,string"`
-        videoRemaining          string `json:"35,string"`
+        photosRemaining         int `json:"34"`
+        videoRemaining          int `json:"35"`
         batchNumber             int `json:"36"`
         videoCount              int `json:"37"`
         photoCount              int `json:"38"`
@@ -185,6 +185,6 @@ type goProSettings struct {
 }
 
 type goProCameraStatus struct {
-        Status []goProStatus `json:"status"`
-        Settings []goProSettings `json:"settings"`
+  status goProStatus `json:"status"`
+  settings goProSettings `json:"settings"`
 }
