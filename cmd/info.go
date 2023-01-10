@@ -56,8 +56,9 @@ var infoCmd = &cobra.Command{
 					proTune = gpStatus.Settings.Num34
 				}
 				fmt.Printf("Mode : %s\n", modeName)
-				fmt.Printf("White Balance : %t\n", whiteBal != 0)
+				fmt.Printf("White Balance : %s\n", gopro.GetWhiteBalance(whiteBal))
 				if currentMode == 0 {
+                                        fmt.Printf("Resolution : %s\n", gopro.GetVidRes(gpStatus.Settings.VideoResolutions))
 					var isoText = ""
 					if isoMode == 1 {
 						isoText = "Lock"
@@ -66,28 +67,13 @@ var infoCmd = &cobra.Command{
 					}
 					fmt.Printf("ISO Mode : %s\n", isoText)
 				} else {
-					fmt.Printf("ISO Min : %d\n", getISO(isoMin))
+					fmt.Printf("ISO Min : %d\n", gopro.GetISO(isoMin))
 				}
-				fmt.Printf("ISO Limit : %d\n", getISO(isoLimit))
+				fmt.Printf("ISO Limit : %d\n", gopro.GetISO(isoLimit))
 				fmt.Printf("Protune : %t\n", proTune != 0)
 			}
 		}
 	},
-}
-
-func getISO(in int) int {
-	switch in {
-	case 0:
-		return 800
-	case 1:
-		return 400
-	case 2:
-		return 200
-	case 3:
-		return 100
-	default:
-		return 0
-	}
 }
 
 func init() {
