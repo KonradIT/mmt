@@ -41,10 +41,8 @@ var infoCmd = &cobra.Command{
 				switch customCameraOpts["connection"] {
 				case "connect":
 					printGpStatus(input)
-                                /*
-                                case "sd_card":
-                                    do gmpf extract here
-                                */
+				case "sd_card":
+					gopro.GetFileInfo(input)
 				}
 			}
 		}
