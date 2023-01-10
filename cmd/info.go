@@ -31,46 +31,56 @@ var infoCmd = &cobra.Command{
 			}
 			switch c {
 			case utils.GoPro:
-				var gpStatus = gopro.CameraStatus{}
-				gpStatus, err = gopro.GetInfo(input)
-				fmt.Printf("SSID : %s\n", gpStatus.Status.WiFiSSID)
-				currentMode := gpStatus.Status.CurrentMode
-				var modeName = "Video"
-				var whiteBal = gpStatus.Settings.Num11
-				var isoMode = gpStatus.Settings.Num74
-				var isoLimit = gpStatus.Settings.Num13
-				var isoMin = 0
-				var proTune = gpStatus.Settings.Num10
-				switch currentMode {
-				case 1:
-					modeName = "Photo"
-					whiteBal = gpStatus.Settings.Num22
-					isoMin = gpStatus.Settings.Num75
-					isoLimit = gpStatus.Settings.Num24
-					proTune = gpStatus.Settings.Num21
-				case 2:
-					modeName = "MultiShot"
-					whiteBal = gpStatus.Settings.Num35
-					isoMin = gpStatus.Settings.Num76
-					isoLimit = gpStatus.Settings.Num37
-					proTune = gpStatus.Settings.Num34
-				}
-				fmt.Printf("Mode : %s\n", modeName)
-				fmt.Printf("White Balance : %s\n", gopro.GetWhiteBalance(whiteBal))
-				if currentMode == 0 {
-                                        fmt.Printf("Resolution : %s\n", gopro.GetVidRes(gpStatus.Settings.VideoResolutions))
-					var isoText = ""
-					if isoMode == 1 {
-						isoText = "Lock"
-					} else {
-						isoText = "Max"
+				if customCameraOpts["connection"] == "" {
+					connection := getFlagString(cmd, "connection")
+					if connection == "" {
+						connection = "sd_card"
 					}
-					fmt.Printf("ISO Mode : %s\n", isoText)
-				} else {
-					fmt.Printf("ISO Min : %d\n", gopro.GetISO(isoMin))
+					customCameraOpts["connection"] = connection
 				}
-				fmt.Printf("ISO Limit : %d\n", gopro.GetISO(isoLimit))
-				fmt.Printf("Protune : %t\n", proTune != 0)
+				switch customCameraOpts["connection"] {
+				case "connect":
+					var gpStatus = gopro.CameraStatus{}
+					gpStatus, err = gopro.GetInfo(input)
+					fmt.Printf("SSID : %s\n", gpStatus.Status.WiFiSSID)
+					currentMode := gpStatus.Status.CurrentMode
+					var modeName = "Video"
+					var whiteBal = gpStatus.Settings.Num11
+					var isoMode = gpStatus.Settings.Num74
+					var isoLimit = gpStatus.Settings.Num13
+					var isoMin = 0
+					var proTune = gpStatus.Settings.Num10
+					switch currentMode {
+					case 1:
+						modeName = "Photo"
+						whiteBal = gpStatus.Settings.Num22
+						isoMin = gpStatus.Settings.Num75
+						isoLimit = gpStatus.Settings.Num24
+						proTune = gpStatus.Settings.Num21
+					case 2:
+						modeName = "MultiShot"
+						whiteBal = gpStatus.Settings.Num35
+						isoMin = gpStatus.Settings.Num76
+						isoLimit = gpStatus.Settings.Num37
+						proTune = gpStatus.Settings.Num34
+					}
+					fmt.Printf("Mode : %s\n", modeName)
+					fmt.Printf("White Balance : %s\n", gopro.GetWhiteBalance(whiteBal))
+					if currentMode == 0 {
+						fmt.Printf("Resolution : %s\n", gopro.GetVidRes(gpStatus.Settings.VideoResolutions))
+						var isoText = ""
+						if isoMode == 1 {
+							isoText = "Lock"
+						} else {
+							isoText = "Max"
+						}
+						fmt.Printf("ISO Mode : %s\n", isoText)
+					} else {
+						fmt.Printf("ISO Min : %d\n", gopro.GetISO(isoMin))
+					}
+					fmt.Printf("ISO Limit : %d\n", gopro.GetISO(isoLimit))
+					fmt.Printf("Protune : %t\n", proTune != 0)
+				}
 			}
 		}
 	},
@@ -80,4 +90,5 @@ func init() {
 	rootCmd.AddCommand(infoCmd)
 	infoCmd.Flags().StringP("input", "i", "", "Input IP Address")
 	infoCmd.Flags().StringP("camera", "c", "", "Camera type")
+	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
 }
