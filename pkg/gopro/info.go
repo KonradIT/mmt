@@ -3,7 +3,6 @@ package gopro
 /* GoPro Connect - API exposed over USB Ethernet */
 
 import (
-        "fmt"
         /*
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
@@ -11,14 +10,12 @@ import (
         */
 )
 
-func GetInfo(in string) error {
+func GetInfo(in string) (CameraStatus, error) {
 	var gpStatus = &CameraStatus{}
 	err := caller(in, "gp/gpControl/status", gpStatus)
 	if err != nil {
-               fmt.Println(err)
-               return err
+               return *gpStatus, err
 	}
-        fmt.Println(gpStatus)
-        return nil
+        return *gpStatus, nil
 }
 
