@@ -40,50 +40,58 @@ var infoCmd = &cobra.Command{
 				}
 				switch customCameraOpts["connection"] {
 				case "connect":
-					var gpStatus = gopro.CameraStatus{}
-					gpStatus, err = gopro.GetInfo(input)
-					fmt.Printf("SSID : %s\n", gpStatus.Status.WiFiSSID)
-					currentMode := gpStatus.Status.CurrentMode
-					var modeName = "Video"
-					var whiteBal = gpStatus.Settings.Num11
-					var isoMode = gpStatus.Settings.Num74
-					var isoLimit = gpStatus.Settings.Num13
-					var isoMin = 0
-					var proTune = gpStatus.Settings.Num10
-					switch currentMode {
-					case 1:
-						modeName = "Photo"
-						whiteBal = gpStatus.Settings.Num22
-						isoMin = gpStatus.Settings.Num75
-						isoLimit = gpStatus.Settings.Num24
-						proTune = gpStatus.Settings.Num21
-					case 2:
-						modeName = "MultiShot"
-						whiteBal = gpStatus.Settings.Num35
-						isoMin = gpStatus.Settings.Num76
-						isoLimit = gpStatus.Settings.Num37
-						proTune = gpStatus.Settings.Num34
-					}
-					fmt.Printf("Mode : %s\n", modeName)
-					fmt.Printf("White Balance : %s\n", gopro.GetWhiteBalance(whiteBal))
-					if currentMode == 0 {
-						fmt.Printf("Resolution : %s\n", gopro.GetVidRes(gpStatus.Settings.VideoResolutions))
-						var isoText = ""
-						if isoMode == 1 {
-							isoText = "Lock"
-						} else {
-							isoText = "Max"
-						}
-						fmt.Printf("ISO Mode : %s\n", isoText)
-					} else {
-						fmt.Printf("ISO Min : %d\n", gopro.GetISO(isoMin))
-					}
-					fmt.Printf("ISO Limit : %d\n", gopro.GetISO(isoLimit))
-					fmt.Printf("Protune : %t\n", proTune != 0)
+					printGpStatus(input)
+                                /*
+                                case "sd_card":
+                                    do gmpf extract here
+                                */
 				}
 			}
 		}
 	},
+}
+
+func printGpStatus(input string) {
+	var gpStatus = gopro.CameraStatus{}
+	gpStatus, _ = gopro.GetInfo(input)
+	fmt.Printf("SSID : %s\n", gpStatus.Status.WiFiSSID)
+	currentMode := gpStatus.Status.CurrentMode
+	var modeName = "Video"
+	var whiteBal = gpStatus.Settings.Num11
+	var isoMode = gpStatus.Settings.Num74
+	var isoLimit = gpStatus.Settings.Num13
+	var isoMin = 0
+	var proTune = gpStatus.Settings.Num10
+	switch currentMode {
+	case 1:
+		modeName = "Photo"
+		whiteBal = gpStatus.Settings.Num22
+		isoMin = gpStatus.Settings.Num75
+		isoLimit = gpStatus.Settings.Num24
+		proTune = gpStatus.Settings.Num21
+	case 2:
+		modeName = "MultiShot"
+		whiteBal = gpStatus.Settings.Num35
+		isoMin = gpStatus.Settings.Num76
+		isoLimit = gpStatus.Settings.Num37
+		proTune = gpStatus.Settings.Num34
+	}
+	fmt.Printf("Mode : %s\n", modeName)
+	fmt.Printf("White Balance : %s\n", gopro.GetWhiteBalance(whiteBal))
+	if currentMode == 0 {
+		fmt.Printf("Resolution : %s\n", gopro.GetVidRes(gpStatus.Settings.VideoResolutions))
+		var isoText = ""
+		if isoMode == 1 {
+			isoText = "Lock"
+		} else {
+			isoText = "Max"
+		}
+		fmt.Printf("ISO Mode : %s\n", isoText)
+	} else {
+		fmt.Printf("ISO Min : %d\n", gopro.GetISO(isoMin))
+	}
+	fmt.Printf("ISO Limit : %d\n", gopro.GetISO(isoLimit))
+	fmt.Printf("Protune : %t\n", proTune != 0)
 }
 
 func init() {
