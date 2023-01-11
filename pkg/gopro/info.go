@@ -4,12 +4,7 @@ package gopro
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"github.com/fatih/color"
-	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 )
 
@@ -93,29 +88,9 @@ func GetWhiteBalance(in int) string {
 
 func GetFileInfo(in string) (*utils.Result, error) {
 	var result utils.Result
-	versionContent, err := os.ReadFile(filepath.Join(in, "MISC", fmt.Sprint(Version)))
-	if err != nil {
-		return nil, err
+	returned, err := fromMP4(in)
+	if returned != nil {
+		fmt.Printf("\n\treturned: %f %f\n", returned.Latitude, returned.Longitude)
 	}
-
-	gpVersion, err := readInfo(versionContent)
-	if err != nil {
-		return nil, err
-	}
-
-	c := color.New(color.FgCyan)
-	y := color.New(color.FgHiBlue)
-	color.Cyan("🎥 [%s]:", gpVersion.CameraType)
-	c.Printf("\t📹 FW: %s ", gpVersion.FirmwareVersion)
-	y.Printf("SN: %s\n", gpVersion.CameraSerialNumber)
-	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
-
-	switch root {
-	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22":
-		return &result, nil
-	case "HD2", "HD3", "HD4", "HX", "HD5":
-		return &result, nil
-	default:
-		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
-	}
+	return &result, err
 }

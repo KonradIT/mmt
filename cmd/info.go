@@ -41,7 +41,7 @@ var infoCmd = &cobra.Command{
 				switch customCameraOpts["connection"] {
 				case "connect":
 					printGpStatus(input)
-				case "sd_card":
+                                default:
 					gopro.GetFileInfo(input)
 				}
 			}
@@ -96,5 +96,5 @@ func init() {
 	rootCmd.AddCommand(infoCmd)
 	infoCmd.Flags().StringP("input", "i", "", "Input IP Address")
 	infoCmd.Flags().StringP("camera", "c", "", "Camera type")
-	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
+	infoCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
 }
