@@ -41,7 +41,7 @@ var infoCmd = &cobra.Command{
 				switch customCameraOpts["connection"] {
 				case "connect":
 					printGpStatus(input)
-                                default:
+				default:
 					gopro.GetFileInfo(input)
 				}
 			}
