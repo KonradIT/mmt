@@ -111,8 +111,8 @@ func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 	return ipsFound, nil
 }
 
-func GetMediaList(in string) (*goProMediaList, error) {
-	var gpMediaList = &goProMediaList{}
+func GetMediaList(in string) (*mediaList, error) {
+	var gpMediaList = &mediaList{}
 	err := caller(in, "gp/gpMediaList", gpMediaList)
 	if err != nil {
 		return nil, err
