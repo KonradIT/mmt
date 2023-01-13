@@ -94,7 +94,7 @@ type cameraInfo struct {
 	} `json:"info"`
 }
 
-type mediaList struct {
+type MediaList struct {
 	ID    string `json:"id"`
 	Media []struct {
 		D  string `json:"d"`
