@@ -20,7 +20,7 @@ import (
 	"gopkg.in/djherbis/times.v1"
 )
 
-func getDeviceNameFromPhoto(path string) (string, error) {
+func getDeviceNameFromPhoto(path string) (string, error) { //nolint:unused
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
