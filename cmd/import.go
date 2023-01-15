@@ -41,6 +41,7 @@ var importCmd = &cobra.Command{
 		bufferSize := getFlagInt(cmd, "buffer", "1000")
 		prefix := getFlagString(cmd, "prefix")
 		dateRange := getFlagSlice(cmd, "range")
+		cameraName := getFlagString(cmd, "camera_name")
 
 		customCameraOpts := make(map[string]interface{})
 
@@ -87,7 +88,7 @@ var importCmd = &cobra.Command{
 				}
 				customCameraOpts["tag_names"] = getFlagSlice(cmd, "tag_names")
 			}
-			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, customCameraOpts)
+			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, cameraName, customCameraOpts)
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
@@ -130,22 +131,23 @@ func init() {
 	importCmd.Flags().StringSlice("sort_by", []string{}, "Sort files by: `camera`, `location`")
 	importCmd.Flags().StringSlice("tag_names", []string{}, "Tag names for number of HiLight tags in last 10s of video, each position being the amount, eg: 'marked 1,good stuff,important' => num of tags: 1,2,3")
 	importCmd.Flags().StringP("skip_aux", "s", "true", "Skip auxiliary files (GoPro: THM, LRV. DJI: SRT)")
+	importCmd.Flags().String("camera_name", "", "Override camera name detection with specified string")
 
 	// Camera helpers
 	importCmd.Flags().Bool("use_gopro", false, "Detect GoPro camera attached")
 	importCmd.Flags().Bool("use_insta360", false, "Detect Insta360 camera attached")
 }
 
-func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, camOpts map[string]interface{}) (*utils.Result, error) {
+func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, camOpts map[string]interface{}) (*utils.Result, error) {
 	switch c {
 	case utils.GoPro:
-		return gopro.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
+		return gopro.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
 	case utils.DJI:
-		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
+		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
 	case utils.Insta360:
-		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
+		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
 	case utils.Android:
-		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, camOpts)
+		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
 	}
 	return nil, mErrors.ErrUnsupportedCamera("")
 }

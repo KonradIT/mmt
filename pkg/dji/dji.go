@@ -44,10 +44,13 @@ func getDeviceNameFromPhoto(path string) (string, error) {
 
 var locationService = LocationService{}
 
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
 	sortOptions := utils.ParseCliOptions(cameraOptions)
 
+	if cameraName == "" {
+		cameraName = "DJI Device"
+	}
 	di, err := disk.GetInfo(in)
 	if err != nil {
 		return nil, err
@@ -76,9 +79,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := utils.ResultCounter{
-		CameraName: "DJI Device",
-	}
+	inlineCounter := utils.ResultCounter{}
 
 	for _, f := range folders {
 		r := mediaFolderRegex.MatchString(f.Name())
@@ -151,7 +152,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					wg.Add(1)
 					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
 
-					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, "DJI Device")
+					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, cameraName)
 					switch ftype.Type {
 					case Photo:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
@@ -168,25 +169,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
-
-								// Get Device Name
-
-								devName, err := getDeviceNameFromPhoto(osPathname)
-								if err != nil {
-									inlineCounter.SetFailure(err, filename)
-									return
-								}
-								// Rename directory
-								matchDeviceName, is := DeviceNames[devName]
-								if is {
-									devName = matchDeviceName
-								}
-
-								if err != nil {
-									inlineCounter.SetFailure(err, filename)
-									return
-								}
-								inlineCounter.SetCameraName(devName)
 							}
 						}(f.Name(), de.Name(), osPathname, bar)
 
@@ -265,23 +247,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	wg.Wait()
 	progressBar.Shutdown()
-
-	// Rename each folder
-
-	_ = godirwalk.Walk(out, &godirwalk.Options{
-		Unsorted: true,
-		Callback: func(osPathname string, de *godirwalk.Dirent) error {
-			if !de.ModeType().IsDir() {
-				return godirwalk.SkipThis
-			}
-
-			modified, err := utils.FindFolderInPath(osPathname, "DJI Device")
-			if err == nil {
-				_ = os.Rename(modified, strings.Replace(modified, "DJI Device", inlineCounter.CameraName, -1)) // Could be a folder already exists... time to move the content to that folder.
-			}
-			return nil
-		},
-	})
 
 	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
 	result.FilesImported += inlineCounter.Get().FilesImported

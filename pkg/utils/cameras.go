@@ -310,7 +310,6 @@ func FindFolderInPath(entirePath, directory string) (string, error) {
 
 type ResultCounter struct {
 	mu               sync.Mutex
-	CameraName       string
 	Errors           []error
 	FilesNotImported []string
 	FilesImported    int
@@ -321,18 +320,6 @@ func (rc *ResultCounter) SetFailure(err error, file string) {
 	rc.Errors = append(rc.Errors, err)
 	rc.FilesNotImported = append(rc.FilesNotImported, file)
 	rc.mu.Unlock()
-}
-
-func (rc *ResultCounter) SetCameraName(camName string) {
-	rc.mu.Lock()
-	rc.CameraName = camName
-	rc.mu.Unlock()
-}
-
-func (rc *ResultCounter) GetCameraName() string {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-	return rc.CameraName
 }
 
 func (rc *ResultCounter) SetSuccess() {

@@ -54,7 +54,7 @@ func getRfpsFolder(pathName string) (string, error) {
 	fpsAsFloat := strconv.Itoa(framerate.(int))
 	return fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat), nil
 }
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	/* Import method using SD card bay or SD card reader */
 
 	dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
@@ -166,12 +166,15 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
 
+	if cameraName == "" {
+		cameraName = gpVersion.CameraType
+	}
 	switch root {
 	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22":
-		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
+		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, cameraName)
 		return &result, nil
 	case "HD2", "HD3", "HD4", "HX", "HD5":
-		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, gpVersion.CameraType)
+		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, cameraName)
 		return &result, nil
 	default:
 		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
