@@ -46,6 +46,9 @@ func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out
 				reverseLocation, reverseerr := ReverseLocation(*locationFromFile)
 				if reverseerr == nil {
 					location = reverseLocation
+					if location == "" || location == " " {
+						location = fallbackFromConfig()
+					}
 				}
 			}
 			if sortoptions.ByLocation {
