@@ -59,7 +59,7 @@ func prepare(out string, deviceFileName string, deviceModel string, mediaDate st
 	}
 	return bar, dayFolder, nil
 }
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	var result utils.Result
 
 	sortOptions := utils.ParseCliOptions(cameraOptions)

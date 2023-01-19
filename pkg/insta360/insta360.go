@@ -40,9 +40,12 @@ func getDeviceName(manifest string) string {
 	}
 	return fmt.Sprintf("Insta360%s", modelName[0])
 }
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	sortOptions := utils.ParseCliOptions(cameraOptions)
 
+	if cameraName == "" {
+		cameraName = getDeviceName(filepath.Join(in, "DCIM", "fileinfo_list.list"))
+	}
 	di, err := disk.GetInfo(in)
 	if err != nil {
 		return nil, err
@@ -146,7 +149,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					wg.Add(1)
 					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
-					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, getDeviceName(filepath.Join(in, "DCIM", "fileinfo_list.list")))
+					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, cameraName)
 
 					x := de.Name()
 
