@@ -262,6 +262,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
+								bar.Abort(true)
 							} else {
 								inlineCounter.SetSuccess()
 							}
