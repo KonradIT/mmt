@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -34,6 +37,41 @@ func SplitSliceInChunks(a []string, chuckSize int) [][]string {
 	return chunks
 }
 
+func getModDates(input string) ([]time.Time, error) {
+	var modificationDates = []time.Time{}
+	items, err := ioutil.ReadDir(input)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if item.IsDir() {
+			subitems, err := ioutil.ReadDir(filepath.Join(input, item.Name()))
+			if err != nil {
+				return nil, err
+			}
+			for _, subitem := range subitems {
+				if subitem.IsDir() {
+					return getModDates(filepath.Join(input, item.Name(), subitem.Name()))
+				} else {
+					fileDate := subitem.ModTime()
+					parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
+					if !slices.Contains(modificationDates, parsedDate) {
+						modificationDates = append(modificationDates, parsedDate)
+					}
+				}
+			}
+
+		} else {
+			fileDate := item.ModTime()
+			parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
+			if !slices.Contains(modificationDates, parsedDate) {
+				modificationDates = append(modificationDates, parsedDate)
+			}
+		}
+	}
+	return modificationDates, nil
+}
+
 var calendarView = &cobra.Command{
 	Use:   "calendar",
 	Short: "View days in which media was captured",
@@ -42,13 +80,33 @@ var calendarView = &cobra.Command{
 		if err != nil {
 			cui.Error(err.Error())
 		}
-		if connectionType != utils.Connect {
-			cui.Error("Not GoPro Connect")
-		}
 
-		mediaList, err := gopro.GetMediaList(detectedGoPro)
-		if err != nil {
-			cui.Error(err.Error())
+		var modificationDates = []time.Time{}
+
+		switch connectionType {
+		case utils.Connect:
+			mediaList, err := gopro.GetMediaList(detectedGoPro)
+			if err != nil {
+				cui.Error(err.Error())
+			}
+			for _, folder := range mediaList.Media {
+				for _, file := range folder.Fs {
+					fileDate := time.Unix(file.Cre, 0)
+
+					parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
+					if !slices.Contains(modificationDates, parsedDate) {
+						modificationDates = append(modificationDates, parsedDate)
+					}
+				}
+			}
+			break
+		case utils.SDCard:
+			m, err := getModDates(filepath.Join(detectedGoPro, fmt.Sprintf("%s", gopro.DCIM)))
+			if err != nil {
+				cui.Error(err.Error())
+			}
+			modificationDates = m
+			break
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
@@ -75,20 +133,7 @@ var calendarView = &cobra.Command{
 			data = append(data, " ")
 		}
 
-		var modificationDates = []time.Time{}
-
-		for _, folder := range mediaList.Media {
-			for _, file := range folder.Fs {
-				fileDate := time.Unix(file.Cre, 0)
-
-				parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
-				if !slices.Contains(modificationDates, parsedDate) {
-					modificationDates = append(modificationDates, parsedDate)
-				}
-			}
-		}
-
-		for i := 1; i <= 31; i++ {
+		for i := 1; i <= firstOfMonth.AddDate(0, 1, -1).Day(); i++ {
 			date := time.Date(currentYear, currentMonth, i, 0, 0, 0, 0, currentLocation)
 			if slices.Contains(modificationDates, date) {
 				data = append(data, color.CyanString(strconv.Itoa(i)))
