@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -45,22 +44,11 @@ func getModDates(input string) ([]time.Time, error) {
 	}
 	for _, item := range items {
 		if item.IsDir() {
-			subitems, err := ioutil.ReadDir(filepath.Join(input, item.Name()))
+			m, err := getModDates(filepath.Join(input, item.Name()))
 			if err != nil {
 				return nil, err
 			}
-			for _, subitem := range subitems {
-				if subitem.IsDir() {
-					return getModDates(filepath.Join(input, item.Name(), subitem.Name()))
-				} else {
-					fileDate := subitem.ModTime()
-					parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
-					if !slices.Contains(modificationDates, parsedDate) {
-						modificationDates = append(modificationDates, parsedDate)
-					}
-				}
-			}
-
+			modificationDates = append(modificationDates, m...)
 		} else {
 			fileDate := item.ModTime()
 			parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
@@ -99,14 +87,12 @@ var calendarView = &cobra.Command{
 					}
 				}
 			}
-			break
 		case utils.SDCard:
-			m, err := getModDates(filepath.Join(detectedGoPro, fmt.Sprintf("%s", gopro.DCIM)))
+			m, err := getModDates(filepath.Join(detectedGoPro, string(gopro.DCIM)))
 			if err != nil {
 				cui.Error(err.Error())
 			}
 			modificationDates = m
-			break
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
