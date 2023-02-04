@@ -92,7 +92,7 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar) erro
 
 	_, err = os.Stat(dst)
 	if err == nil {
-		return fmt.Errorf("File %s already exists", dst)
+		return nil
 	}
 
 	destination, err := os.Create(dst)
