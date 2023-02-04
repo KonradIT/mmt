@@ -29,7 +29,7 @@ var gpTurbo = true
 
 func handleKill() {
 	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM) //nolint:govet // todo
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM) //nolint
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
