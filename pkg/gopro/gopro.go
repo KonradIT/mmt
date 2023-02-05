@@ -236,7 +236,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
+					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
 
 					switch ftype.Type {
 					case Video:
@@ -261,8 +261,9 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
-								bar.Abort(true)
 							} else {
 								inlineCounter.SetSuccess()
 							}
@@ -297,6 +298,8 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -313,6 +316,8 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -325,6 +330,8 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -408,7 +415,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
+					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
 
 					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
 
@@ -440,6 +447,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -487,6 +496,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -516,6 +527,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -531,6 +544,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -543,6 +558,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -555,6 +572,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 							defer wg.Done()
 							err := parse(folder, filename, osPathname, sortoptions, result, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()

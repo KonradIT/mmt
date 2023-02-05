@@ -148,7 +148,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
+					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
 					dayFolder := utils.GetOrder(sortOptions, nil, osPathname, out, mediaDate, cameraName)
 
 					x := de.Name()
@@ -168,6 +168,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), bufferSize, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -204,6 +206,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), bufferSize, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
