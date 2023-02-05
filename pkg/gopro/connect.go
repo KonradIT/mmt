@@ -216,7 +216,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 
-					go func(in, folder, origFilename, unsorted string, lrvSize int, bar *mpb.Bar, result utils.Result) {
+					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar, result utils.Result) {
 						defer wg.Done()
 						x := origFilename
 						filename := origFilename
@@ -233,8 +233,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
 							bar)
 						if err != nil {
-							bar.EwmaSetCurrent(goprofile.S, 1*time.Millisecond)
-							bar.EwmaIncrInt64(goprofile.S, 1*time.Millisecond)
+							bar.EwmaSetCurrent(origSize, 1*time.Millisecond)
+							bar.EwmaIncrInt64(origSize, 1*time.Millisecond)
 							inlineCounter.SetFailure(err, origFilename)
 							return
 						}
@@ -305,7 +305,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							}
 							inlineCounter.SetSuccess()
 						}
-					}(in, folder.D, goprofile.N, unsorted, goprofile.Glrv, bar, result)
+					}(in, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar, result)
 
 				case Photo:
 					type photo struct {
@@ -396,7 +396,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						}
 						multiShotBar := utils.GetNewBar(progressBar, gpFileInfo.S, filename, utils.IoTX)
 
-						go func(in, folder, origFilename, unsorted string, result utils.Result) {
+						go func(in, folder, origFilename, unsorted string, origSize int64, result utils.Result) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
@@ -405,8 +405,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								multiShotBar,
 							)
 							if err != nil {
-								multiShotBar.EwmaSetCurrent(gpFileInfo.S, 1*time.Millisecond)
-								multiShotBar.EwmaIncrInt64(gpFileInfo.S, 1*time.Millisecond)
+								bar.EwmaSetCurrent(origSize, 1*time.Millisecond)
+								bar.EwmaIncrInt64(origSize, 1*time.Millisecond)
 								inlineCounter.SetFailure(err, origFilename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -423,7 +423,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 									return
 								}
 							}
-						}(in, folder.D, filename, unsorted, result)
+						}(in, folder.D, filename, unsorted, gpFileInfo.S, result)
 					}
 
 				default:
