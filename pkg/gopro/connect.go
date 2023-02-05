@@ -29,7 +29,7 @@ var gpTurbo = true
 
 func handleKill() {
 	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM) //nolint:govet // todo
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM) //nolint
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
@@ -111,6 +111,14 @@ func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 	return ipsFound, nil
 }
 
+func GetMediaList(in string) (*MediaList, error) {
+	var gpMediaList = &MediaList{}
+	err := caller(in, "gp/gpMediaList", gpMediaList)
+	if err != nil {
+		return nil, err
+	}
+	return gpMediaList, nil
+}
 func forceGetFolder(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err = os.MkdirAll(path, 0755)
@@ -157,8 +165,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 		}
 	}
 
-	var gpMediaList = &goProMediaList{}
-	err = caller(in, "gp/gpMediaList", gpMediaList)
+	gpMediaList, err := GetMediaList(in)
 	if err != nil {
 		return nil, err
 	}
