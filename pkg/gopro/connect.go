@@ -226,6 +226,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
 							bar)
 						if err != nil {
+							bar.EwmaSetCurrent(goprofile.S, 1*time.Millisecond)
+							bar.EwmaIncrInt64(goprofile.S, 1*time.Millisecond)
 							inlineCounter.SetFailure(err, origFilename)
 							return
 						}
@@ -279,6 +281,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, proxyVideoName),
 								proxyVideoBar)
 							if err != nil {
+								proxyVideoBar.EwmaSetCurrent(int64(lrvSize), 1*time.Millisecond)
+								proxyVideoBar.EwmaIncrInt64(int64(lrvSize), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, origFilename)
 								return
 							}
@@ -328,6 +332,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							Folder: folder.D,
 							IsRaw:  true,
 							Bar:    rawPhotoBar,
+							Size:   rawPhotoTotal,
 						})
 					}
 
@@ -341,6 +346,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								nowPhoto.Bar,
 							)
 							if err != nil {
+								nowPhoto.Bar.EwmaSetCurrent(int64(nowPhoto.Size), 1*time.Millisecond)
+								nowPhoto.Bar.EwmaIncrInt64(int64(nowPhoto.Size), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, nowPhoto.Name)
 							} else {
 								inlineCounter.SetSuccess()
@@ -380,7 +387,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						if err != nil {
 							log.Fatal(err.Error())
 						}
-						multiShotBar := utils.GetNewBar(progressBar, int64(gpFileInfo.S), filename, utils.IoTX)
+						multiShotBar := utils.GetNewBar(progressBar, gpFileInfo.S, filename, utils.IoTX)
 
 						go func(in, folder, origFilename, unsorted string, result utils.Result) {
 							defer wg.Done()
@@ -391,6 +398,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								multiShotBar,
 							)
 							if err != nil {
+								multiShotBar.EwmaSetCurrent(gpFileInfo.S, 1*time.Millisecond)
+								multiShotBar.EwmaIncrInt64(gpFileInfo.S, 1*time.Millisecond)
 								inlineCounter.SetFailure(err, origFilename)
 							} else {
 								inlineCounter.SetSuccess()
