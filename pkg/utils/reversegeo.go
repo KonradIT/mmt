@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/codingsince1985/geo-golang"
 	"github.com/codingsince1985/geo-golang/openstreetmap"
@@ -14,6 +15,8 @@ type Location struct {
 }
 
 func formatFromConfig() int {
+	key := "location.format"
+	viper.SetDefault(key, 1)
 	return viper.GetInt("location.format")
 }
 
@@ -33,6 +36,11 @@ type locationFormat interface {
 	format(*geo.Address) string
 }
 
+func cleanup(input string) string {
+	repl := strings.NewReplacer("/", "_", ":", "_", "\\", "_", ".", "_")
+	return repl.Replace(strings.TrimSpace(input))
+}
+
 type format1 struct{}
 
 func (format1) format(address *geo.Address) string {
@@ -49,7 +57,7 @@ func (format2) format(address *geo.Address) string {
 }
 
 func getPrettyAddress(format locationFormat, address *geo.Address) string {
-	return format.format(address)
+	return cleanup(format.format(address))
 }
 
 func ReverseLocation(location Location) (string, error) {
