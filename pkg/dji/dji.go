@@ -150,7 +150,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, int64(info.Size()), de.Name(), utils.IoTX)
+					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
 
 					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, cameraName)
 					switch ftype.Type {
@@ -166,6 +166,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), bufferSize, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -184,6 +186,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), bufferSize, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -208,6 +212,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), bufferSize, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -225,6 +231,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), bufferSize, bar)
 							if err != nil {
+								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
+								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
