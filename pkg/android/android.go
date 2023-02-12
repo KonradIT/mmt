@@ -203,17 +203,16 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		filename, folder := pixelNameSort(entries.Entry().Name)
 		if folder != "" {
 			if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
-				err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0o755)
-				if err != nil {
-					result.Errors = append(result.Errors, err)
+				mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0o755)
+				if mkdirerr != nil {
+					result.Errors = append(result.Errors, mkdirerr)
 					result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 					return &result, nil //nolint
 				}
 			}
 
 			localPath = filepath.Join(dayFolder, "photos", folder, filename)
-
-		} else {
+		} else if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") {
 			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 		}
 

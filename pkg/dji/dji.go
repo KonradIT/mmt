@@ -143,7 +143,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						if d.Before(start) || d.After(end) {
 							return godirwalk.SkipThis
 						}
-
 					}
 
 					info, err := os.Stat(osPathname)
