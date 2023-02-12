@@ -39,6 +39,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 		return nil, mErrors.ErrInvalidFile
 	}
 }
+
 func fromSRT(srtPath string) (*utils.Location, error) {
 	content, err := ioutil.ReadFile(strings.Replace(srtPath, ".MP4", ".SRT", -1))
 	if err != nil {

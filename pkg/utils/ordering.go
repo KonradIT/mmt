@@ -59,7 +59,7 @@ func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out
 		}
 	}
 	if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
-		_ = os.MkdirAll(dayFolder, 0755)
+		_ = os.MkdirAll(dayFolder, 0o755)
 	}
 	return dayFolder
 }

@@ -40,6 +40,7 @@ func getDeviceName(manifest string) string {
 	}
 	return fmt.Sprintf("Insta360%s", modelName[0])
 }
+
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	sortOptions := utils.ParseCliOptions(cameraOptions)
 
@@ -105,24 +106,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					// check if is in date range
 
-					if len(dateRange) == 2 { //nolint:nestif
-						layout := replacer.Replace(dateFormat)
-
-						start, err1 := time.Parse(layout, dateRange[0])
-						end, err2 := time.Parse(layout, dateRange[1])
-						if err1 == nil && err2 == nil {
-							if d.Before(start) {
-								return godirwalk.SkipThis
-							}
-							if d.After(end) {
-								return godirwalk.SkipThis
-							}
-						}
-					}
-
-					if len(dateRange) == 1 { //nolint:nestif
+					switch len(dateRange) {
+					case 1:
+						dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
 						dateEnd := time.Now()
-						dateStart := dateEnd
 						switch dateRange[0] {
 						case "today":
 							dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
@@ -132,14 +119,27 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
 						}
 
-						if dateStart != dateEnd {
-							if d.Before(dateStart) {
-								return godirwalk.SkipThis
-							}
-							if d.After(dateEnd) {
-								return godirwalk.SkipThis
-							}
+						if d.Before(dateStart) {
+							return godirwalk.SkipThis
 						}
+						if d.After(dateEnd) {
+							return godirwalk.SkipThis
+						}
+					case 2:
+						layout := replacer.Replace(dateFormat)
+
+						start, err := time.Parse(layout, dateRange[0])
+						if err != nil {
+							log.Fatal(err.Error())
+						}
+						end, err := time.Parse(layout, dateRange[1])
+						if err != nil {
+							log.Fatal(err.Error())
+						}
+						if d.Before(start) || d.After(end) {
+							return godirwalk.SkipThis
+						}
+
 					}
 
 					info, err := os.Stat(osPathname)
@@ -157,7 +157,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					case Photo, RawPhoto:
 						id := x[3+8+2 : 3+8+6+2]
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos", id)); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0755)
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0o755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}
@@ -195,7 +195,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							id = x[3+3+8+2+1 : 3+3+8+6+2+1]
 						}
 						if _, err := os.Stat(filepath.Join(dayFolder, slug, id)); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, slug, id), 0755)
+							err = os.MkdirAll(filepath.Join(dayFolder, slug, id), 0o755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}

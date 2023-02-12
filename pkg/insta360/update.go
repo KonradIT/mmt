@@ -30,7 +30,7 @@ func UpdateCamera(sdcard string, model string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	var response = &FirmwareDownloadList{}
+	response := &FirmwareDownloadList{}
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
 		return err

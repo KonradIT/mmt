@@ -30,7 +30,7 @@ var importCmd = &cobra.Command{
 		if projectName != "" {
 			_, err := os.Stat(filepath.Join(output, projectName))
 			if os.IsNotExist(err) {
-				err := os.Mkdir(filepath.Join(output, projectName), 0755)
+				err := os.Mkdir(filepath.Join(output, projectName), 0o755)
 				if err != nil {
 					cui.Error("Something went wrong creating project dir", err)
 				}
@@ -41,11 +41,11 @@ var importCmd = &cobra.Command{
 		bufferSize := getFlagInt(cmd, "buffer", "1000")
 		prefix := getFlagString(cmd, "prefix")
 		dateRange := getFlagSlice(cmd, "range")
-		cameraName := getFlagString(cmd, "camera_name")
+		cameraName := getFlagString(cmd, "camera-name")
 
 		customCameraOpts := make(map[string]interface{})
 
-		if useGoPro, err := cmd.Flags().GetBool("use_gopro"); err == nil && useGoPro {
+		if useGoPro, err := cmd.Flags().GetBool("use-gopro"); err == nil && useGoPro {
 			detectedGoPro, connectionType, err := gopro.Detect()
 			if err != nil {
 				cui.Error(err.Error())
@@ -53,7 +53,7 @@ var importCmd = &cobra.Command{
 			input = detectedGoPro
 			customCameraOpts["connection"] = string(connectionType)
 			camera = "gopro"
-		} else if useInsta360, err := cmd.Flags().GetBool("use_insta360"); err == nil && useInsta360 {
+		} else if useInsta360, err := cmd.Flags().GetBool("use-insta360"); err == nil && useInsta360 {
 			detectedInsta360, connectionType, err := insta360.Detect()
 			if err != nil {
 				cui.Error(err.Error())
@@ -69,24 +69,24 @@ var importCmd = &cobra.Command{
 				cui.Error("Something went wrong", err)
 			}
 
-			skipAuxFiles := getFlagBool(cmd, "skip_aux", "true")
-			customCameraOpts["skip_aux"] = skipAuxFiles
-			sortBy := getFlagSlice(cmd, "sort_by")
+			skipAuxFiles := getFlagBool(cmd, "skip-aux", "true")
+			customCameraOpts["skip-aux"] = skipAuxFiles
+			sortBy := getFlagSlice(cmd, "sort-by")
 			if len(sortBy) == 0 {
-				customCameraOpts["sort_by"] = []string{"camera", "location"}
+				customCameraOpts["sort-by"] = []string{"camera", "location"}
 			} else {
-				customCameraOpts["sort_by"] = sortBy
+				customCameraOpts["sort-by"] = sortBy
 			}
 			switch c {
 			case utils.GoPro:
 				if customCameraOpts["connection"] == "" {
 					connection := getFlagString(cmd, "connection")
 					if connection == "" {
-						connection = "sd_card"
+						connection = "sd-card"
 					}
 					customCameraOpts["connection"] = connection
 				}
-				customCameraOpts["tag_names"] = getFlagSlice(cmd, "tag_names")
+				customCameraOpts["tag-names"] = getFlagSlice(cmd, "tag-names")
 			}
 			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, cameraName, customCameraOpts)
 			if err != nil {
@@ -127,15 +127,15 @@ func init() {
 	importCmd.Flags().StringP("buffer", "b", "", "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
-	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
-	importCmd.Flags().StringSlice("sort_by", []string{}, "Sort files by: `camera`, `location`")
-	importCmd.Flags().StringSlice("tag_names", []string{}, "Tag names for number of HiLight tags in last 10s of video, each position being the amount, eg: 'marked 1,good stuff,important' => num of tags: 1,2,3")
-	importCmd.Flags().StringP("skip_aux", "s", "true", "Skip auxiliary files (GoPro: THM, LRV. DJI: SRT)")
-	importCmd.Flags().String("camera_name", "", "Override camera name detection with specified string")
+	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd-card`, `connect` (GoPro-specific)")
+	importCmd.Flags().StringSlice("sort-by", []string{}, "Sort files by: `camera`, `location`")
+	importCmd.Flags().StringSlice("tag-names", []string{}, "Tag names for number of HiLight tags in last 10s of video, each position being the amount, eg: 'marked 1,good stuff,important' => num of tags: 1,2,3")
+	importCmd.Flags().StringP("skip-aux", "s", "true", "Skip auxiliary files (GoPro: THM, LRV. DJI: SRT)")
+	importCmd.Flags().String("camera-name", "", "Override camera name detection with specified string")
 
 	// Camera helpers
-	importCmd.Flags().Bool("use_gopro", false, "Detect GoPro camera attached")
-	importCmd.Flags().Bool("use_insta360", false, "Detect Insta360 camera attached")
+	importCmd.Flags().Bool("use-gopro", false, "Detect GoPro camera attached")
+	importCmd.Flags().Bool("use-insta360", false, "Detect Insta360 camera attached")
 }
 
 func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, camOpts map[string]interface{}) (*utils.Result, error) {

@@ -109,8 +109,10 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					}
 
 					// check if is in date range
-					if len(dateRange) == 1 {
-						dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+
+					switch len(dateRange) {
+					case 1:
+						dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
 						dateEnd := time.Now()
 						switch dateRange[0] {
 						case "today":
@@ -127,21 +129,21 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						if d.After(dateEnd) {
 							return godirwalk.SkipThis
 						}
-					}
-
-					if len(dateRange) == 2 { //nolint:nestif
+					case 2:
 						layout := replacer.Replace(dateFormat)
 
-						start, err1 := time.Parse(layout, dateRange[0])
-						end, err2 := time.Parse(layout, dateRange[1])
-						if err1 == nil && err2 == nil {
-							if d.Before(start) {
-								return godirwalk.SkipThis
-							}
-							if d.After(end) {
-								return godirwalk.SkipThis
-							}
+						start, err := time.Parse(layout, dateRange[0])
+						if err != nil {
+							log.Fatal(err.Error())
 						}
+						end, err := time.Parse(layout, dateRange[1])
+						if err != nil {
+							log.Fatal(err.Error())
+						}
+						if d.Before(start) || d.After(end) {
+							return godirwalk.SkipThis
+						}
+
 					}
 
 					info, err := os.Stat(osPathname)
@@ -156,7 +158,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					switch ftype.Type {
 					case Photo:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755)
 							if err != nil {
 								return godirwalk.SkipThis
 							}
@@ -176,7 +178,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 					case Video:
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}
@@ -202,7 +204,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}
 
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos", extraPath)); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0755)
+							err = os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0o755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}
@@ -221,7 +223,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						}(f.Name(), de.Name(), osPathname, bar)
 					case RawPhoto:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
+							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755)
 							if err != nil {
 								log.Fatal(err.Error())
 							}

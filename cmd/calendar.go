@@ -27,7 +27,7 @@ func pad(d time.Weekday) int {
 	return int(d)
 }
 
-func SplitSliceInChunks(a []string, chuckSize int) [][]string {
+func splitSliceInChunks(a []string, chuckSize int) [][]string {
 	chunks := [][]string{}
 	for chuckSize < len(a) {
 		a, chunks = a[chuckSize:], append(chunks, a[0:chuckSize:chuckSize])
@@ -37,7 +37,7 @@ func SplitSliceInChunks(a []string, chuckSize int) [][]string {
 }
 
 func getModDates(input string) ([]time.Time, error) {
-	var modificationDates = []time.Time{}
+	modificationDates := []time.Time{}
 	items, err := ioutil.ReadDir(input)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ var calendarView = &cobra.Command{
 			cui.Error(err.Error())
 		}
 
-		var modificationDates = []time.Time{}
+		modificationDates := []time.Time{}
 
 		switch connectionType {
 		case utils.Connect:
@@ -127,7 +127,7 @@ var calendarView = &cobra.Command{
 				data = append(data, color.YellowString(strconv.Itoa(i)))
 			}
 		}
-		prepared := SplitSliceInChunks(data, 7)
+		prepared := splitSliceInChunks(data, 7)
 		for _, v := range prepared {
 			table.Append(v)
 		}

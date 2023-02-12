@@ -24,6 +24,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 		return nil, mErrors.ErrInvalidFile
 	}
 }
+
 func fromMP4(videoPath string) (*utils.Location, error) {
 	vman := videomanipulation.New()
 	data, err := vman.ExtractGPMF(videoPath)

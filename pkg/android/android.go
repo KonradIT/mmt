@@ -3,7 +3,6 @@ package android
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,8 +25,10 @@ func pixelNameSort(filename string) (string, string) {
 	return filename, ""
 }
 
-var locationService = LocationService{}
-var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
+var (
+	locationService = LocationService{}
+	replacer        = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
+)
 
 func prepare(out string, deviceFileName string, deviceModel string, mediaDate string, sortOptions utils.SortOptions, deviceFileReader io.ReadCloser, progressBar *mpb.Progress) (*mpb.Bar, string, error) {
 	localFile, err := ioutil.TempFile(out, deviceFileName)
@@ -59,6 +60,7 @@ func prepare(out string, deviceFileName string, deviceModel string, mediaDate st
 	}
 	return bar, dayFolder, nil
 }
+
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	var result utils.Result
 
@@ -108,11 +110,12 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		}
 
 		// check if is in date range
-		dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+		dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
 
 		dateEnd := time.Now()
 
-		if len(dateRange) == 1 {
+		switch len(dateRange) {
+		case 1:
 			switch dateRange[0] {
 			case "today":
 				dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
@@ -127,20 +130,20 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			if entries.Entry().ModifiedAt.After(dateEnd) {
 				continue
 			}
-		}
-
-		if len(dateRange) == 2 { //nolint
+		case 2:
 			layout := replacer.Replace(dateFormat)
 
-			start, err1 := time.Parse(layout, dateRange[0])
-			end, err2 := time.Parse(layout, dateRange[1])
-			if err1 == nil && err2 == nil {
-				if entries.Entry().ModifiedAt.Before(start) {
-					continue
-				}
-				if entries.Entry().ModifiedAt.After(end) {
-					continue
-				}
+			start, err := time.Parse(layout, dateRange[0])
+			if err != nil {
+				return nil, err
+			}
+			end, err := time.Parse(layout, dateRange[1])
+			if err != nil {
+				return nil, err
+			}
+
+			if entries.Entry().ModifiedAt.Before(start) || entries.Entry().ModifiedAt.After(end) {
+				continue
 			}
 		}
 
@@ -162,7 +165,6 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 			readfile,
 			progressBar,
 		)
-
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
@@ -177,15 +179,19 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		}
 
 		if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-			err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
+			err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755)
 			if err != nil {
-				log.Fatal(err.Error())
+				result.Errors = append(result.Errors, err)
+				result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
+				return &result, nil //nolint
 			}
 		}
 		if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-			err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
+			err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755)
 			if err != nil {
-				log.Fatal(err.Error())
+				result.Errors = append(result.Errors, err)
+				result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
+				return &result, nil //nolint
 			}
 		}
 
@@ -195,17 +201,18 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		}
 
 		filename, folder := pixelNameSort(entries.Entry().Name)
-		if strings.HasSuffix(strings.ToLower(entries.Entry().Name), ".jpg") { //nolint:nestif
-			if folder != "" {
-				if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
-					err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0755)
-					if err != nil {
-						log.Fatal(err.Error())
-					}
+		if folder != "" {
+			if _, err := os.Stat(filepath.Join(dayFolder, "photos", folder)); os.IsNotExist(err) {
+				err = os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0o755)
+				if err != nil {
+					result.Errors = append(result.Errors, err)
+					result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
+					return &result, nil //nolint
 				}
-
-				localPath = filepath.Join(dayFolder, "photos", folder, filename)
 			}
+
+			localPath = filepath.Join(dayFolder, "photos", folder, filename)
+
 		} else {
 			localPath = filepath.Join(dayFolder, "photos", entries.Entry().Name)
 		}

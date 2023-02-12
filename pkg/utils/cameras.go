@@ -271,11 +271,11 @@ func ParseCliOptions(cameraOptions map[string]interface{}) SortOptions {
 	byCamera := false
 	byLocation := false
 	skipAux := false
-	skipAuxOption, found := cameraOptions["skip_aux"]
+	skipAuxOption, found := cameraOptions["skip-aux"]
 	if found {
 		skipAux = skipAuxOption.(bool)
 	}
-	sortByOptions, found := cameraOptions["sort_by"]
+	sortByOptions, found := cameraOptions["sort-by"]
 	if found {
 		for _, sortop := range sortByOptions.([]string) {
 			if sortop == "camera" {

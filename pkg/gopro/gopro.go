@@ -54,16 +54,17 @@ func getRfpsFolder(pathName string) (string, error) {
 	fpsAsFloat := strconv.Itoa(framerate.(int))
 	return fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat), nil
 }
+
 func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
 	/* Import method using SD card bay or SD card reader */
 
-	dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+	dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
 	dateEnd := time.Now()
 
 	byCamera := false
 	byLocation := false
 
-	sortByOptions, found := cameraOptions["sort_by"]
+	sortByOptions, found := cameraOptions["sort-by"]
 	if found {
 		for _, sortop := range sortByOptions.([]string) {
 			if sortop == "camera" {
@@ -110,7 +111,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 	}
 
 	skipAux := false
-	skipAuxOption, found := cameraOptions["skip_aux"]
+	skipAuxOption, found := cameraOptions["skip-aux"]
 	if found {
 		skipAux = skipAuxOption.(bool)
 	}
@@ -122,7 +123,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		BufferSize:         bufferSize,
 		Prefix:             prefix,
 		DateRange:          []time.Time{dateStart, dateEnd},
-		TagNames:           cameraOptions["tag_names"].([]string),
+		TagNames:           cameraOptions["tag-names"].([]string),
 	}
 
 	connectionType, found := cameraOptions["connection"]
@@ -653,7 +654,7 @@ func getMediaDate(d time.Time, sortoptions utils.SortOptions) string {
 
 func parse(folder string, name string, osPathname string, sortoptions utils.SortOptions, result utils.Result, bar *mpb.Bar) error {
 	if _, err := os.Stat(folder); os.IsNotExist(err) {
-		err = os.MkdirAll(folder, 0755)
+		err = os.MkdirAll(folder, 0o755)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
