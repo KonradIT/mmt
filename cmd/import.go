@@ -90,7 +90,7 @@ var importCmd = &cobra.Command{
 
 			params := utils.ImportParams{
 				Input:              input,
-				Output:             output,
+				Output:             filepath.Join(output, projectName),
 				CameraName:         cameraName,
 				SkipAuxiliaryFiles: skipAuxFiles,
 				DateFormat:         dateFormat,
