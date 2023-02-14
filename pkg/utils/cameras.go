@@ -79,11 +79,6 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar) erro
 	if err != nil {
 		return err
 	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file", src)
-	}
-
 	source, err := os.Open(src)
 	if err != nil {
 		return err
@@ -226,14 +221,14 @@ func Unzip(src string, dest string) error {
 
 		if f.FileInfo().IsDir() {
 			// Make Folder
-			if err = os.MkdirAll(fpath, os.ModePerm); err != nil {
+			if err := os.MkdirAll(fpath, os.ModePerm); err != nil {
 				return err
 			}
 			continue
 		}
 
 		// Make File
-		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
 			return err
 		}
 
@@ -265,33 +260,6 @@ func Unzip(src string, dest string) error {
 		}
 	}
 	return nil
-}
-
-func ParseCliOptions(cameraOptions map[string]interface{}) SortOptions {
-	byCamera := false
-	byLocation := false
-	skipAux := false
-	skipAuxOption, found := cameraOptions["skip_aux"]
-	if found {
-		skipAux = skipAuxOption.(bool)
-	}
-	sortByOptions, found := cameraOptions["sort_by"]
-	if found {
-		for _, sortop := range sortByOptions.([]string) {
-			if sortop == "camera" {
-				byCamera = true
-			}
-			if sortop == "location" {
-				byLocation = true
-			}
-		}
-	}
-
-	return SortOptions{
-		ByCamera:           byCamera,
-		ByLocation:         byLocation,
-		SkipAuxiliaryFiles: skipAux,
-	}
 }
 
 func FindFolderInPath(entirePath, directory string) (string, error) {
@@ -362,3 +330,5 @@ func GetNewBar(progressBar *mpb.Progress, total int64, filename string, barType 
 		),
 	)
 }
+
+var DateFormatReplacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")

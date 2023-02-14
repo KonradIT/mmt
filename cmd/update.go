@@ -31,7 +31,6 @@ var updateCmd = &cobra.Command{
 				cui.Error("Something went wrong", err)
 			}
 		}
-
 	},
 }
 

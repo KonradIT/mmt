@@ -55,7 +55,8 @@ func GetHiLights(path string) (*HiLights, error) {
 	if hmmtData != nil {
 		return &HiLights{
 			hmmtData.Count,
-			hmmtData.Entries}, nil
+			hmmtData.Entries,
+		}, nil
 	}
 	return nil, errors.New("No data found")
 }

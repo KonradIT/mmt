@@ -15,8 +15,6 @@ import (
 var FirmwareCatalogRemoteURL = "https://openapi.insta360.com/website/appDownload/getGroupApp?group=%s&X-Language=en-us"
 
 func UpdateCamera(sdcard string, model string) error {
-	client := &http.Client{}
-
 	camera, err := CameraGet("insta360-" + model)
 	if err != nil {
 		return err
@@ -25,12 +23,12 @@ func UpdateCamera(sdcard string, model string) error {
 	if err != nil {
 		return err
 	}
-	resp, err := client.Do(req)
+	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	var response = &FirmwareDownloadList{}
+	response := &FirmwareDownloadList{}
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
 		return err

@@ -44,14 +44,15 @@ func getDeviceNameFromPhoto(path string) (string, error) { //nolint:unused
 
 var locationService = LocationService{}
 
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
-	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
-	sortOptions := utils.ParseCliOptions(cameraOptions)
+type Entrypoint struct{}
 
-	if cameraName == "" {
-		cameraName = "DJI Device"
+func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
+	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
+
+	if params.CameraName == "" {
+		params.CameraName = "DJI Device"
 	}
-	di, err := disk.GetInfo(in)
+	di, err := disk.GetInfo(params.Input)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA`)
 
-	root := filepath.Join(in, "DCIM")
+	root := filepath.Join(params.Input, "DCIM")
 	var result utils.Result
 
 	folders, err := ioutil.ReadDir(root)
@@ -101,47 +102,16 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 						return godirwalk.SkipThis
 					}
 					d := t.ModTime()
-					replacer := strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
 
 					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
-						mediaDate = d.Format(replacer.Replace(dateFormat))
+					if strings.Contains(params.DateFormat, "yyyy") && strings.Contains(params.DateFormat, "mm") && strings.Contains(params.DateFormat, "dd") {
+						mediaDate = d.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
 					}
 
 					// check if is in date range
-					if len(dateRange) == 1 {
-						dateStart := time.Date(0000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-						dateEnd := time.Now()
-						switch dateRange[0] {
-						case "today":
-							dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-						case "yesterday":
-							dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Hour)
-						case "week":
-							dateStart = time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location()).Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-						}
 
-						if d.Before(dateStart) {
-							return godirwalk.SkipThis
-						}
-						if d.After(dateEnd) {
-							return godirwalk.SkipThis
-						}
-					}
-
-					if len(dateRange) == 2 { //nolint:nestif
-						layout := replacer.Replace(dateFormat)
-
-						start, err1 := time.Parse(layout, dateRange[0])
-						end, err2 := time.Parse(layout, dateRange[1])
-						if err1 == nil && err2 == nil {
-							if d.Before(start) {
-								return godirwalk.SkipThis
-							}
-							if d.After(end) {
-								return godirwalk.SkipThis
-							}
-						}
+					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
+						return godirwalk.SkipThis
 					}
 
 					info, err := os.Stat(osPathname)
@@ -152,19 +122,19 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 					wg.Add(1)
 					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
 
-					dayFolder := utils.GetOrder(sortOptions, locationService, osPathname, out, mediaDate, cameraName)
+					dayFolder := utils.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
 					switch ftype.Type {
 					case Photo:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0755)
-							if err != nil {
+							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755)
+							if mkdirerr != nil {
 								return godirwalk.SkipThis
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), bufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), params.BufferSize, bar)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -172,19 +142,19 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 
 					case Video:
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0755)
-							if err != nil {
-								log.Fatal(err.Error())
+							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755)
+							if mkdirerr != nil {
+								log.Fatal(mkdirerr.Error())
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), bufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), params.BufferSize, bar)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -192,25 +162,25 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 					case Subtitle:
 						extraPath := srtFolderFromConfig()
-						if sortOptions.SkipAuxiliaryFiles {
+						if params.SkipAuxiliaryFiles {
 							wg.Done()
 							bar.Abort(true)
 							break
 						}
 
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos", extraPath)); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0755)
-							if err != nil {
-								log.Fatal(err.Error())
+							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0o755)
+							if mkdirerr != nil {
+								log.Fatal(mkdirerr.Error())
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), bufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), params.BufferSize, bar)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -218,18 +188,18 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 					case RawPhoto:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
-							err = os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0755)
-							if err != nil {
-								log.Fatal(err.Error())
+							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755)
+							if mkdirerr != nil {
+								log.Fatal(mkdirerr.Error())
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), bufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), params.BufferSize, bar)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -237,10 +207,8 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 					case PanoramaIndex:
-					case Audio:
-						// TODO get audio files
 					}
 				}
 

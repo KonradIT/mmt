@@ -131,7 +131,6 @@ var applyLutCmd = &cobra.Command{
 			}
 			color.Green(">> Successfully applied LUT to: %s", input)
 		}
-
 	},
 }
 

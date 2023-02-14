@@ -11,6 +11,16 @@ linters:
   - nestif
   - goconst
   - asasalint
+  - bodyclose
+  - dupl
+  - durationcheck
+  - errname
+  - goconst
+  - godox
+  - gofumpt
+  - importas
+  - unconvert
+  - unparam
 linter-settings:
   nestif:
     min-complexity: 20

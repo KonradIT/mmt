@@ -24,12 +24,14 @@ import (
 	"github.com/vbauerster/mpb/v8"
 )
 
-var ipAddress = ""
-var gpTurbo = true
+var (
+	ipAddress = ""
+	gpTurbo   = true
+)
 
 func handleKill() {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM) //nolint
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
@@ -41,15 +43,13 @@ func handleKill() {
 		os.Exit(0)
 	}()
 }
+
 func caller(ip, path string, object interface{}) error {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
 		return err
 	}
-	resp, err := client.Do(req)
+	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -64,15 +64,16 @@ func caller(ip, path string, object interface{}) error {
 }
 
 func head(path string) (int, error) {
-	client := &http.Client{}
 	req, err := http.NewRequest("HEAD", path, nil)
 	if err != nil {
 		return 0, err
 	}
-	resp, err := client.Do(req)
+	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
+
 	length, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if err != nil {
 		return 0, err
@@ -96,7 +97,7 @@ func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 			ipv4Addr := a.(*net.IPNet).IP.To4()
 			if r.MatchString(ipv4Addr.String()) {
 				correctIP := ipv4Addr.String()[:len(ipv4Addr.String())-1] + "1"
-				var gpInfo = &cameraInfo{}
+				gpInfo := &cameraInfo{}
 				err := caller(correctIP, "gp/gpControl/info", gpInfo)
 				if err != nil {
 					continue
@@ -112,34 +113,43 @@ func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 }
 
 func GetMediaList(in string) (*MediaList, error) {
-	var gpMediaList = &MediaList{}
+	gpMediaList := &MediaList{}
 	err := caller(in, "gp/gpMediaList", gpMediaList)
 	if err != nil {
 		return nil, err
 	}
 	return gpMediaList, nil
 }
+
 func forceGetFolder(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err = os.MkdirAll(path, 0755)
-		if err != nil {
-			log.Fatal(err.Error())
+		mkdirerr := os.MkdirAll(path, 0o755)
+		if mkdirerr != nil {
+			log.Fatal(mkdirerr.Error())
 		}
 	}
 }
 
-func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result, error) {
+func validateIP() bool {
+	valid := regexp.MustCompile(`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`)
+	return valid.MatchString(ipAddress)
+}
+
+func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	var verType Type
 	var result utils.Result
-	ipAddress = in
+	ipAddress = params.Input
 
 	// handle ctrl-c
 	handleKill()
 
-	var gpInfo = &cameraInfo{}
-	err := caller(in, "gp/gpControl/info", gpInfo)
+	if !validateIP() {
+		return nil, mErrors.ErrInvalidSuppliedData(ipAddress)
+	}
+	gpInfo := &cameraInfo{}
+	err := caller(params.Input, "gp/gpControl/info", gpInfo)
 	if err != nil {
-		return nil, err
+		return nil, mErrors.ErrNotFound("Connect camera: " + params.Input)
 	}
 	cameraName := gpInfo.Info.ModelName
 
@@ -159,13 +169,13 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 	// activate turbo
 
 	if gpTurbo {
-		err = caller(in, "gp/gpTurbo?p=1", nil)
+		err = caller(params.Input, "gp/gpTurbo?p=1", nil)
 		if err != nil {
 			color.Red("Error activating Turbo! Download speeds will be much slower")
 		}
 	}
 
-	gpMediaList, err := GetMediaList(in)
+	gpMediaList, err := GetMediaList(params.Input)
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +187,9 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 	inlineCounter := utils.ResultCounter{}
 
-	unsorted := filepath.Join(out, "unsorted")
+	unsorted := filepath.Join(params.Output, "unsorted")
 	if _, err := os.Stat(unsorted); os.IsNotExist(err) {
-		_ = os.Mkdir(unsorted, 0755)
+		_ = os.Mkdir(unsorted, 0o755)
 	}
 
 	chaptered := regexp.MustCompile(`GP\d+.MP4`)
@@ -195,15 +205,15 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 					continue
 				}
 				tm := time.Unix(i, 0).UTC()
-				start := sortOptions.DateRange[0]
-				end := sortOptions.DateRange[1]
+				start := params.DateRange[0]
+				end := params.DateRange[1]
 				zoneName, _ := end.Zone()
 				newTime := strings.Replace(tm.Format(time.UnixDate), "UTC", zoneName, -1)
 				tm, _ = time.Parse(time.UnixDate, newTime)
 				mediaDate := tm.Format("02-01-2006")
 
-				if strings.Contains(sortOptions.DateFormat, "yyyy") && strings.Contains(sortOptions.DateFormat, "mm") && strings.Contains(sortOptions.DateFormat, "dd") {
-					mediaDate = tm.Format(replacer.Replace(sortOptions.DateFormat))
+				if strings.Contains(params.DateFormat, "yyyy") && strings.Contains(params.DateFormat, "mm") && strings.Contains(params.DateFormat, "dd") {
+					mediaDate = tm.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
 				}
 
 				if tm.Before(start) || tm.After(end) {
@@ -216,7 +226,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 
-					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar, result utils.Result) {
+					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar) {
 						defer wg.Done()
 						x := origFilename
 						filename := origFilename
@@ -243,15 +253,15 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 
 						// Move to actual folder
 
-						finalPath := utils.GetOrder(sortOptions, locationService, filepath.Join(unsorted, origFilename), out, mediaDate, cameraName)
-						var gpFileInfo = &goProMediaMetadata{}
+						finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
+						gpFileInfo := &goProMediaMetadata{}
 						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
 						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)
 							return
 						}
 
-						importanceName := getImportanceName(gpFileInfo.Hi, gpFileInfo.Dur, sortOptions.TagNames)
+						importanceName := getImportanceName(gpFileInfo.Hi, gpFileInfo.Dur, params.TagNames)
 
 						denom := gpFileInfo.FpsDenom
 						if denom == 0 {
@@ -276,7 +286,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						}
 
 						// download proxy
-						if lrvSize > 0 && !sortOptions.SkipAuxiliaryFiles {
+						if lrvSize > 0 && !params.SkipAuxiliaryFiles {
 							proxyVideoName := "GL" + strings.Replace(origFilename[2:], ".MP4", ".LRV", -1)
 							if verType == V1 {
 								proxyVideoName = strings.Replace(origFilename, ".MP4", ".LRV", -1)
@@ -305,7 +315,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							}
 							inlineCounter.SetSuccess()
 						}
-					}(in, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar, result)
+					}(params.Input, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar)
 
 				case Photo:
 					type photo struct {
@@ -320,7 +330,8 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							Folder: folder.D,
 							Name:   goprofile.N,
 							IsRaw:  false,
-							Bar:    bar},
+							Bar:    bar,
+						},
 					}
 
 					hasRawPhoto := goprofile.Raw == "1"
@@ -328,7 +339,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						wg.Add(1)
 						rawPhotoName := strings.Replace(goprofile.N, ".JPG", ".GPR", -1)
 
-						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder.D, rawPhotoName))
+						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", params.Input, folder.D, rawPhotoName))
 						if err != nil {
 							continue
 						}
@@ -344,7 +355,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 					}
 
 					for _, item := range totalPhotos {
-						go func(in string, nowPhoto photo, unsorted string, result utils.Result) {
+						go func(in string, nowPhoto photo, unsorted string) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
@@ -360,7 +371,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 								inlineCounter.SetSuccess()
 								// Move to actual folder
 
-								finalPath := utils.GetOrder(sortOptions, locationService, filepath.Join(unsorted, nowPhoto.Name), out, mediaDate, cameraName)
+								finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, nowPhoto.Name), params.Output, mediaDate, cameraName)
 
 								photoPath := filepath.Join(finalPath, "photos")
 								if nowPhoto.IsRaw {
@@ -377,7 +388,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 									return
 								}
 							}
-						}(in, item, unsorted, result)
+						}(params.Input, item, unsorted)
 					}
 
 				case Multishot:
@@ -389,14 +400,14 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 						}
 						filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
 
-						var gpFileInfo = &goProMediaMetadata{}
-						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
+						gpFileInfo := &goProMediaMetadata{}
+						err = caller(params.Input, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
 						if err != nil {
 							log.Fatal(err.Error())
 						}
 						multiShotBar := utils.GetNewBar(progressBar, gpFileInfo.S, filename, utils.IoTX)
 
-						go func(in, folder, origFilename, unsorted string, origSize int64, result utils.Result) {
+						go func(in, folder, origFilename, unsorted string, origSize int64) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
@@ -411,7 +422,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 							} else {
 								inlineCounter.SetSuccess()
 								// Move to actual folder
-								finalPath := utils.GetOrder(sortOptions, locationService, filepath.Join(unsorted, origFilename), out, mediaDate, cameraName)
+								finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
 								forceGetFolder(filepath.Join(finalPath, "multishot", filebaseroot))
 
 								err := os.Rename(
@@ -423,7 +434,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 									return
 								}
 							}
-						}(in, folder.D, filename, unsorted, gpFileInfo.S, result)
+						}(params.Input, folder.D, filename, unsorted, gpFileInfo.S)
 					}
 
 				default:
@@ -438,7 +449,7 @@ func ImportConnect(in, out string, sortOptions utils.SortOptions) (*utils.Result
 	wg.Wait()
 	progressBar.Shutdown()
 	if gpTurbo {
-		if err := caller(in, "gp/gpTurbo?p=0", nil); err != nil {
+		if err := caller(params.Input, "gp/gpTurbo?p=0", nil); err != nil {
 			color.Red("Could not exit turbo mode")
 		}
 	}

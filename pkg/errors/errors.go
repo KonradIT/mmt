@@ -14,6 +14,7 @@ var (
 	ErrGeneric                  = errors.New("Generic error")
 	ErrNoGPS                    = errors.New("No GPS data found")
 	ErrInvalidCoordinatesFormat = errors.New("Invalid coordinates format")
+	ErrInvalidSuppliedData      = func(data interface{}) error { return fmt.Errorf("Invalid data: %s", data) }
 	ErrUnsupportedCamera        = func(camera string) error { return fmt.Errorf("camera %s is not supported", camera) }
 	ErrNotFound                 = func(item string) error { return fmt.Errorf("Unable to find %s", item) }
 )

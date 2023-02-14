@@ -24,7 +24,7 @@ func tagAsDuration(tag int, increase bool) string {
 	return fmt.Sprintf("01:00:%d:%03d", seconds, 0)
 }
 
-func exportCSV(name string, tags gopro.HiLights, output string) error {
+func exportCSV(tags gopro.HiLights, output string) error {
 	csvFile, err := os.Create(output)
 	if err != nil {
 		return err
@@ -43,12 +43,12 @@ func exportCSV(name string, tags gopro.HiLights, output string) error {
 	return writer.Error()
 }
 
-func exportJSON(name string, tags gopro.HiLights, output string) error {
+func exportJSON(tags gopro.HiLights, output string) error {
 	b, err := json.MarshalIndent(tags, "", "\t")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(output, b, 0600)
+	return os.WriteFile(output, b, 0o600)
 }
 
 func exportEDL(name string, tags gopro.HiLights, output string) error {
@@ -58,7 +58,7 @@ FCM: NON-DROP FRAME
 	for index, tag := range tags.Timestamps {
 		content = fmt.Sprintf("%s\n%03d  AX       V     C        %s %s %s %s\n* FROM CLIP NAME: %s\n", content, index, "00:00:00:00", "00:00:00:01", tagAsDuration(tag, false), tagAsDuration(tag, true), name)
 	}
-	return os.WriteFile(output, []byte(content), 0600)
+	return os.WriteFile(output, []byte(content), 0o600)
 }
 
 func extractIndividual(input, output, format string) (int, error) {
@@ -72,12 +72,12 @@ func extractIndividual(input, output, format string) (int, error) {
 		if output == "" {
 			output = strings.Replace(input, filepath.Ext(input), ".csv", -1)
 		}
-		err = exportCSV(filepath.Base(input), *hilights, output)
+		err = exportCSV(*hilights, output)
 	case "json":
 		if output == "" {
 			output = strings.Replace(input, filepath.Ext(input), ".json", -1)
 		}
-		err = exportJSON(filepath.Base(input), *hilights, output)
+		err = exportJSON(*hilights, output)
 	case "edl":
 		if output == "" {
 			output = strings.Replace(input, filepath.Ext(input), ".edl", -1)
@@ -88,7 +88,7 @@ func extractIndividual(input, output, format string) (int, error) {
 }
 
 var exportTags = &cobra.Command{
-	Use:   "export_tags",
+	Use:   "export-tags",
 	Short: "Export HiLight/other tags in video",
 	Run: func(cmd *cobra.Command, args []string) {
 		input := getFlagString(cmd, "input")
