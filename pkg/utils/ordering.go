@@ -3,7 +3,6 @@ package utils
 import (
 	"os"
 	"path/filepath"
-	"time"
 )
 
 type locationUtil interface {
@@ -11,14 +10,8 @@ type locationUtil interface {
 }
 
 type SortOptions struct {
-	ByLocation         bool
-	SkipAuxiliaryFiles bool
-	ByCamera           bool
-	DateFormat         string
-	BufferSize         int
-	Prefix             string
-	DateRange          []time.Time
-	TagNames           []string
+	ByLocation bool
+	ByCamera   bool
 }
 
 func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out, mediaDate, deviceName string) string {
@@ -31,9 +24,6 @@ func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out
 			dayFolder = filepath.Join(dayFolder, mediaDate)
 		case "camera":
 			if sortoptions.ByCamera {
-				if sortoptions.Prefix != "" {
-					deviceName = sortoptions.Prefix + " " + deviceName
-				}
 				dayFolder = filepath.Join(dayFolder, deviceName)
 			}
 		case "location":

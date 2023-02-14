@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/erdaltsksn/cui"
 	"github.com/fatih/color"
@@ -16,6 +18,7 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 )
 
 var importCmd = &cobra.Command{
@@ -42,8 +45,17 @@ var importCmd = &cobra.Command{
 		prefix := getFlagString(cmd, "prefix")
 		dateRange := getFlagSlice(cmd, "range")
 		cameraName := getFlagString(cmd, "camera-name")
-
-		customCameraOpts := make(map[string]interface{})
+		connection := utils.ConnectionType(getFlagString(cmd, "connection"))
+		skipAuxFiles := getFlagBool(cmd, "skip-aux", "true")
+		sortBy := getFlagSlice(cmd, "sort-by")
+		if len(sortBy) == 0 {
+			sortBy = []string{"camera", "location"}
+		}
+		sortOptions := utils.SortOptions{
+			ByLocation: slices.Contains(sortBy, "location"),
+			ByCamera:   slices.Contains(sortBy, "camera"),
+		}
+		tagNames := getFlagSlice(cmd, "tag-names")
 
 		if useGoPro, err := cmd.Flags().GetBool("use-gopro"); err == nil && useGoPro {
 			detectedGoPro, connectionType, err := gopro.Detect()
@@ -51,7 +63,7 @@ var importCmd = &cobra.Command{
 				cui.Error(err.Error())
 			}
 			input = detectedGoPro
-			customCameraOpts["connection"] = string(connectionType)
+			connection = connectionType
 			camera = "gopro"
 		} else if useInsta360, err := cmd.Flags().GetBool("use-insta360"); err == nil && useInsta360 {
 			detectedInsta360, connectionType, err := insta360.Detect()
@@ -59,7 +71,7 @@ var importCmd = &cobra.Command{
 				cui.Error(err.Error())
 			}
 			input = detectedInsta360
-			customCameraOpts["connection"] = string(connectionType)
+			connection = connectionType
 			camera = "insta360"
 		}
 
@@ -69,29 +81,31 @@ var importCmd = &cobra.Command{
 				cui.Error("Something went wrong", err)
 			}
 
-			skipAuxFiles := getFlagBool(cmd, "skip-aux", "true")
-			customCameraOpts["skip-aux"] = skipAuxFiles
-			sortBy := getFlagSlice(cmd, "sort-by")
-			if len(sortBy) == 0 {
-				customCameraOpts["sort-by"] = []string{"camera", "location"}
-			} else {
-				customCameraOpts["sort-by"] = sortBy
-			}
 			switch c {
 			case utils.GoPro:
-				if customCameraOpts["connection"] == "" {
-					connection := getFlagString(cmd, "connection")
-					if connection == "" {
-						connection = "sd-card"
-					}
-					customCameraOpts["connection"] = connection
+				if connection == "" {
+					connection = "sd-card"
 				}
-				customCameraOpts["tag-names"] = getFlagSlice(cmd, "tag-names")
 			}
-			r, err := importFromCamera(c, input, filepath.Join(output, projectName), dateFormat, bufferSize, prefix, dateRange, cameraName, customCameraOpts)
+
+			params := utils.ImportParams{
+				Input:              input,
+				Output:             output,
+				CameraName:         cameraName,
+				SkipAuxiliaryFiles: skipAuxFiles,
+				DateFormat:         dateFormat,
+				BufferSize:         bufferSize,
+				Prefix:             prefix,
+				DateRange:          parseDateRange(dateRange, dateFormat),
+				TagNames:           tagNames,
+				Connection:         connection,
+				Sort:               sortOptions,
+			}
+			r, err := importFromCamera(c, params)
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
+
 			data := [][]string{
 				{strconv.Itoa(r.FilesImported), strconv.Itoa(len(r.FilesNotImported)), strconv.Itoa(len(r.Errors))},
 			}
@@ -138,16 +152,58 @@ func init() {
 	importCmd.Flags().Bool("use-insta360", false, "Detect Insta360 camera attached")
 }
 
-func importFromCamera(c utils.Camera, input string, output string, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, camOpts map[string]interface{}) (*utils.Result, error) {
+func parseDateRange(dateRange []string, dateFormat string) []time.Time {
+	dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+	dateEnd := time.Now()
+
+	if len(dateRange) == 1 {
+		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+		switch dateRange[0] {
+		case "today":
+			dateStart = today
+		case "yesterday":
+			dateStart = today.Add(-24 * time.Hour)
+		case "week":
+			dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
+		case "week-back":
+			dateStart = today.Add((-24 * 7) * time.Hour)
+		}
+	}
+
+	if len(dateRange) == 2 {
+		start, err := time.Parse(utils.DateFormatReplacer.Replace(dateFormat), dateRange[0])
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		if err == nil {
+			dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+		}
+		end, err := time.Parse(utils.DateFormatReplacer.Replace(dateFormat), dateRange[1])
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		if err == nil {
+			dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+		}
+	}
+
+	return []time.Time{dateStart, dateEnd}
+}
+
+func callImport(cameraIf utils.Import, params utils.ImportParams) (*utils.Result, error) {
+	return cameraIf.Import(params)
+}
+
+func importFromCamera(c utils.Camera, params utils.ImportParams) (*utils.Result, error) {
 	switch c {
 	case utils.GoPro:
-		return gopro.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
+		return callImport(gopro.Entrypoint{}, params)
 	case utils.DJI:
-		return dji.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
+		return callImport(dji.Entrypoint{}, params)
 	case utils.Insta360:
-		return insta360.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
+		return callImport(insta360.Entrypoint{}, params)
 	case utils.Android:
-		return android.Import(input, output, dateFormat, bufferSize, prefix, dateRange, cameraName, camOpts)
+		return callImport(android.Entrypoint{}, params)
 	}
 	return nil, mErrors.ErrUnsupportedCamera("")
 }

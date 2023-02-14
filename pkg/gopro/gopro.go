@@ -30,8 +30,6 @@ Uses data from:
 https://community.gopro.com/t5/en/GoPro-Camera-File-Naming-Convention/ta-p/390220#
 */
 
-var replacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
-
 var MediaFolderRegex = regexp.MustCompile(`\d\d\dGOPRO`)
 
 var ffprobe = utils.NewFFprobe(nil)
@@ -55,90 +53,21 @@ func getRfpsFolder(pathName string) (string, error) {
 	return fmt.Sprintf("%dx%d %s", s.Streams[0].Width, s.Streams[0].Height, fpsAsFloat), nil
 }
 
-func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange []string, cameraName string, cameraOptions map[string]interface{}) (*utils.Result, error) {
+type Entrypoint struct{}
+
+func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 	/* Import method using SD card bay or SD card reader */
 
-	dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-	dateEnd := time.Now()
-
-	byCamera := false
-	byLocation := false
-
-	sortByOptions, found := cameraOptions["sort-by"]
-	if found {
-		for _, sortop := range sortByOptions.([]string) {
-			if sortop == "camera" {
-				byCamera = true
-			}
-			if sortop == "location" {
-				byLocation = true
-			}
-
-			if sortop != "camera" && sortop != "days" && sortop != "location" {
-				return nil, fmt.Errorf("Unrecognized option for sort_by: %s", sortop)
-			}
-		}
-	}
-	if len(dateRange) == 1 {
-		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-		switch dateRange[0] {
-		case "today":
-			dateStart = today
-		case "yesterday":
-			dateStart = today.Add(-24 * time.Hour)
-		case "week":
-			dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-		case "week-back":
-			dateStart = today.Add((-24 * 7) * time.Hour)
-		}
+	switch params.Connection {
+	case utils.Connect:
+		return ImportConnect(params)
+	case utils.SDCard:
+		break
+	default:
+		return nil, mErrors.ErrUnsupportedConnection
 	}
 
-	if len(dateRange) == 2 {
-		start, err := time.Parse(replacer.Replace(dateFormat), dateRange[0])
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		if err == nil {
-			dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-		}
-		end, err := time.Parse(replacer.Replace(dateFormat), dateRange[1])
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		if err == nil {
-			dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
-		}
-	}
-
-	skipAux := false
-	skipAuxOption, found := cameraOptions["skip-aux"]
-	if found {
-		skipAux = skipAuxOption.(bool)
-	}
-	sortOptions := utils.SortOptions{
-		SkipAuxiliaryFiles: skipAux,
-		ByCamera:           byCamera,
-		ByLocation:         byLocation,
-		DateFormat:         dateFormat,
-		BufferSize:         bufferSize,
-		Prefix:             prefix,
-		DateRange:          []time.Time{dateStart, dateEnd},
-		TagNames:           cameraOptions["tag-names"].([]string),
-	}
-
-	connectionType, found := cameraOptions["connection"]
-	if found {
-		switch connectionType.(string) {
-		case string(utils.Connect):
-			return ImportConnect(in, out, sortOptions)
-		case string(utils.SDCard):
-			break
-		default:
-			return nil, mErrors.ErrUnsupportedConnection
-		}
-	}
-
-	versionContent, err := os.ReadFile(filepath.Join(in, "MISC", fmt.Sprint(Version)))
+	versionContent, err := os.ReadFile(filepath.Join(params.Input, "MISC", fmt.Sprint(Version)))
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +77,7 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 		return nil, err
 	}
 
-	di, err := disk.GetInfo(in)
+	di, err := disk.GetInfo(params.Input)
 	if err != nil {
 		return nil, err
 	}
@@ -167,26 +96,31 @@ func Import(in, out, dateFormat string, bufferSize int, prefix string, dateRange
 
 	root := strings.Split(gpVersion.FirmwareVersion, ".")[0]
 
-	if cameraName == "" {
-		cameraName = gpVersion.CameraType
+	if params.CameraName == "" {
+		params.CameraName = gpVersion.CameraType
 	}
+	if params.Prefix != "" {
+		params.CameraName = fmt.Sprintf("%s %s", params.Prefix, params.CameraName)
+	}
+	params.Input = filepath.Join(params.Input, fmt.Sprint(DCIM))
+
 	switch root {
 	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22":
-		result := importFromGoProV2(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, cameraName)
+		result := importFromGoProV2(params)
 		return &result, nil
 	case "HD2", "HD3", "HD4", "HX", "HD5":
-		result := importFromGoProV1(filepath.Join(in, fmt.Sprint(DCIM)), out, sortOptions, cameraName)
+		result := importFromGoProV1(params)
 		return &result, nil
 	default:
 		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
 	}
 }
 
-func importFromGoProV2(root string, output string, sortoptions utils.SortOptions, cameraName string) utils.Result {
+func importFromGoProV2(params utils.ImportParams) utils.Result {
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
 
-	folders, err := ioutil.ReadDir(root)
+	folders, err := ioutil.ReadDir(params.Input)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return result
@@ -199,34 +133,28 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 
 	inlineCounter := utils.ResultCounter{}
 
+folderLoop:
 	for _, f := range folders {
 		r := MediaFolderRegex.MatchString(f.Name())
 
 		if !r {
-			continue
+			continue folderLoop
 		}
 		color.Green("Looking at %s", f.Name())
 
-		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
+		err = godirwalk.Walk(filepath.Join(params.Input, f.Name()), &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
+			fileTypeLoop:
 				for _, ftype := range fileTypes {
 					if !ftype.Regex.MatchString(de.Name()) {
-						continue
+						continue fileTypeLoop
 					}
 
-					d := getFileTime(osPathname, false)
+					d := getFileTime(osPathname, true)
+					mediaDate := getMediaDate(getFileTime(osPathname, true), params.DateFormat)
 
-					mediaDate := getMediaDate(d, sortoptions)
-
-					if len(sortoptions.DateRange) == 2 {
-						start := sortoptions.DateRange[0]
-						end := sortoptions.DateRange[1]
-						if d.Before(start) {
-							return godirwalk.SkipThis
-						}
-						if d.After(end) {
-							return godirwalk.SkipThis
-						}
+					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
+						return godirwalk.SkipThis
 					}
 
 					info, err := os.Stat(osPathname)
@@ -234,7 +162,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						return godirwalk.SkipThis
 					}
 
-					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
+					dayFolder := utils.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
 
 					wg.Add(1)
 					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
@@ -254,16 +182,14 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 
 						if hilights, err := GetHiLights(osPathname); err == nil {
 							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
-								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
+								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), params.TagNames))
 							}
 						}
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -271,7 +197,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						}(folder, filename, osPathname, bar)
 
 						// Get LRV
-						if sortoptions.SkipAuxiliaryFiles {
+						if params.SkipAuxiliaryFiles {
 							return godirwalk.SkipThis
 						}
 
@@ -287,7 +213,7 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, sortoptions, result, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, result, bar)
 						}(folder, filename, lrvFullpath, proxyVideoBar)
 					case Photo:
 						additionalDir := ""
@@ -297,10 +223,8 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						folder := filepath.Join(dayFolder, "photos", additionalDir)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -315,10 +239,8 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						folder := filepath.Join(dayFolder, "multishot", additionalDir, de.Name()[:4])
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -329,10 +251,8 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 						folder := filepath.Join(dayFolder, "photos/raw")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -363,11 +283,11 @@ func importFromGoProV2(root string, output string, sortoptions utils.SortOptions
 	return result
 }
 
-func importFromGoProV1(root string, output string, sortoptions utils.SortOptions, cameraName string) utils.Result {
+func importFromGoProV1(params utils.ImportParams) utils.Result {
 	fileTypes := FileTypeMatches[V1]
 	var result utils.Result
 
-	folders, err := ioutil.ReadDir(root)
+	folders, err := ioutil.ReadDir(params.Input)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return result
@@ -388,7 +308,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 		}
 		color.Green("Looking at %s", f.Name())
 
-		err = godirwalk.Walk(filepath.Join(root, f.Name()), &godirwalk.Options{
+		err = godirwalk.Walk(filepath.Join(params.Input, f.Name()), &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error {
 				for _, ftype := range fileTypes {
 					if !ftype.Regex.MatchString(de.Name()) {
@@ -396,18 +316,10 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 					}
 
 					d := getFileTime(osPathname, true)
+					mediaDate := getMediaDate(d, params.DateFormat)
 
-					mediaDate := getMediaDate(d, sortoptions)
-
-					if len(sortoptions.DateRange) == 2 {
-						start := sortoptions.DateRange[0]
-						end := sortoptions.DateRange[1]
-						if d.Before(start) {
-							return godirwalk.SkipThis
-						}
-						if d.After(end) {
-							return godirwalk.SkipThis
-						}
+					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
+						return godirwalk.SkipThis
 					}
 
 					info, err := os.Stat(osPathname)
@@ -418,7 +330,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 					wg.Add(1)
 					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
 
-					dayFolder := utils.GetOrder(sortoptions, locationService, osPathname, output, mediaDate, cameraName)
+					dayFolder := utils.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
 
 					switch ftype.Type {
 					case Video:
@@ -439,24 +351,22 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						additionalDir := ""
 						if hilights, err := GetHiLights(osPathname); err == nil {
 							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
-								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
+								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), params.TagNames))
 							}
 						}
 
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
 							}
 						}(folder, x, osPathname, bar)
 
-						if sortoptions.SkipAuxiliaryFiles {
+						if params.SkipAuxiliaryFiles {
 							return godirwalk.SkipThis
 						}
 
@@ -471,7 +381,7 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, sortoptions, result, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, result, bar)
 						}(folder, x, lrvFullpath, proxyVideoBar)
 
 					case ChapteredVideo:
@@ -488,24 +398,22 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						additionalDir := ""
 						if hilights, err := GetHiLights(osPathname); err == nil {
 							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
-								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), sortoptions.TagNames))
+								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), params.TagNames))
 							}
 						}
 
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
 							}
 						}(folder, name, osPathname, bar)
 
-						if sortoptions.SkipAuxiliaryFiles {
+						if params.SkipAuxiliaryFiles {
 							return godirwalk.SkipThis
 						}
 
@@ -520,16 +428,14 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, sortoptions, result, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, result, bar)
 						}(folder, x, lrvFullpath, proxyVideoBar)
 					case Photo:
 						folder := filepath.Join(dayFolder, "photos")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -537,16 +443,14 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						}(folder, de.Name(), osPathname, bar)
 
 					case LowResolutionVideo:
-						if sortoptions.SkipAuxiliaryFiles {
+						if params.SkipAuxiliaryFiles {
 							return godirwalk.SkipThis
 						}
 						folder := filepath.Join(dayFolder, "videos/proxy")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -557,10 +461,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -571,10 +473,8 @@ func importFromGoProV1(root string, output string, sortoptions utils.SortOptions
 						folder := filepath.Join(dayFolder, "photos/raw")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, sortoptions, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
 							if err != nil {
-								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
-								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, filename)
 							} else {
 								inlineCounter.SetSuccess()
@@ -644,21 +544,31 @@ func getFileTime(osPathname string, utcFix bool) time.Time {
 	return d
 }
 
-func getMediaDate(d time.Time, sortoptions utils.SortOptions) string {
+func getMediaDate(d time.Time, dateFormat string) string {
 	mediaDate := d.Format("02-01-2006")
-	if strings.Contains(sortoptions.DateFormat, "yyyy") && strings.Contains(sortoptions.DateFormat, "mm") && strings.Contains(sortoptions.DateFormat, "dd") {
-		mediaDate = d.Format(replacer.Replace(sortoptions.DateFormat))
+	if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
+		mediaDate = d.Format(utils.DateFormatReplacer.Replace(dateFormat))
 	}
 	return mediaDate
 }
 
-func parse(folder string, name string, osPathname string, sortoptions utils.SortOptions, result utils.Result, bar *mpb.Bar) error {
+func parse(folder string, name string, osPathname string, bufferSize int, result utils.Result, bar *mpb.Bar) error {
 	if _, err := os.Stat(folder); os.IsNotExist(err) {
-		err = os.MkdirAll(folder, 0o755)
-		if err != nil {
-			log.Fatal(err.Error())
+		mkdirerr := os.MkdirAll(folder, 0o755)
+		if mkdirerr != nil {
+			return mkdirerr
 		}
 	}
+	sourceFileStat, err := os.Stat(osPathname)
+	if err != nil {
+		return err
+	}
 
-	return utils.CopyFile(osPathname, filepath.Join(folder, name), sortoptions.BufferSize, bar)
+	err = utils.CopyFile(osPathname, filepath.Join(folder, name), bufferSize, bar)
+	if err != nil {
+		bar.EwmaSetCurrent(sourceFileStat.Size(), 1*time.Millisecond)
+		bar.EwmaIncrInt64(sourceFileStat.Size(), 1*time.Millisecond)
+		return err
+	}
+	return nil
 }
