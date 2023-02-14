@@ -84,7 +84,7 @@ var importCmd = &cobra.Command{
 			switch c {
 			case utils.GoPro:
 				if connection == "" {
-					connection = "sd-card"
+					connection = utils.SDCard
 				}
 			}
 
@@ -141,7 +141,7 @@ func init() {
 	importCmd.Flags().StringP("buffer", "b", "", "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
-	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd-card`, `connect` (GoPro-specific)")
+	importCmd.Flags().StringP("connection", "x", "", "Connexion type: `sd_card`, `connect` (GoPro-specific)")
 	importCmd.Flags().StringSlice("sort-by", []string{}, "Sort files by: `camera`, `location`")
 	importCmd.Flags().StringSlice("tag-names", []string{}, "Tag names for number of HiLight tags in last 10s of video, each position being the amount, eg: 'marked 1,good stuff,important' => num of tags: 1,2,3")
 	importCmd.Flags().StringP("skip-aux", "s", "true", "Skip auxiliary files (GoPro: THM, LRV. DJI: SRT)")

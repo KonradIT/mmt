@@ -67,7 +67,16 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 		return nil, mErrors.ErrUnsupportedConnection
 	}
 
-	versionContent, err := os.ReadFile(filepath.Join(params.Input, "MISC", fmt.Sprint(Version)))
+	versionFile := filepath.Join(params.Input, "MISC", fmt.Sprint(Version))
+
+	_, err := os.Stat(versionFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, mErrors.ErrNoCameraDetected
+		}
+		return nil, mErrors.ErrNotFound(versionFile)
+	}
+	versionContent, err := os.ReadFile(versionFile)
 	if err != nil {
 		return nil, err
 	}

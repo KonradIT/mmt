@@ -132,6 +132,11 @@ func forceGetFolder(path string) {
 	}
 }
 
+func validateIP() bool {
+	valid := regexp.MustCompile(`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`)
+	return valid.MatchString(ipAddress)
+}
+
 func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	var verType Type
 	var result utils.Result
@@ -140,10 +145,13 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	// handle ctrl-c
 	handleKill()
 
+	if !validateIP() {
+		return nil, mErrors.ErrInvalidSuppliedData(ipAddress)
+	}
 	gpInfo := &cameraInfo{}
 	err := caller(params.Input, "gp/gpControl/info", gpInfo)
 	if err != nil {
-		return nil, err
+		return nil, mErrors.ErrNotFound("Connect camera: " + params.Input)
 	}
 	cameraName := gpInfo.Info.ModelName
 
