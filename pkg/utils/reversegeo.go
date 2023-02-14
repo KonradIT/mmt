@@ -56,6 +56,12 @@ func (format2) format(address *geo.Address) string {
 	return address.Country
 }
 
+type format3 struct{}
+
+func (format3) format(address *geo.Address) string {
+	return address.FormattedAddress
+}
+
 func getPrettyAddress(format locationFormat, address *geo.Address) string {
 	return cleanup(format.format(address))
 }

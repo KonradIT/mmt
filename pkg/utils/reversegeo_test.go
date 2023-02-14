@@ -20,14 +20,14 @@ func TestPrettyAddress(t *testing.T) {
 				Latitude:  -39.6375091,
 				Longitude: 175.2222849,
 			},
-			Result: []string{"Manawatū-Whanganui New Zealand_Aotearoa", "New Zealand_Aotearoa"},
+			Result: []string{"Manawatū-Whanganui New Zealand_Aotearoa", "New Zealand_Aotearoa", "Whanganui District, Manawatū-Whanganui, New Zealand_Aotearoa"},
 		},
 		{
 			Address: Location{
 				Latitude:  52.547567,
 				Longitude: 13.385176,
 			},
-			Result: []string{"Berlin Deutschland", "Deutschland"},
+			Result: []string{"Berlin Deutschland", "Deutschland", "Flakturm Humboldthain, Humboldtsteg, Gesundbrunnen, Mitte, Berlin, 13357, Deutschland"},
 		},
 	}
 
@@ -42,6 +42,9 @@ func TestPrettyAddress(t *testing.T) {
 
 			resp = getPrettyAddress(format2{}, address)
 			require.Equal(t, value.Result[1], resp)
+
+			resp = getPrettyAddress(format3{}, address)
+			require.Equal(t, value.Result[2], resp)
 		})
 	}
 }
