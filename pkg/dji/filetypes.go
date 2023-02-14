@@ -23,8 +23,4 @@ var fileTypes = []FileTypeMatch{
 		Regex: regexp.MustCompile(`.html`),
 		Type:  PanoramaIndex,
 	},
-	{
-		Regex: regexp.MustCompile(`.AAC`),
-		Type:  Audio,
-	},
 }

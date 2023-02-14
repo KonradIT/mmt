@@ -197,7 +197,7 @@ folderLoop:
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -222,7 +222,7 @@ folderLoop:
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, bar)
 						}(folder, filename, lrvFullpath, proxyVideoBar)
 					case Photo:
 						additionalDir := ""
@@ -232,7 +232,7 @@ folderLoop:
 						folder := filepath.Join(dayFolder, "photos", additionalDir)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -248,7 +248,7 @@ folderLoop:
 						folder := filepath.Join(dayFolder, "multishot", additionalDir, de.Name()[:4])
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -260,7 +260,7 @@ folderLoop:
 						folder := filepath.Join(dayFolder, "photos/raw")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -367,7 +367,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -390,7 +390,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, bar)
 						}(folder, x, lrvFullpath, proxyVideoBar)
 
 					case ChapteredVideo:
@@ -414,7 +414,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -437,13 +437,13 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, bar)
 						}(folder, x, lrvFullpath, proxyVideoBar)
 					case Photo:
 						folder := filepath.Join(dayFolder, "photos")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -458,7 +458,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						folder := filepath.Join(dayFolder, "videos/proxy")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -470,7 +470,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -482,7 +482,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						folder := filepath.Join(dayFolder, "photos/raw")
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err := parse(folder, filename, osPathname, params.BufferSize, result, bar)
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
 							if err != nil {
 								inlineCounter.SetFailure(err, filename)
 							} else {
@@ -561,7 +561,7 @@ func getMediaDate(d time.Time, dateFormat string) string {
 	return mediaDate
 }
 
-func parse(folder string, name string, osPathname string, bufferSize int, result utils.Result, bar *mpb.Bar) error {
+func parse(folder string, name string, osPathname string, bufferSize int, bar *mpb.Bar) error {
 	if _, err := os.Stat(folder); os.IsNotExist(err) {
 		mkdirerr := os.MkdirAll(folder, 0o755)
 		if mkdirerr != nil {

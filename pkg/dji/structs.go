@@ -10,7 +10,6 @@ const (
 	Subtitle      FileType = "srt"
 	RawPhoto      FileType = "dng"
 	PanoramaIndex FileType = "panoramaindex"
-	Audio         FileType = "audio"
 )
 
 type FileTypeMatch struct {

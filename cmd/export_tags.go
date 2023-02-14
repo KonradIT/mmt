@@ -24,7 +24,7 @@ func tagAsDuration(tag int, increase bool) string {
 	return fmt.Sprintf("01:00:%d:%03d", seconds, 0)
 }
 
-func exportCSV(name string, tags gopro.HiLights, output string) error {
+func exportCSV(tags gopro.HiLights, output string) error {
 	csvFile, err := os.Create(output)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func exportCSV(name string, tags gopro.HiLights, output string) error {
 	return writer.Error()
 }
 
-func exportJSON(name string, tags gopro.HiLights, output string) error {
+func exportJSON(tags gopro.HiLights, output string) error {
 	b, err := json.MarshalIndent(tags, "", "\t")
 	if err != nil {
 		return err
@@ -72,12 +72,12 @@ func extractIndividual(input, output, format string) (int, error) {
 		if output == "" {
 			output = strings.Replace(input, filepath.Ext(input), ".csv", -1)
 		}
-		err = exportCSV(filepath.Base(input), *hilights, output)
+		err = exportCSV(*hilights, output)
 	case "json":
 		if output == "" {
 			output = strings.Replace(input, filepath.Ext(input), ".json", -1)
 		}
-		err = exportJSON(filepath.Base(input), *hilights, output)
+		err = exportJSON(*hilights, output)
 	case "edl":
 		if output == "" {
 			output = strings.Replace(input, filepath.Ext(input), ".edl", -1)

@@ -17,12 +17,11 @@ import (
 var FirmwareCatalogRemoteURL = "https://firmware-api.gopro.com/v2/firmware/catalog"
 
 func UpdateCamera(sdcard string) error {
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", FirmwareCatalogRemoteURL, nil)
 	if err != nil {
 		return err
 	}
-	resp, err := client.Do(req)
+	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}

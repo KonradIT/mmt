@@ -45,14 +45,11 @@ func handleKill() {
 }
 
 func caller(ip, path string, object interface{}) error {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
 		return err
 	}
-	resp, err := client.Do(req)
+	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -67,15 +64,16 @@ func caller(ip, path string, object interface{}) error {
 }
 
 func head(path string) (int, error) {
-	client := &http.Client{}
 	req, err := http.NewRequest("HEAD", path, nil)
 	if err != nil {
 		return 0, err
 	}
-	resp, err := client.Do(req)
+	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
+
 	length, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if err != nil {
 		return 0, err
@@ -228,7 +226,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 
-					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar, result utils.Result) {
+					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar) {
 						defer wg.Done()
 						x := origFilename
 						filename := origFilename
@@ -317,7 +315,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 							}
 							inlineCounter.SetSuccess()
 						}
-					}(params.Input, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar, result)
+					}(params.Input, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar)
 
 				case Photo:
 					type photo struct {
@@ -357,7 +355,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 					}
 
 					for _, item := range totalPhotos {
-						go func(in string, nowPhoto photo, unsorted string, result utils.Result) {
+						go func(in string, nowPhoto photo, unsorted string) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
@@ -390,7 +388,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 									return
 								}
 							}
-						}(params.Input, item, unsorted, result)
+						}(params.Input, item, unsorted)
 					}
 
 				case Multishot:
@@ -409,7 +407,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 						}
 						multiShotBar := utils.GetNewBar(progressBar, gpFileInfo.S, filename, utils.IoTX)
 
-						go func(in, folder, origFilename, unsorted string, origSize int64, result utils.Result) {
+						go func(in, folder, origFilename, unsorted string, origSize int64) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
@@ -436,7 +434,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 									return
 								}
 							}
-						}(params.Input, folder.D, filename, unsorted, gpFileInfo.S, result)
+						}(params.Input, folder.D, filename, unsorted, gpFileInfo.S)
 					}
 
 				default:

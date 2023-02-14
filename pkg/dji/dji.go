@@ -132,7 +132,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), params.BufferSize, bar)
 							if err != nil {
@@ -142,7 +142,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 
 					case Video:
 						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
@@ -152,7 +152,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), params.BufferSize, bar)
 							if err != nil {
@@ -162,7 +162,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 					case Subtitle:
 						extraPath := srtFolderFromConfig()
 						if params.SkipAuxiliaryFiles {
@@ -178,7 +178,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), params.BufferSize, bar)
 							if err != nil {
@@ -188,7 +188,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 					case RawPhoto:
 						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
 							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755)
@@ -197,7 +197,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							}
 						}
 
-						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), params.BufferSize, bar)
 							if err != nil {
@@ -207,10 +207,8 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							} else {
 								inlineCounter.SetSuccess()
 							}
-						}(f.Name(), de.Name(), osPathname, bar)
+						}(de.Name(), osPathname, bar)
 					case PanoramaIndex:
-					case Audio:
-						// TODO get audio files
 					}
 				}
 
