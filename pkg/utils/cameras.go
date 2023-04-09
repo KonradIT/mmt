@@ -58,6 +58,11 @@ func CameraGuess(input string) string {
 	if err == nil {
 		return Insta360.ToString()
 	}
+
+	_, err = os.Stat(filepath.Join(input, "MISC", "GIS", "dji.gis"))
+	if err == nil {
+		return DJI.ToString()
+	}
 	return ""
 }
 
@@ -199,10 +204,7 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar) error {
 	// Close the file without defer so it can happen before Rename()
 	out.Close()
 
-	if err = os.Rename(filepath+".tmp", filepath); err != nil {
-		return err
-	}
-	return nil
+	return os.Rename(filepath+".tmp", filepath)
 }
 
 func Unzip(src string, dest string) error {

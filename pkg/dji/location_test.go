@@ -24,6 +24,7 @@ func TestParseSRT(t *testing.T) {
 		"Mini_SE.SRT":        1470,
 		"mavic_mini.SRT":     145,
 		"p4_rtk.SRT":         250,
+		"mavic_air2.srt":     290,
 	}
 	fs, err := gitfs.New(ctx, "github.com/JuanIrache/DJI_SRT_Parser/samples",
 		gitfs.OptGlob("*.srt", "*.SRT"))

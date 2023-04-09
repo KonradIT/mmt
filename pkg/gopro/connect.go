@@ -3,6 +3,7 @@ package gopro
 /* GoPro Connect - API exposed over USB Ethernet */
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -31,12 +32,13 @@ var (
 
 func handleKill() {
 	c := make(chan os.Signal, 2)
+	ctx := context.Background()
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
 		if gpTurbo {
-			if err := caller(ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
+			if err := caller(ctx, ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
 				color.Red("Could not exit turbo mode")
 			}
 		}
@@ -44,11 +46,12 @@ func handleKill() {
 	}()
 }
 
-func caller(ip, path string, object interface{}) error {
+func caller(ctx context.Context, ip, path string, object interface{}) error {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
 		return err
 	}
+	req = req.WithContext(ctx)
 	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
@@ -81,12 +84,15 @@ func head(path string) (int, error) {
 	return length, nil
 }
 
-func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
+func GetGoProNetworkAddresses(ctx context.Context) ([]ConnectDevice, error) {
+	ctx, cancelCtx := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelCtx()
 	ipsFound := []ConnectDevice{}
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return ipsFound, err
 	}
+
 	for _, i := range ifaces {
 		addrs, err := i.Addrs()
 		if err != nil {
@@ -98,7 +104,7 @@ func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 			if r.MatchString(ipv4Addr.String()) {
 				correctIP := ipv4Addr.String()[:len(ipv4Addr.String())-1] + "1"
 				gpInfo := &cameraInfo{}
-				err := caller(correctIP, "gp/gpControl/info", gpInfo)
+				err := caller(ctx, correctIP, "gp/gpControl/info", gpInfo)
 				if err != nil {
 					continue
 				}
@@ -113,8 +119,9 @@ func GetGoProNetworkAddresses() ([]ConnectDevice, error) {
 }
 
 func GetMediaList(in string) (*MediaList, error) {
+	ctx := context.Background()
 	gpMediaList := &MediaList{}
-	err := caller(in, "gp/gpMediaList", gpMediaList)
+	err := caller(ctx, in, "gp/gpMediaList", gpMediaList)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +154,8 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 		return nil, mErrors.ErrInvalidSuppliedData(ipAddress)
 	}
 	gpInfo := &cameraInfo{}
-	err := caller(params.Input, "gp/gpControl/info", gpInfo)
+	ctx := context.Background()
+	err := caller(ctx, params.Input, "gp/gpControl/info", gpInfo)
 	if err != nil {
 		return nil, mErrors.ErrNotFound("Connect camera: " + params.Input)
 	}
@@ -169,7 +177,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	// activate turbo
 
 	if gpTurbo {
-		err = caller(params.Input, "gp/gpTurbo?p=1", nil)
+		err = caller(ctx, params.Input, "gp/gpTurbo?p=1", nil)
 		if err != nil {
 			color.Red("Error activating Turbo! Download speeds will be much slower")
 		}
@@ -255,7 +263,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 
 						finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
 						gpFileInfo := &goProMediaMetadata{}
-						err = caller(in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
+						err = caller(ctx, in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
 						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)
 							return
@@ -401,7 +409,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 						filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
 
 						gpFileInfo := &goProMediaMetadata{}
-						err = caller(params.Input, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
+						err = caller(ctx, params.Input, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
 						if err != nil {
 							log.Fatal(err.Error())
 						}
@@ -449,7 +457,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	wg.Wait()
 	progressBar.Shutdown()
 	if gpTurbo {
-		if err := caller(params.Input, "gp/gpTurbo?p=0", nil); err != nil {
+		if err := caller(ctx, params.Input, "gp/gpTurbo?p=0", nil); err != nil {
 			color.Red("Could not exit turbo mode")
 		}
 	}

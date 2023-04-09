@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/erdaltsksn/cui"
@@ -24,7 +25,8 @@ var listDevicesCmd = &cobra.Command{
 			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Device, utils.CameraGuess(partition.Device)))
 		}
 
-		networkDevices, err := gopro.GetGoProNetworkAddresses()
+		ctx := context.Background()
+		networkDevices, err := gopro.GetGoProNetworkAddresses(ctx)
 		if err != nil {
 			cui.Error(err.Error())
 		}
