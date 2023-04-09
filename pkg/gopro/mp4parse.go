@@ -26,6 +26,7 @@ func (*HMMT) GetType() mp4.BoxType {
 
 func (h *HMMT) GetFieldLength(name string, ctx mp4.Context) uint {
 	_ = name
+	_ = ctx
 	return uint(h.Count)
 }
 
