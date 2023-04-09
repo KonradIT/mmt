@@ -38,6 +38,7 @@ const (
 type FileType string
 
 const (
+	Audio              FileType = "audio"
 	Video              FileType = "video"
 	Photo              FileType = "photo"
 	PowerPano          FileType = "powerpano"
