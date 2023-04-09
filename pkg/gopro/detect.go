@@ -1,6 +1,8 @@
 package gopro
 
 import (
+	"context"
+
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/shirou/gopsutil/disk"
@@ -17,7 +19,8 @@ func Detect() (string, utils.ConnectionType, error) {
 		}
 	}
 
-	networkDevices, err := GetGoProNetworkAddresses()
+	ctx := context.Background()
+	networkDevices, err := GetGoProNetworkAddresses(ctx)
 	if err != nil {
 		return "", "", err
 	}

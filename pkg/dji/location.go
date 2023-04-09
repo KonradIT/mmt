@@ -1,7 +1,10 @@
 package dji
 
 import (
+	"bufio"
+	"io"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,13 +18,20 @@ type LatLongPair struct {
 	Indicator           string
 }
 
-var allDrones = map[string]LatLongPair{
-	"NewMavics": {
+type ACType int
+
+const (
+	NewAircraft ACType = iota
+	OldAircraft
+)
+
+var allDrones = map[ACType]LatLongPair{
+	NewAircraft: {
 		Latitude:  regexp.MustCompile(`\[latitude[ ]?: ([+-]?(\d+\.?\d*)|(\.\d+))\]`),
 		Longitude: regexp.MustCompile(`\[long[t]?itude[ ]?: ([+-]?(\d+\.?\d*)|(\.\d+))\]`), // DJI and their typos...
 	},
 
-	"OldMavics": {
+	OldAircraft: {
 		Latitude:  regexp.MustCompile(`GPS[ ]?\(([+-]?(\d+\.?\d*)|(\.\d+))`),
 		Longitude: regexp.MustCompile(`,[ ]?([+-]?(\d+\.?\d*)|(\.\d+)),[ ]?\d+\)`),
 	},
@@ -41,7 +51,14 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 }
 
 func fromSRT(srtPath string) (*utils.Location, error) {
-	content, err := ioutil.ReadFile(strings.Replace(srtPath, ".MP4", ".SRT", -1))
+	fs, err := os.Open(strings.Replace(srtPath, ".MP4", ".SRT", -1))
+	if err != nil {
+		return nil, err
+	}
+	defer fs.Close()
+	reader := bufio.NewReader(fs)
+	limitedSizeReader := io.LimitReader(reader, 2048)
+	content, err := ioutil.ReadAll(limitedSizeReader)
 	if err != nil {
 		return nil, err
 	}
@@ -51,13 +68,9 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 	for _, drone := range allDrones {
 		latMatches := drone.Latitude.FindAllStringSubmatch(string(content), -1)
 
-		if len(latMatches) == 0 {
-			continue
-		}
-
 		lonMatches := drone.Longitude.FindAllStringSubmatch(string(content), -1)
 
-		if len(lonMatches) == 0 {
+		if len(lonMatches) == 0 || len(latMatches) == 0 {
 			continue
 		}
 
