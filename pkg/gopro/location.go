@@ -3,6 +3,7 @@ package gopro
 import (
 	"bytes"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/konradit/gopro-utils/telemetry"
@@ -18,6 +19,10 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	switch true {
 	case strings.Contains(path, ".MP4"):
 		return fromMP4(path)
+	case strings.Contains(path, ".WAV"):
+		return fromMP4(path[:len(path)-len(filepath.Ext(path))] + ".MP4")
+	case strings.Contains(path, ".GPR"):
+		return utils.LocationFromEXIF(path)
 	case strings.Contains(path, ".JPG"):
 		return utils.LocationFromEXIF(path)
 	default:

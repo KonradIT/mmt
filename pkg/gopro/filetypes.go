@@ -20,6 +20,11 @@ var FileTypeMatches = map[Type][]FileTypeMatch{
 			HeroMode: true,
 		},
 		{
+			Regex:    regexp.MustCompile(`GX\d+.WAV`),
+			Type:     Audio,
+			HeroMode: true,
+		},
+		{
 			Regex:    regexp.MustCompile(`GH\d+.MP4`),
 			Type:     Video,
 			HeroMode: true,

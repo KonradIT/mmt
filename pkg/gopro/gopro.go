@@ -268,6 +268,18 @@ folderLoop:
 							}
 						}(folder, de.Name(), osPathname, bar)
 
+					case Audio:
+						folder := filepath.Join(dayFolder, "audios")
+						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer wg.Done()
+							err := parse(folder, filename, osPathname, params.BufferSize, bar)
+							if err != nil {
+								inlineCounter.SetFailure(err, filename)
+							} else {
+								inlineCounter.SetSuccess()
+							}
+						}(folder, de.Name(), osPathname, bar)
+
 					default:
 						inlineCounter.SetFailure(errors.New("Unsupported file"), de.Name())
 					}
