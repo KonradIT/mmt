@@ -4,23 +4,23 @@ import "regexp"
 
 var fileTypes = []FileTypeMatch{
 	{
-		Regex: regexp.MustCompile(`.JPG`),
+		Regex: regexp.MustCompile(`\.JPG$`),
 		Type:  Photo,
 	},
 	{
-		Regex: regexp.MustCompile(`.MP4`),
+		Regex: regexp.MustCompile(`\.MP4$`),
 		Type:  Video,
 	},
 	{
-		Regex: regexp.MustCompile(`.SRT`),
+		Regex: regexp.MustCompile(`\.SRT$`),
 		Type:  Subtitle,
 	},
 	{
-		Regex: regexp.MustCompile(`.DNG`),
+		Regex: regexp.MustCompile(`\.DNG$`),
 		Type:  RawPhoto,
 	},
 	{
-		Regex: regexp.MustCompile(`.html`),
+		Regex: regexp.MustCompile(`\.html$`),
 		Type:  PanoramaIndex,
 	},
 }
