@@ -83,7 +83,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 	}
 	device := client.Device(deviceDescriptor)
 
-	entries, err := device.ListDirEntries("/mnt/datos/a/Almacenamiento interno/DCIM/Camera")
+	entries, err := device.ListDirEntries("/sdcard/DCIM/Camera")
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 		// Read Original file from device
 
-		readfile, err := device.OpenRead("/mnt/datos/a/Almacenamiento interno/DCIM/Camera/" + entries.Entry().Name)
+		readfile, err := device.OpenRead("/sdcard/DCIM/Camera/" + entries.Entry().Name)
 		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
@@ -185,7 +185,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 		go func(filename, localPath string, bar *mpb.Bar) {
 			defer wg.Done()
-			readfile, err = device.OpenRead("/mnt/datos/a/Almacenamiento interno/DCIM/Camera/" + filename)
+			readfile, err = device.OpenRead("/sdcard/DCIM/Camera/" + filename)
 			if err != nil {
 				inlineCounter.SetFailure(err, filename)
 				return
