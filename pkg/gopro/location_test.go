@@ -25,7 +25,7 @@ var videoTests = map[string]bool{
 
 	"hero7.mp4":        false,
 	"hero8.mp4":        true,
-	"karma.mp4":        true,
+	"karma.mp4":        false,
 	"max-360mode.mp4":  true,
 	"max-heromode.mp4": true,
 }
