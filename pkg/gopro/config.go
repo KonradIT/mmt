@@ -25,3 +25,9 @@ func gpsCountryCodesFromConfig() []string {
 	viper.SetDefault(key, []string{}) // 3d lock, 2d lock
 	return viper.GetStringSlice(key)
 }
+
+func gpsMaxCountryCodesFromConfig() int {
+	key := fmt.Sprintf("%s.gps_max_country_codes", parent)
+	viper.SetDefault(key, 5)
+	return int(viper.GetInt(key))
+}

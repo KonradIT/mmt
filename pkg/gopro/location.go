@@ -50,6 +50,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 	lastEvent := &telemetry.TELEM{}
 	coordinates := []Location{}
 
+	GetLocation:
 	for {
 		event, err := telemetry.Read(reader)
 		if err != nil && err != io.EOF {
@@ -84,16 +85,13 @@ func fromMP4(videoPath string) (*utils.Location, error) {
             		continue
             	}
             	if slices.Contains(CountryCodes, address.CountryCode) {
-            		coordinates = append(coordinates, Location{telem.Latitude, telem.Longitude})
-
             		GPSNum++
-            		// TODO: get from config
-            		if GPSNum > 3 {
-						return &utils.Location{
-							Latitude:  telem.Latitude,
-							Longitude: telem.Longitude,
-						}, nil
+            		if GPSNum > gpsMaxCountryCodesFromConfig() {
+            			break GetLocation
             		}
+				} else
+				{
+					continue
 				}
 			}
 
