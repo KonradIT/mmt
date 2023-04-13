@@ -15,7 +15,7 @@ import (
 
 var videoTests = map[string]bool{
 	"hero5.mp4":     true,
-	"hero6+ble.mp4": false,
+	"hero6+ble.mp4": true,
 	"hero6.mp4":     true,
 	"hero6a.mp4":    true,
 
