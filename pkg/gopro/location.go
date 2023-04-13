@@ -81,21 +81,18 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 				service := openstreetmap.Geocoder()
 
             	address, err := service.ReverseGeocode(telem.Latitude, telem.Longitude)
-            	if err != nil {
+            	if err != nil || !slices.Contains(CountryCodes, address.CountryCode) {
             		continue
             	}
-            	if slices.Contains(CountryCodes, address.CountryCode) {
-            		GPSNum++
-            		if GPSNum > gpsMaxCountryCodesFromConfig() {
-            			break GetLocation
-            		}
-				} else
-				{
-					continue
-				}
+
+				GPSNum++
 			}
 
 			coordinates = append(coordinates, Location{telem.Latitude, telem.Longitude})
+
+			if GPSNum > gpsMaxCountryCodesFromConfig() {
+				break GetLocation
+			}
 		}
 		*lastEvent = *event
 	}
