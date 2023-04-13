@@ -22,8 +22,8 @@ linters:
   - unconvert
   - unparam
   skip-files:
-    - pkg/gopro/config.go
-    - pkg/gopro/location_test.go
+    - "pkg/gopro/config.go"
+    - "pkg/gopro/location_test.go"
 linter-settings:
   nestif:
     min-complexity: 20
