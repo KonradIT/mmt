@@ -13,10 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-	// TODO:
-	// Invalid length ACCL packet
-	// "Fusion.mp4":    true,
-
 var videoTests = map[string]bool{
 	"hero5.mp4":     true,
 	"hero6+ble.mp4": true,
