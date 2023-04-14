@@ -133,7 +133,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 						go func(id, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), params.BufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -171,7 +171,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 						go func(id, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
 
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), params.BufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)

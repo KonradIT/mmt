@@ -134,7 +134,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), params.BufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -154,7 +154,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), params.BufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -180,7 +180,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), params.BufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
@@ -199,7 +199,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), params.BufferSize, bar)
+							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
 								bar.EwmaIncrInt64(info.Size(), 1*time.Millisecond)
