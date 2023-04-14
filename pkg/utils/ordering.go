@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type locationUtil interface {
@@ -18,6 +19,8 @@ func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out
 	order := orderFromConfig()
 	dayFolder := out
 
+	var wg sync.WaitGroup
+
 	for _, item := range order {
 		switch item {
 		case "date":
@@ -30,24 +33,31 @@ func GetOrder(sortoptions SortOptions, GetLocation locationUtil, osPathname, out
 			if GetLocation == nil {
 				continue
 			}
-			location := fallbackFromConfig()
-			locationFromFile, locerr := GetLocation.GetLocation(osPathname)
-			if locerr == nil {
-				reverseLocation, reverseerr := ReverseLocation(*locationFromFile)
-				if reverseerr == nil {
-					location = reverseLocation
-					if location == "" || location == " " {
-						location = fallbackFromConfig()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				location := fallbackFromConfig()
+				locationFromFile, locerr := GetLocation.GetLocation(osPathname)
+				if locerr == nil {
+					reverseLocation, reverseerr := ReverseLocation(*locationFromFile)
+					if reverseerr == nil {
+						location = reverseLocation
+						if location == "" || location == " " {
+							location = fallbackFromConfig()
+						}
 					}
 				}
-			}
-			if sortoptions.ByLocation {
-				dayFolder = filepath.Join(dayFolder, location)
-			}
+				if sortoptions.ByLocation {
+					dayFolder = filepath.Join(dayFolder, location)
+				}
+			}()
+
 		default:
 			// Not supported
 		}
 	}
+	wg.Wait()
+
 	if _, err := os.Stat(dayFolder); os.IsNotExist(err) {
 		_ = os.MkdirAll(dayFolder, 0o755)
 	}

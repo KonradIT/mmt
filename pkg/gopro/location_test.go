@@ -15,12 +15,13 @@ import (
 
 var videoTests = map[string]bool{
 	"hero5.mp4":     true,
-	"hero6+ble.mp4": false,
+	"hero6+ble.mp4": true,
 	"hero6.mp4":     true,
 	"hero6a.mp4":    true,
 
 	"hero7.mp4":        false,
-	"hero8.mp4":        false,
+	"hero8.mp4":        true,
+	"karma.mp4":        false,
 	"max-360mode.mp4":  true,
 	"max-heromode.mp4": true,
 }
