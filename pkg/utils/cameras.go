@@ -79,7 +79,7 @@ const (
 	Connect ConnectionType = "connect"
 )
 
-func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar) error {
+func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar, modTime time.Time) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -141,6 +141,11 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar) erro
 		if _, err := destination.Write(buf[:n]); err != nil {
 			return err
 		}
+	}
+
+	err = os.Chtimes(dst, modTime, modTime)
+	if err != nil {
+		return err
 	}
 
 	return nil
