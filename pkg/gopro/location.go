@@ -17,11 +17,6 @@ import (
 
 type LocationService struct{}
 
-type Location struct {
-	latitude  float64
-	longitude float64
-}
-
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
 	switch true {
 	case strings.Contains(path, ".MP4"):
@@ -48,7 +43,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 	reader := bytes.NewReader(*data)
 
 	lastEvent := &telemetry.TELEM{}
-	coordinates := []Location{}
+	coordinates := []utils.Location{}
 
 GetLocation:
 	for {
@@ -88,7 +83,7 @@ GetLocation:
 				GPSNum++
 			}
 
-			coordinates = append(coordinates, Location{telem.Latitude, telem.Longitude})
+			coordinates = append(coordinates, utils.Location{telem.Latitude, telem.Longitude})
 
 			if GPSNum > gpsMaxCountryCodesFromConfig() {
 				break GetLocation
@@ -104,19 +99,19 @@ GetLocation:
 	closestLocation := getClosestLocation(coordinates)
 
 	return &utils.Location{
-		Latitude:  closestLocation.latitude,
-		Longitude: closestLocation.longitude,
+		Latitude:  closestLocation.Latitude,
+		Longitude: closestLocation.Longitude,
 	}, nil
 }
 
-func getClosestLocation(locations []Location) Location {
+func getClosestLocation(locations []utils.Location) utils.Location {
 	// Find the nearest and repeat location
-	counts := make(map[Location]int)
+	counts := make(map[utils.Location]int)
 	for _, loc := range locations {
 		counts[loc]++
 	}
 
-	mostFrequentLocation := Location{}
+	mostFrequentLocation := utils.Location{}
 	maxCount := 0
 	for loc, count := range counts {
 		if count > maxCount {
@@ -135,11 +130,11 @@ func getClosestLocation(locations []Location) Location {
 	return mostFrequentLocation
 }
 
-func distance(loc1 Location, loc2 Location) float64 {
-	lat1 := degreesToRadians(loc1.latitude)
-	lon1 := degreesToRadians(loc1.longitude)
-	lat2 := degreesToRadians(loc2.latitude)
-	lon2 := degreesToRadians(loc2.longitude)
+func distance(loc1 utils.Location, loc2 utils.Location) float64 {
+	lat1 := degreesToRadians(loc1.Latitude)
+	lon1 := degreesToRadians(loc1.Longitude)
+	lat2 := degreesToRadians(loc2.Latitude)
+	lon2 := degreesToRadians(loc2.Longitude)
 
 	deltaLat := lat2 - lat1
 	deltaLon := lon2 - lon1
