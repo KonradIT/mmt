@@ -83,7 +83,7 @@ GetLocation:
 				GPSNum++
 			}
 
-			coordinates = append(coordinates, utils.Location{telem.Latitude, telem.Longitude})
+			coordinates = append(coordinates, utils.Location{Latitude: telem.Latitude, Longitude: telem.Longitude})
 
 			if GPSNum > gpsMaxCountryCodesFromConfig() {
 				break GetLocation
