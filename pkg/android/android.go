@@ -110,7 +110,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 		}
 
 		// check if is in date range
-		if entries.Entry().ModifiedAt.Before(params.DateRange[0]) || entries.Entry().ModifiedAt.After(params.DateRange[0]) {
+		if !utils.IsValidDate(entries.Entry().ModifiedAt) {
 			continue
 		}
 

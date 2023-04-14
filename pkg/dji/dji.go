@@ -110,7 +110,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 					// check if is in date range
 
-					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
+					if !utils.IsValidDate(d) {
 						return godirwalk.SkipThis
 					}
 
