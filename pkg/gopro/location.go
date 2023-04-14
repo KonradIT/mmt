@@ -3,22 +3,22 @@ package gopro
 import (
 	"bytes"
 	"io"
+	"math"
 	"path/filepath"
 	"strings"
-	"math"
 
+	"github.com/codingsince1985/geo-golang/openstreetmap"
 	"github.com/konradit/gopro-utils/telemetry"
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/konradit/mmt/pkg/videomanipulation"
-	"github.com/codingsince1985/geo-golang/openstreetmap"
 	"golang.org/x/exp/slices"
 )
 
 type LocationService struct{}
 
 type Location struct {
-	latitude float64
+	latitude  float64
 	longitude float64
 }
 
@@ -50,7 +50,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 	lastEvent := &telemetry.TELEM{}
 	coordinates := []Location{}
 
-	GetLocation:
+GetLocation:
 	for {
 		event, err := telemetry.Read(reader)
 		if err != nil && err != io.EOF {
@@ -80,10 +80,10 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 			if len(CountryCodes) != 0 {
 				service := openstreetmap.Geocoder()
 
-            	address, err := service.ReverseGeocode(telem.Latitude, telem.Longitude)
-            	if err != nil || !slices.Contains(CountryCodes, address.CountryCode) {
-            		continue
-            	}
+				address, err := service.ReverseGeocode(telem.Latitude, telem.Longitude)
+				if err != nil || !slices.Contains(CountryCodes, address.CountryCode) {
+					continue
+				}
 
 				GPSNum++
 			}
@@ -97,7 +97,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 		*lastEvent = *event
 	}
 
-    if len(coordinates) == 0 {
+	if len(coordinates) == 0 {
 		return nil, mErrors.ErrNoGPS
 	}
 
