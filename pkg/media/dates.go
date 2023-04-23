@@ -50,7 +50,16 @@ func GetFileTimeExif(osPathname string) time.Time {
 		}
 	}
 
-	gpsDateTime := x.Get(FieldName("GPSDateStamp")) + " " + x.Get(FieldName("GPSTimeStamp"))
+	var gpsDateTime string
+	gpsDateStamp, _ := x.Get(exif.GPSDateStamp)
+	gpsTimeStamp, _ := x.Get(exif.GPSTimeStamp)
+
+	gpsT, _ := gpsTimeStamp.StringVal()
+	gpsD, _ := gpsDateStamp.StringVal()
+
+	gpsDateTime = gpsD + " " + gpsT
+
+	// parse the string into time
 	date, err = time.Parse("2006:01:02 15:04:05", gpsDateTime)
 	if err == nil {
 		return date
@@ -59,10 +68,14 @@ func GetFileTimeExif(osPathname string) time.Time {
 	// define the list of possible tags to extract date from
 	dateTags := []string{"DateTimeOriginal", "DateTime", "DateTimeDigitized"}
 
-	// loop through the tags until a valid date is found
+	// loop for each tag and return the first valid date
 	for _, tag := range dateTags {
-		if x.tagMap[tag] != nil && x.tagMap[tag] != "" {
-			date, err := time.Parse("2006:01:02 15:04:05", x.tagMap[tag])
+		// get value of tag from exif
+		tt, err := x.Get(exif.FieldName(tag))
+
+		if err != nil {
+			tts, _ := tt.StringVal()
+			date, err = time.Parse("2006:01:02 15:04:05", tts)
 			if err != nil {
 				continue
 			}
@@ -71,15 +84,6 @@ func GetFileTimeExif(osPathname string) time.Time {
 	}
 
 	return d
-}
-
-func GetFreeDiskSpace(path string) (uint64, error) {
-	var stat syscall.Statfs_t
-	err := syscall.Statfs(path, &stat)
-	if err != nil {
-		return 0, err
-	}
-	return stat.Bavail * uint64(stat.Bsize), nil
 }
 
 func GetTimeFromMP4(videoPath string, date *time.Time) error {
