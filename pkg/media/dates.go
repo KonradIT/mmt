@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dsoprea/go-exif/v3"
 	"github.com/konradit/gopro-utils/telemetry"
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
@@ -72,7 +71,6 @@ func GetFileTimeExif(osPathname string) time.Time {
 	for _, tag := range dateTags {
 		// get value of tag from exif
 		tt, err := x.Get(exif.FieldName(tag))
-
 		if err != nil {
 			tts, _ := tt.StringVal()
 			date, err = time.Parse("2006:01:02 15:04:05", tts)
