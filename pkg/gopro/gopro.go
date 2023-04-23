@@ -160,8 +160,8 @@ folderLoop:
 						continue fileTypeLoop
 					}
 
-					d := GetFileTime(osPathname, true)
-					mediaDate := GetMediaDate(getFileTime(osPathname, true), params.DateFormat)
+					d := media.GetFileTime(osPathname, true)
+					mediaDate := media.GetMediaDate(getFileTime(osPathname, true), params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -337,8 +337,8 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						continue
 					}
 
-					d := GetFileTime(osPathname, true)
-					mediaDate := GetMediaDate(d, params.DateFormat)
+					d := media.GetFileTime(osPathname, true)
+					mediaDate := media.GetMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
