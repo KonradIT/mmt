@@ -18,6 +18,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
 	mErrors "github.com/konradit/mmt/pkg/errors"
+	"github.com/konradit/mmt/pkg/media"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/maja42/goval"
 	"github.com/minio/minio/pkg/disk"
@@ -159,8 +160,8 @@ folderLoop:
 						continue fileTypeLoop
 					}
 
-					d := getFileTime(osPathname, true)
-					mediaDate := getMediaDate(getFileTime(osPathname, true), params.DateFormat)
+					d := GetFileTime(osPathname, true)
+					mediaDate := GetMediaDate(getFileTime(osPathname, true), params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -336,8 +337,8 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						continue
 					}
 
-					d := getFileTime(osPathname, true)
-					mediaDate := getMediaDate(d, params.DateFormat)
+					d := GetFileTime(osPathname, true)
+					mediaDate := GetMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
