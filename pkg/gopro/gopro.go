@@ -449,7 +449,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
-							_ = parse(folder, filename, osPathname, params.BufferSize, bar)
+							_ = parse(folder, filename, osPathname, params.BufferSize, bar, d)
 						}(folder, x, lrvFullpath, proxyVideoBar)
 					case Photo:
 						folder := filepath.Join(dayFolder, "photos")
