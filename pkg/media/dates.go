@@ -33,14 +33,22 @@ func GetGPSTime(x *exif.Exif, date *time.Time) bool {
 	if err != nil {
 		return false
 	}
-	gpsT, err := gpsTimeStamp.StringVal()
+
+	// convert rational to string
+	gpsH, _, err := gpsTimeStamp.Rat2(0)
+	if err != nil {
+		return false
+	}
+	gpsM, _, err := gpsTimeStamp.Rat2(1)
+	if err != nil {
+		return false
+	}
+	gpsS, _, err := gpsTimeStamp.Rat2(2)
 	if err != nil {
 		return false
 	}
 
-	gpsDateTime = gpsD + " " + gpsT
-
-	fmt.Printf("gpsDateTime: %s", gpsDateTime)
+	gpsDateTime = fmt.Sprintf("%s %02d:%02d:%02d", gpsD, gpsH, gpsM, gpsS)
 
 	// parse the string into time
 	d, err := time.Parse("2006:01:02 15:04:05", gpsDateTime)
@@ -69,8 +77,6 @@ func GetFileTimeExif(osPathname string) time.Time {
 	// First search in gps track
 	if strings.Contains(osPathname, ".MP4") {
 		if GetTimeFromMP4(osPathname, &date) {
-			fmt.Fprintf(os.Stderr, fmt.Sprintf("mp4 gpsDateTime: %s \n", date))
-
 			return date
 		}
 	}
@@ -86,7 +92,6 @@ func GetFileTimeExif(osPathname string) time.Time {
 	}
 
 	if GetGPSTime(x, &date) {
-		fmt.Fprintf(os.Stderr, fmt.Sprintf("gpstime gpsDateTime: %s \n", date))
 		return date
 	}
 
@@ -103,12 +108,9 @@ func GetFileTimeExif(osPathname string) time.Time {
 			if err != nil {
 				continue
 			}
-			fmt.Fprintf(os.Stderr, fmt.Sprintf("exitf gpsDateTime: %s \n", date))
 			return date
 		}
 	}
-
-	fmt.Fprintf(os.Stderr, fmt.Sprintf("sin valor obtenido: %s \n", d))
 
 	return d
 }
@@ -145,10 +147,8 @@ func GetTimeFromMP4(videoPath string, date *time.Time) bool {
 
 		telems := lastEvent.ShitJson()
 		for _, telem := range telems {
-			fmt.Fprintf(os.Stderr, fmt.Sprintf("location: %f - %f \n", telem.Latitude, telem.Longitude))
-
 			if telem.Latitude != 0 && telem.Longitude != 0 {
-				*date = time.Unix(0, telem.TS)
+				*date = time.UnixMicro(telem.TS)
 
 				return true
 			}
