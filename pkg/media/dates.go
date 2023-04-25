@@ -60,7 +60,7 @@ func getGPSTime(x *exif.Exif, date *time.Time) bool {
 	return false
 }
 
-func getFileTimeExif(osPathname string) time.Time {
+func getFileTimeExif(osPathname string, goPro bool) time.Time {
 	var date time.Time
 
 	if strings.Contains(osPathname, ".WAV") {
@@ -75,7 +75,7 @@ func getFileTimeExif(osPathname string) time.Time {
 	d := t.ModTime()
 
 	// First search in gps track
-	if strings.Contains(osPathname, ".MP4") {
+	if goPro && strings.Contains(osPathname, ".MP4") {
 		if getTimeFromMP4(osPathname, &date) {
 			return date
 		}
@@ -159,8 +159,8 @@ func getTimeFromMP4(videoPath string, date *time.Time) bool {
 	return false
 }
 
-func GetFileTime(osPathname string, utcFix bool) time.Time {
-	t := getFileTimeExif(osPathname)
+func GetFileTime(osPathname string, utcFix bool, goPro bool) time.Time {
+	t := getFileTimeExif(osPathname, goPro)
 
 	if utcFix {
 		zoneName, _ := t.Zone()
