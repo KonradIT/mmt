@@ -8,17 +8,16 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
+	"github.com/konradit/mmt/pkg/media"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/minio/minio/pkg/disk"
 	"github.com/vbauerster/mpb/v8"
-	"gopkg.in/djherbis/times.v1"
 )
 
 func getDeviceName(manifest string) string {
@@ -91,20 +90,11 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 					if !ftype.Regex.MatchString(de.Name()) {
 						continue
 					}
-					t, err := times.Stat(osPathname)
-					if err != nil {
-						return godirwalk.SkipThis
-					}
 
-					d := t.ModTime()
-
-					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(params.DateFormat, "yyyy") && strings.Contains(params.DateFormat, "mm") && strings.Contains(params.DateFormat, "dd") {
-						mediaDate = d.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
-					}
+					d := media.GetFileTime(osPathname, true)
+					mediaDate := media.GetMediaDate(d, params.DateFormat)
 
 					// check if is in date range
-
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
 					}
