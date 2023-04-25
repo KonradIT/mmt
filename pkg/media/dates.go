@@ -76,7 +76,7 @@ func GetFileTimeExif(osPathname string) time.Time {
 
 	// First search in gps track
 	if strings.Contains(osPathname, ".MP4") {
-		if GetTimeFromMP4(osPathname, &date) {
+		if getTimeFromMP4(osPathname, &date) {
 			return date
 		}
 	}
@@ -115,7 +115,7 @@ func GetFileTimeExif(osPathname string) time.Time {
 	return d
 }
 
-func GetTimeFromMP4(videoPath string, date *time.Time) bool {
+func getTimeFromMP4(videoPath string, date *time.Time) bool {
 	vman := videomanipulation.New()
 	data, err := vman.ExtractGPMF(videoPath)
 	if err != nil {
