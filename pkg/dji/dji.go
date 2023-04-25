@@ -97,7 +97,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 						continue
 					}
 
-					d := media.GetFileTime(osPathname, true, false)
+					d := media.GetFileTime(osPathname, false, false)
 					mediaDate := media.GetMediaDate(d, params.DateFormat)
 
 					// check if is in date range
