@@ -17,7 +17,7 @@ import (
 	"gopkg.in/djherbis/times.v1"
 )
 
-func GetGPSTime(x *exif.Exif, date *time.Time) bool {
+func getGPSTime(x *exif.Exif, date *time.Time) bool {
 	var gpsDateTime string
 
 	gpsDateStamp, err := x.Get(exif.GPSDateStamp)
@@ -91,7 +91,7 @@ func getFileTimeExif(osPathname string) time.Time {
 		return d
 	}
 
-	if GetGPSTime(x, &date) {
+	if getGPSTime(x, &date) {
 		return date
 	}
 
