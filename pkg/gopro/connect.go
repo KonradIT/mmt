@@ -164,7 +164,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	root := strings.Split(gpInfo.Info.FirmwareVersion, ".")[0]
 
 	switch root {
-	case "HD9", "H21", "H22":
+	case "HD9", "H21", "H22", "H23":
 		verType = V2
 		gpTurbo = true
 	case "HD6", "HD7", "HD8":

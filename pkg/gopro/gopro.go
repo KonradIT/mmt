@@ -114,7 +114,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 	params.Input = filepath.Join(params.Input, fmt.Sprint(DCIM))
 
 	switch root {
-	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22":
+	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22", "H23":
 		result := importFromGoProV2(params)
 		return &result, nil
 	case "HD2", "HD3", "HD4", "HX", "HD5":
@@ -533,7 +533,7 @@ func cleanVersion(s string) string {
 	i := strings.LastIndex(s, ",")
 	excludingLast := s[:i] + strings.Replace(s[i:], ",", "", 1)
 
-	if strings.Contains(s, "HERO10") || strings.Contains(s, "HERO11") {
+	if strings.Contains(s, `,"firmware version"`) {
 		return strings.ReplaceAll(s, "\n", "")
 	}
 	return excludingLast

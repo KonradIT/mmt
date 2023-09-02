@@ -18,7 +18,7 @@ Right now the script supports these cameras:
     - HERO2 - HERO5
     - MAX
     - Fusion
-    - HERO6 - HERO11
+    - HERO6 - HERO12
 -   Insta360: X2, GO2, X3
 -   DJI: Osmo Pocket 1/2, DJI Osmo Action 1/2/3, Mavics, Minis
 -   Android: All, but with Pixel 6 (Google Camera) specific fixes
