@@ -18,11 +18,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
 	mErrors "github.com/konradit/mmt/pkg/errors"
+	"github.com/konradit/mmt/pkg/media"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/maja42/goval"
 	"github.com/minio/minio/pkg/disk"
 	"github.com/vbauerster/mpb/v8"
-	"gopkg.in/djherbis/times.v1"
 )
 
 /*
@@ -159,8 +159,8 @@ folderLoop:
 						continue fileTypeLoop
 					}
 
-					d := getFileTime(osPathname, true)
-					mediaDate := getMediaDate(getFileTime(osPathname, true), params.DateFormat)
+					d := media.GetFileTime(osPathname, true, true)
+					mediaDate := media.GetMediaDate(media.GetFileTime(osPathname, true, true), params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -336,8 +336,8 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						continue
 					}
 
-					d := getFileTime(osPathname, true)
-					mediaDate := getMediaDate(d, params.DateFormat)
+					d := media.GetFileTime(osPathname, true, true)
+					mediaDate := media.GetMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -548,29 +548,6 @@ func readInfo(inBytes []byte) (*Info, error) {
 		return nil, err
 	}
 	return &gpVersion, nil
-}
-
-func getFileTime(osPathname string, utcFix bool) time.Time {
-	var d time.Time
-	t, err := times.Stat(osPathname)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	d = t.ModTime()
-	if utcFix {
-		zoneName, _ := d.Zone()
-		newTime := strings.Replace(d.Format(time.UnixDate), zoneName, "UTC", -1)
-		d, _ = time.Parse(time.UnixDate, newTime)
-	}
-	return d
-}
-
-func getMediaDate(d time.Time, dateFormat string) string {
-	mediaDate := d.Format("02-01-2006")
-	if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
-		mediaDate = d.Format(utils.DateFormatReplacer.Replace(dateFormat))
-	}
-	return mediaDate
 }
 
 func parse(folder string, name string, osPathname string, bufferSize int, bar *mpb.Bar, modTime time.Time) error {
