@@ -20,7 +20,7 @@ func TestPrettyAddress(t *testing.T) {
 				Latitude:  -39.6375091,
 				Longitude: 175.2222849,
 			},
-			Result: []string{"Manawatū-Whanganui New Zealand_Aotearoa", "New Zealand_Aotearoa", "Whanganui District, Manawatū-Whanganui, New Zealand_Aotearoa"},
+			Result: []string{"Matahiwi Manawatū-Whanganui New Zealand _ Aotearoa", "New Zealand _ Aotearoa", "Matahiwi Track, Matahiwi, Whanganui District, Manawatū-Whanganui, New Zealand _ Aotearoa"},
 		},
 		{
 			Address: Location{
