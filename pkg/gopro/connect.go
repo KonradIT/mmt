@@ -213,9 +213,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 					continue
 				}
 				tm := time.Unix(i, 0).UTC()
-				start := params.DateRange[0]
-				end := params.DateRange[1]
-				zoneName, _ := end.Zone()
+				zoneName, _ := utils.DateZone()
 				newTime := strings.Replace(tm.Format(time.UnixDate), "UTC", zoneName, -1)
 				tm, _ = time.Parse(time.UnixDate, newTime)
 				mediaDate := tm.Format("02-01-2006")
@@ -224,7 +222,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 					mediaDate = tm.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
 				}
 
-				if tm.Before(start) || tm.After(end) {
+				if !utils.IsValidDate(tm) {
 					continue
 				}
 

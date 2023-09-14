@@ -337,5 +337,3 @@ func GetNewBar(progressBar *mpb.Progress, total int64, filename string, barType 
 		),
 	)
 }
-
-var DateFormatReplacer = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
