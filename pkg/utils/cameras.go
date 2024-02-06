@@ -172,7 +172,7 @@ func (wc WriteCounter) PrintProgress() {
 	fmt.Printf("\rDownloading... %s complete", humanize.Bytes(wc.Total))
 }
 
-func DownloadFile(filepath string, url string, progressbar *mpb.Bar) error {
+func DownloadFile(filepath string, url string, progressbar *mpb.Bar, mtime *time.Time) error {
 	// Create the file, but give it a tmp file extension, this means we won't overwrite a
 	// file until it's downloaded, but we'll remove the tmp extension once downloaded.
 	out, err := os.Create(filepath + ".tmp")
@@ -208,6 +208,13 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar) error {
 
 	// Close the file without defer so it can happen before Rename()
 	out.Close()
+
+	if mtime != nil {
+		// set file mtime to what was given to us
+		if err := os.Chtimes(filepath+".tmp", time.Time{}, *mtime); err != nil {
+			return err
+		}
+	}
 
 	return os.Rename(filepath+".tmp", filepath)
 }

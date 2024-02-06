@@ -234,7 +234,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
 
-					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar) {
+					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar, mtime time.Time) {
 						defer wg.Done()
 						x := origFilename
 						filename := origFilename
@@ -249,7 +249,8 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 						err := utils.DownloadFile(
 							filepath.Join(unsorted, origFilename),
 							fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
-							bar)
+							bar,
+							&mtime)
 						if err != nil {
 							bar.EwmaSetCurrent(origSize, 1*time.Millisecond)
 							bar.EwmaIncrInt64(origSize, 1*time.Millisecond)
@@ -304,7 +305,8 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 							err := utils.DownloadFile(
 								filepath.Join(unsorted, proxyVideoName),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, proxyVideoName),
-								proxyVideoBar)
+								proxyVideoBar,
+								&mtime)
 							if err != nil {
 								proxyVideoBar.EwmaSetCurrent(int64(lrvSize), 1*time.Millisecond)
 								proxyVideoBar.EwmaIncrInt64(int64(lrvSize), 1*time.Millisecond)
@@ -323,7 +325,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 							}
 							inlineCounter.SetSuccess()
 						}
-					}(params.Input, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar)
+					}(params.Input, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar, tm)
 
 				case Photo:
 					type photo struct {
@@ -363,13 +365,14 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 					}
 
 					for _, item := range totalPhotos {
-						go func(in string, nowPhoto photo, unsorted string) {
+						go func(in string, nowPhoto photo, unsorted string, mtime time.Time) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
 								filepath.Join(unsorted, nowPhoto.Name),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, nowPhoto.Folder, nowPhoto.Name),
 								nowPhoto.Bar,
+								&mtime,
 							)
 							if err != nil {
 								nowPhoto.Bar.EwmaSetCurrent(int64(nowPhoto.Size), 1*time.Millisecond)
@@ -396,7 +399,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 									return
 								}
 							}
-						}(params.Input, item, unsorted)
+						}(params.Input, item, unsorted, tm)
 					}
 
 				case Multishot:
@@ -415,13 +418,14 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 						}
 						multiShotBar := utils.GetNewBar(progressBar, gpFileInfo.S, filename, utils.IoTX)
 
-						go func(in, folder, origFilename, unsorted string, origSize int64) {
+						go func(in, folder, origFilename, unsorted string, origSize int64, mtime time.Time) {
 							defer wg.Done()
 
 							err := utils.DownloadFile(
 								filepath.Join(unsorted, origFilename),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, origFilename),
 								multiShotBar,
+								&mtime,
 							)
 							if err != nil {
 								bar.EwmaSetCurrent(origSize, 1*time.Millisecond)
@@ -442,7 +446,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 									return
 								}
 							}
-						}(params.Input, folder.D, filename, unsorted, gpFileInfo.S)
+						}(params.Input, folder.D, filename, unsorted, gpFileInfo.S, tm)
 					}
 
 				default:
