@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/spf13/viper"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/spf13/viper"
 )
 
 func timeoutFromConfig() int {
@@ -16,9 +16,12 @@ func timeoutFromConfig() int {
 
 var Client *http.Client
 
-func init () {
-	var retryableClient = retryablehttp.NewClient()
+func init() {
+	retryableClient := retryablehttp.NewClient()
 	retryableClient.Logger = nil
+	retryableClient.Backoff = retryablehttp.LinearJitterBackoff
+	timeout := time.Duration(timeoutFromConfig()) * time.Second
+	retryableClient.RetryWaitMin = timeout / 10
+	retryableClient.RetryWaitMax = timeout
 	Client = retryableClient.StandardClient()
-
 }
