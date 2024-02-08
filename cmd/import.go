@@ -25,10 +25,10 @@ var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import media",
 	Run: func(cmd *cobra.Command, args []string) {
-		input := getFlagString(cmd, "input")
-		output := getFlagString(cmd, "output")
-		camera := getFlagString(cmd, "camera")
-		projectName := getFlagString(cmd, "name")
+		input := getFlagString(cmd, "input", "")
+		output := getFlagString(cmd, "output", "")
+		camera := getFlagString(cmd, "camera", "")
+		projectName := getFlagString(cmd, "name", "")
 
 		if projectName != "" {
 			_, err := os.Stat(filepath.Join(output, projectName))
@@ -40,12 +40,12 @@ var importCmd = &cobra.Command{
 			}
 		}
 
-		dateFormat := getFlagString(cmd, "date")
+		dateFormat := getFlagString(cmd, "date", "dd-mm-yyyy")
 		bufferSize := getFlagInt(cmd, "buffer", "1000")
-		prefix := getFlagString(cmd, "prefix")
+		prefix := getFlagString(cmd, "prefix", "")
 		dateRange := getFlagSlice(cmd, "range")
-		cameraName := getFlagString(cmd, "camera-name")
-		connection := utils.ConnectionType(getFlagString(cmd, "connection"))
+		cameraName := getFlagString(cmd, "camera-name", "")
+		connection := utils.ConnectionType(getFlagString(cmd, "connection", ""))
 		skipAuxFiles := getFlagBool(cmd, "skip-aux", "true")
 		sortBy := getFlagSlice(cmd, "sort-by")
 		if len(sortBy) == 0 {
@@ -137,7 +137,7 @@ func init() {
 	importCmd.Flags().StringP("output", "o", "", "Output directory for sorted media")
 	importCmd.Flags().StringP("name", "n", "", "Project name")
 	importCmd.Flags().StringP("camera", "c", "", "Camera type")
-	importCmd.Flags().StringP("date", "d", "dd-mm-yyyy", "Date format, dd-mm-yyyy by default")
+	importCmd.Flags().StringP("date", "d", "", "Date format, dd-mm-yyyy by default")
 	importCmd.Flags().StringP("buffer", "b", "", "Buffer size for copying, default is 1000 bytes")
 	importCmd.Flags().StringP("prefix", "p", "", "Prefix for each file, pass `cameraname` to prepend the camera name (eg: Hero9 Black)")
 	importCmd.Flags().StringSlice("range", []string{}, "A date range, eg: 01-05-2020,05-05-2020 -- also accepted: `today`, `yesterday`, `week`")
