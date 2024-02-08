@@ -91,9 +91,9 @@ var exportTags = &cobra.Command{
 	Use:   "export-tags",
 	Short: "Export HiLight/other tags in video",
 	Run: func(cmd *cobra.Command, args []string) {
-		input := getFlagString(cmd, "input")
-		format := getFlagString(cmd, "format")
-		output := getFlagString(cmd, "output")
+		input := getFlagString(cmd, "input", "")
+		format := getFlagString(cmd, "format", "")
+		output := getFlagString(cmd, "output", "")
 
 		stat, err := os.Stat(input)
 		if err != nil {

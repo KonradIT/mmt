@@ -88,14 +88,14 @@ var applyLutCmd = &cobra.Command{
 	Use:   "apply-lut",
 	Short: "Apply LUT to one or more images",
 	Run: func(cmd *cobra.Command, args []string) {
-		input := getFlagString(cmd, "input")
-		lutFile := getFlagString(cmd, "lut")
+		input := getFlagString(cmd, "input", "")
+		lutFile := getFlagString(cmd, "lut", "")
 
 		intensity := getFlagInt(cmd, "intensity", "100")
 		intensityParsed := float64(intensity) / 100
 
 		quality := getFlagInt(cmd, "quality", "100")
-		resizeTo := getFlagString(cmd, "resize")
+		resizeTo := getFlagString(cmd, "resize", "")
 
 		stat, err := os.Stat(input)
 		if err != nil {

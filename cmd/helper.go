@@ -8,13 +8,16 @@ import (
 	"github.com/spf13/viper"
 )
 
-func getFlagString(cmd *cobra.Command, name string) string {
+func getFlagString(cmd *cobra.Command, name string, defaultString string) string {
 	value, err := cmd.Flags().GetString(name)
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
 	}
 	if value == "" {
 		value = viper.GetString(name)
+	}
+	if value == "" {
+		value = defaultString
 	}
 	return value
 }
