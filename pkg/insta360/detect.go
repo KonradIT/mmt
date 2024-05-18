@@ -12,8 +12,8 @@ func Detect() (string, utils.ConnectionType, error) {
 		return "", "", err
 	}
 	for _, partition := range partitions {
-		if utils.CameraGuess(partition.Device) == utils.Insta360.ToString() {
-			return partition.Device, utils.SDCard, nil
+		if utils.CameraGuess(partition.Mountpoint) == utils.Insta360.ToString() {
+			return partition.Mountpoint, utils.SDCard, nil
 		}
 	}
 	return "", "", mErrors.ErrNoCameraDetected

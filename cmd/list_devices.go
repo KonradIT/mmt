@@ -22,7 +22,7 @@ var listDevicesCmd = &cobra.Command{
 			color.Yellow("📷 Devices:")
 		}
 		for _, partition := range partitions {
-			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Device, utils.CameraGuess(partition.Device)))
+			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Mountpoint, utils.CameraGuess(partition.Mountpoint)))
 		}
 
 		ctx := context.Background()
