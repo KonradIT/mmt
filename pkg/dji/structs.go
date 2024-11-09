@@ -10,6 +10,7 @@ const (
 	Subtitle      FileType = "srt"
 	RawPhoto      FileType = "dng"
 	PanoramaIndex FileType = "panoramaindex"
+	Audio         FileType = "audio"
 )
 
 type FileTypeMatch struct {
@@ -39,6 +40,5 @@ var DeviceNames = map[string]string{
 	"OT110":   "Osmo Pocket",
 	"L1D-20":  "Mavic 2 Pro",
 	"L2D-20c": "Mavic 3",
-	"FC7303":  "Mini 2",
-	"FC3582":  "Mini 3 Pro",
+	"AC002":   "Osmo Action 3",
 }

@@ -64,7 +64,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 		percentage,
 	)
 
-	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA`)
+	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA|DJI_\d+`)
 
 	root := filepath.Join(params.Input, "DCIM")
 	var result utils.Result
