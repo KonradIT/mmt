@@ -29,6 +29,7 @@ var DeviceNames = map[string]string{
 	"FC3170":  "Mavic Air 2",
 	"FC330":   "Phantom 4",
 	"FC3411":  "Air 2S",
+	"FC8282":  "Air 3",
 	"FC350":   "X3",
 	"FC550":   "X5",
 	"FC6310":  "Phantom 4 Pro",
@@ -40,5 +41,10 @@ var DeviceNames = map[string]string{
 	"OT110":   "Osmo Pocket",
 	"L1D-20":  "Mavic 2 Pro",
 	"L2D-20c": "Mavic 3",
+	"FC9113":  "Mavic 3 Pro",
+	"FC7303":  "Mini 2",
+	"FC3582":  "Mini 3 Pro",
 	"AC002":   "Osmo Action 3",
+	"AC003":   "Osmo Action 4",
+	"AC004":   "Osmo Action 5 Pro",
 }
