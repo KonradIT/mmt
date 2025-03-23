@@ -42,7 +42,7 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 	GPSNum := 0
 	reader := bytes.NewReader(*data)
 
-	lastEvent := &telemetry.TELEM{}
+	lastEvent := &telemetry.Telem{}
 	coordinates := []utils.Location{}
 
 GetLocation:
@@ -65,7 +65,7 @@ GetLocation:
 			return nil, err
 		}
 
-		telems := lastEvent.ShitJson()
+		telems := lastEvent.Json()
 		for _, telem := range telems {
 			if telem.Altitude > gpsMaxAltitudeFromConfig() || telem.Latitude == 0 || telem.Longitude == 0 || uint(telem.GpsAccuracy) > gpsMinAccuracyFromConfig() {
 				continue

@@ -1,6 +1,8 @@
 module github.com/konradit/mmt
 
-go 1.18
+go 1.23
+
+toolchain go1.23.5
 
 require (
 	github.com/abema/go-mp4 v0.9.0
@@ -8,9 +10,10 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/erdaltsksn/cui v0.6.0
 	github.com/fatih/color v1.10.0
+	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/k3a/html2text v1.0.7
 	github.com/karrick/godirwalk v1.16.1
-	github.com/konradit/gopro-utils v0.0.0-20221223164811-e440e8829226
+	github.com/konradit/gopro-utils v1.0.0
 	github.com/maja42/goval v1.3.1
 	github.com/minio/minio v0.0.0-20210220233218-48b212dd8e96
 	github.com/mitchellh/go-homedir v1.1.0
@@ -43,7 +46,6 @@ require (
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/gookit/color v1.2.9 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.5 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
@@ -56,8 +58,7 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/montanaflynn/stats v0.5.0 // indirect
 	github.com/ncw/directio v1.0.5 // indirect
-	github.com/paulmach/go.geo v0.0.0-20180829195134-22b514266d33 // indirect
-	github.com/paulmach/go.geojson v1.4.0 // indirect
+	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pelletier/go-buffruneio v0.2.0 // indirect
 	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
