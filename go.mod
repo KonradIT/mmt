@@ -1,8 +1,6 @@
 module github.com/konradit/mmt
 
-go 1.23
-
-toolchain go1.23.5
+go 1.23.5
 
 require (
 	github.com/abema/go-mp4 v0.9.0
