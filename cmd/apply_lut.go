@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"image/jpeg"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -103,7 +102,7 @@ var applyLutCmd = &cobra.Command{
 		}
 
 		if stat.IsDir() {
-			files, err := ioutil.ReadDir(input)
+			files, err := os.ReadDir(input)
 			if err != nil {
 				cui.Error(err.Error())
 			}

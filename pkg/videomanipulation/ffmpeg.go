@@ -2,7 +2,7 @@ package videomanipulation
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -68,7 +68,7 @@ func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...s
 		ffConfig.InArgs = append(ffConfig.InArgs, []string{"-hwaccel", "cuda"}...)
 	}
 
-	file, err := ioutil.TempFile(filepath.Dir(videos[0]), "filelist.*.txt")
+	file, err := os.CreateTemp(filepath.Dir(videos[0]), "filelist.*.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 		defer wg.Done()
 		defer r.Close()
 
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		extractData <- data
 		extractError <- err
 	}()

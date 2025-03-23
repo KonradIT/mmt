@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -129,7 +128,7 @@ func importFromGoProV2(params utils.ImportParams) utils.Result {
 	fileTypes := FileTypeMatches[V2]
 	var result utils.Result
 
-	folders, err := ioutil.ReadDir(params.Input)
+	folders, err := os.ReadDir(params.Input)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return result
@@ -307,7 +306,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 	fileTypes := FileTypeMatches[V1]
 	var result utils.Result
 
-	folders, err := ioutil.ReadDir(params.Input)
+	folders, err := os.ReadDir(params.Input)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return result

@@ -3,7 +3,6 @@ package dji
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
@@ -58,7 +57,7 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 	defer fs.Close()
 	reader := bufio.NewReader(fs)
 	limitedSizeReader := io.LimitReader(reader, 2048)
-	content, err := ioutil.ReadAll(limitedSizeReader)
+	content, err := io.ReadAll(limitedSizeReader)
 	if err != nil {
 		return nil, err
 	}

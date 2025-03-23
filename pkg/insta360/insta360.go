@@ -3,7 +3,6 @@ package insta360
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -66,7 +65,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 	root := filepath.Join(params.Input, "DCIM")
 	var result utils.Result
 
-	folders, err := ioutil.ReadDir(root)
+	folders, err := os.ReadDir(root)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
 		return &result, nil

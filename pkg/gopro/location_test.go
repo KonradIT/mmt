@@ -3,7 +3,6 @@ package gopro
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -46,7 +45,7 @@ func TestParseGPMF(t *testing.T) {
 
 		remoteFile, err := fs.Open(walk.Path())
 		require.NoError(t, err)
-		localFile, err := ioutil.TempFile(".", walk.Path())
+		localFile, err := os.CreateTemp(".", walk.Path())
 		require.NoError(t, err)
 		defer os.Remove(localFile.Name())
 

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -38,7 +37,7 @@ func splitSliceInChunks(a []string, chuckSize int) [][]string {
 
 func getModDates(input string) ([]time.Time, error) {
 	modificationDates := []time.Time{}
-	items, err := ioutil.ReadDir(input)
+	items, err := os.ReadDir(input)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +49,11 @@ func getModDates(input string) ([]time.Time, error) {
 			}
 			modificationDates = append(modificationDates, m...)
 		} else {
-			fileDate := item.ModTime()
+			fileInfo, err := item.Info()
+			if err != nil {
+				return nil, err
+			}
+			fileDate := fileInfo.ModTime()
 			parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
 			if !slices.Contains(modificationDates, parsedDate) {
 				modificationDates = append(modificationDates, parsedDate)

@@ -2,7 +2,6 @@ package android
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +30,7 @@ var (
 )
 
 func prepare(out string, deviceFileName string, deviceModel string, mediaDate string, sortOptions utils.SortOptions, deviceFileReader io.ReadCloser, progressBar *mpb.Progress) (*mpb.Bar, string, error) {
-	localFile, err := ioutil.TempFile(out, deviceFileName)
+	localFile, err := os.CreateTemp(out, deviceFileName)
 	if err != nil {
 		return nil, "", err
 	}
