@@ -2,8 +2,8 @@ name: Build and release artifacts
 
 on:
   release:
-    tags:
-      - 'v*'
+    types: [published]
+
 permissions:
   contents: write
 jobs:
@@ -20,7 +20,7 @@ jobs:
           cache: true
       - uses: goreleaser/goreleaser-action@v4          # run goreleaser
         with:
-          version: latest
-          args: release --rm-dist
+          version: '~> v2'
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

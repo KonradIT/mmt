@@ -1,3 +1,5 @@
+version: 2
+
 project_name: mmt
 builds:
   - env: [CGO_ENABLED=0]
