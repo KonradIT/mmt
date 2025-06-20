@@ -3,4 +3,4 @@
 - [Installing](installing)
 - [Commands](commands)
 - [Configuration file](configfile)
-- [Example usecases](examples)
+- [Example Use cases](examples)
