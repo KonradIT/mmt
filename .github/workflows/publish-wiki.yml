@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - development
+      - docs
     paths:
       - docs/**
       - .github/workflows/publish-wiki.yml
@@ -13,9 +14,6 @@ on:
       - development
     types:
       - closed
-
-  workflow_dispatch:
-
 
 concurrency:
   group: publish-wiki
