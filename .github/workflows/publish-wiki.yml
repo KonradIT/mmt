@@ -1,24 +1,36 @@
 name: Publish wiki
+
 on:
   push:
-    #branches: [main]
+    branches:
+      - development
     paths:
       - docs/**
       - .github/workflows/publish-wiki.yml
-      
+
+  pull_request:
+    branches:
+      - development
+    types:
+      - closed
+
+  workflow_dispatch:
+
+
 concurrency:
   group: publish-wiki
   cancel-in-progress: true
-  
+
 permissions:
   contents: write
-  
+
 jobs:
   publish-wiki:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: Andrew-Chen-Wang/github-wiki-action@v4
         with:
-            path: docs/
-            commit-message: Update wiki ${{ github.sha }}
+          path: docs/
+          commit-message: Update wiki ${{ github.sha }}
