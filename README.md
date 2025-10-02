@@ -14,11 +14,13 @@ This tool draws inspiration from my [dji-utils/offload.sh](https://github.com/Ko
     - MAX
     - HERO6 - HERO13
     - HERO 2024
+    - MAX2
 -   Insta360: X2, GO2, X3, X4
 -   DJI:
     - Mavic drones (tested with Air 2, Air 2S, Mini 3 Pro, Mavic 3)
     - Osmo Action cameras (tested with Action 3)
     - Osmo Pocket cameras (tested with Pocket 1)
+    - Osmo Nano camera
 -   Android: All, but with Pixel 6 (Google Camera) specific fixes
 - Autel Lite drone
 

@@ -70,6 +70,12 @@ var FileTypeMatches = map[Type][]FileTypeMatch{
 			Type:     Multishot,
 			HeroMode: false,
 		},
+		// MAX 2:
+		{
+			Regex:    regexp.MustCompile(`^GS_+\d+\.36P$`),
+			Type:     Photo,
+			HeroMode: false,
+		},
 	},
 	V1: {
 		{
