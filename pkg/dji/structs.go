@@ -47,4 +47,5 @@ var DeviceNames = map[string]string{
 	"AC002":   "Osmo Action 3",
 	"AC003":   "Osmo Action 4",
 	"AC004":   "Osmo Action 5 Pro",
+	"OW001":   "Osmo Nano",
 }
