@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +15,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
+	"github.com/konradit/mmt/pkg/camera"
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/maja42/goval"
@@ -34,6 +34,10 @@ var MediaFolderRegex = regexp.MustCompile(`\d\d\dGOPRO`)
 var ffprobe = utils.NewFFprobe(nil)
 
 var locationService = LocationService{}
+
+func init() {
+	camera.Register(Entrypoint{})
+}
 
 func getRfpsFolder(pathName string) (string, error) {
 	if filepath.Ext(pathName) == ".360" {
@@ -54,13 +58,24 @@ func getRfpsFolder(pathName string) (string, error) {
 
 type Entrypoint struct{}
 
-func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
+func (Entrypoint) Name() string { return "gopro" }
+
+func (Entrypoint) GuessFromPath(root string) bool {
+	_, err := os.Stat(filepath.Join(root, "MISC", "version.txt"))
+	return err == nil
+}
+
+func (e Entrypoint) UpdateFirmware(input string, _ camera.UpdateOptions) error {
+	return UpdateCamera(input)
+}
+
+func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	/* Import method using SD card bay or SD card reader */
 
 	switch params.Connection {
-	case utils.Connect:
+	case camera.Connect:
 		return ImportConnect(params)
-	case utils.SDCard:
+	case camera.SDCard:
 		break
 	default:
 		return nil, mErrors.ErrUnsupportedConnection
@@ -70,10 +85,10 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 	_, err := os.Stat(versionFile)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, mErrors.ErrNoCameraDetected
 		}
-		return nil, mErrors.ErrNotFound(versionFile)
+		return nil, fmt.Errorf("unable to find %s", versionFile)
 	}
 	versionContent, err := os.ReadFile(versionFile)
 	if err != nil {
@@ -120,13 +135,13 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 		result := importFromGoProV1(params)
 		return &result, nil
 	default:
-		return nil, mErrors.ErrUnsupportedCamera(gpVersion.CameraType)
+		return nil, fmt.Errorf("camera %s is not supported", gpVersion.CameraType)
 	}
 }
 
-func importFromGoProV2(params utils.ImportParams) utils.Result {
+func importFromGoProV2(params camera.ImportParams) camera.Result {
 	fileTypes := FileTypeMatches[V2]
-	var result utils.Result
+	var result camera.Result
 
 	folders, err := os.ReadDir(params.Input)
 	if err != nil {
@@ -139,7 +154,7 @@ func importFromGoProV2(params utils.ImportParams) utils.Result {
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := utils.ResultCounter{}
+	inlineCounter := camera.ResultCounter{}
 
 folderLoop:
 	for _, f := range folders {
@@ -159,7 +174,7 @@ folderLoop:
 					}
 
 					d := getFileTime(osPathname, true)
-					mediaDate := getMediaDate(getFileTime(osPathname, true), params.DateFormat)
+					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -170,10 +185,10 @@ folderLoop:
 						return godirwalk.SkipThis
 					}
 
-					dayFolder := utils.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
+					dayFolder := camera.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
+					bar := camera.GetNewBar(progressBar, info.Size(), de.Name(), camera.IoTX)
 
 					switch ftype.Type {
 					case Video:
@@ -217,7 +232,7 @@ folderLoop:
 						if err != nil {
 							return godirwalk.SkipThis
 						}
-						proxyVideoBar := utils.GetNewBar(progressBar, lrvStat.Size(), lrvReplacer.Replace(de.Name()), utils.IoTX)
+						proxyVideoBar := camera.GetNewBar(progressBar, lrvStat.Size(), lrvReplacer.Replace(de.Name()), camera.IoTX)
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
@@ -280,7 +295,7 @@ folderLoop:
 						}(folder, de.Name(), osPathname, bar)
 
 					default:
-						inlineCounter.SetFailure(errors.New("Unsupported file"), de.Name())
+						inlineCounter.SetFailure(errors.New("unsupported file"), de.Name())
 					}
 				}
 				return nil
@@ -302,9 +317,9 @@ folderLoop:
 	return result
 }
 
-func importFromGoProV1(params utils.ImportParams) utils.Result {
+func importFromGoProV1(params camera.ImportParams) camera.Result {
 	fileTypes := FileTypeMatches[V1]
-	var result utils.Result
+	var result camera.Result
 
 	folders, err := os.ReadDir(params.Input)
 	if err != nil {
@@ -317,7 +332,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := utils.ResultCounter{}
+	inlineCounter := camera.ResultCounter{}
 
 	for _, f := range folders {
 		r := MediaFolderRegex.MatchString(f.Name())
@@ -335,7 +350,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 					}
 
 					d := getFileTime(osPathname, true)
-					mediaDate := getMediaDate(d, params.DateFormat)
+					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -347,9 +362,9 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
+					bar := camera.GetNewBar(progressBar, info.Size(), de.Name(), camera.IoTX)
 
-					dayFolder := utils.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
+					dayFolder := camera.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
 
 					switch ftype.Type {
 					case Video:
@@ -361,7 +376,6 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						}
 						s, err := ffprobe.VideoSize(osPathname)
 						if err != nil {
-							log.Fatal(err.Error())
 							return godirwalk.SkipThis
 						}
 						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
@@ -391,12 +405,12 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 
 						wg.Add(1)
 						folder = filepath.Join(dayFolder, "videos/proxy", rfpsFolder)
-						lrvFullpath := filepath.Join(filepath.Dir(osPathname), strings.Replace(de.Name(), ".MP4", ".LRV", -1))
+						lrvFullpath := filepath.Join(filepath.Dir(osPathname), strings.ReplaceAll(de.Name(), ".MP4", ".LRV"))
 						lrvStat, err := os.Stat(lrvFullpath)
 						if err != nil {
 							return godirwalk.SkipThis
 						}
-						proxyVideoBar := utils.GetNewBar(progressBar, lrvStat.Size(), strings.Replace(de.Name(), ".MP4", ".LRV", -1), utils.IoTX)
+						proxyVideoBar := camera.GetNewBar(progressBar, lrvStat.Size(), strings.ReplaceAll(de.Name(), ".MP4", ".LRV"), camera.IoTX)
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
@@ -408,7 +422,6 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						name := fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], strings.Split(x, ".")[1])
 						s, err := ffprobe.VideoSize(osPathname)
 						if err != nil {
-							log.Fatal(err.Error())
 							return godirwalk.SkipThis
 						}
 						framerate := strings.ReplaceAll(s.Streams[0].RFrameRate, "/1", "")
@@ -438,12 +451,12 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 
 						wg.Add(1)
 						folder = filepath.Join(dayFolder, "videos/proxy", rfpsFolder)
-						lrvFullpath := filepath.Join(filepath.Dir(osPathname), strings.Replace(de.Name(), ".MP4", ".LRV", -1))
+						lrvFullpath := filepath.Join(filepath.Dir(osPathname), strings.ReplaceAll(de.Name(), ".MP4", ".LRV"))
 						lrvStat, err := os.Stat(lrvFullpath)
 						if err != nil {
 							return godirwalk.SkipThis
 						}
-						proxyVideoBar := utils.GetNewBar(progressBar, lrvStat.Size(), strings.Replace(de.Name(), ".MP4", ".LRV", -1), utils.IoTX)
+						proxyVideoBar := camera.GetNewBar(progressBar, lrvStat.Size(), strings.ReplaceAll(de.Name(), ".MP4", ".LRV"), camera.IoTX)
 
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
@@ -501,7 +514,7 @@ func importFromGoProV1(params utils.ImportParams) utils.Result {
 						}(folder, de.Name(), osPathname, bar)
 
 					default:
-						inlineCounter.SetFailure(errors.New("Unsupported file"), de.Name())
+						inlineCounter.SetFailure(errors.New("unsupported file"), de.Name())
 					}
 				}
 				return nil
@@ -551,31 +564,20 @@ func getFileTime(osPathname string, utcFix bool) time.Time {
 	var d time.Time
 	t, err := times.Stat(osPathname)
 	if err != nil {
-		log.Fatal(err.Error())
+		return d
 	}
 	d = t.ModTime()
 	if utcFix {
 		zoneName, _ := d.Zone()
-		newTime := strings.Replace(d.Format(time.UnixDate), zoneName, "UTC", -1)
+		newTime := strings.ReplaceAll(d.Format(time.UnixDate), zoneName, "UTC")
 		d, _ = time.Parse(time.UnixDate, newTime)
 	}
 	return d
 }
 
-func getMediaDate(d time.Time, dateFormat string) string {
-	mediaDate := d.Format("02-01-2006")
-	if strings.Contains(dateFormat, "yyyy") && strings.Contains(dateFormat, "mm") && strings.Contains(dateFormat, "dd") {
-		mediaDate = d.Format(utils.DateFormatReplacer.Replace(dateFormat))
-	}
-	return mediaDate
-}
-
 func parse(folder string, name string, osPathname string, bufferSize int, bar *mpb.Bar, modTime time.Time) error {
-	if _, err := os.Stat(folder); os.IsNotExist(err) {
-		mkdirerr := os.MkdirAll(folder, 0o755)
-		if mkdirerr != nil {
-			return mkdirerr
-		}
+	if err := os.MkdirAll(folder, 0o755); err != nil {
+		return err
 	}
 	sourceFileStat, err := os.Stat(osPathname)
 	if err != nil {
@@ -589,4 +591,72 @@ func parse(folder string, name string, osPathname string, bufferSize int, bar *m
 		return err
 	}
 	return nil
+}
+
+// getModDates recursively collects unique modification dates from a directory tree.
+func getModDates(input string) ([]time.Time, error) {
+	modificationDates := []time.Time{}
+	items, err := os.ReadDir(input)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if item.IsDir() {
+			m, err := getModDates(filepath.Join(input, item.Name()))
+			if err != nil {
+				return nil, err
+			}
+			modificationDates = append(modificationDates, m...)
+		} else {
+			fileInfo, err := item.Info()
+			if err != nil {
+				return nil, err
+			}
+			fileDate := fileInfo.ModTime()
+			parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
+			found := false
+			for _, d := range modificationDates {
+				if d.Equal(parsedDate) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				modificationDates = append(modificationDates, parsedDate)
+			}
+		}
+	}
+	return modificationDates, nil
+}
+
+// CaptureDates implements camera.CalendarProvider.
+func (Entrypoint) CaptureDates(input string, conn camera.ConnectionType) ([]time.Time, error) {
+	switch conn {
+	case camera.Connect:
+		mediaList, err := GetMediaList(input)
+		if err != nil {
+			return nil, err
+		}
+		var dates []time.Time
+		for _, folder := range mediaList.Media {
+			for _, file := range folder.Fs {
+				fileDate := time.Unix(file.Cre, 0)
+				parsedDate := time.Date(fileDate.Year(), fileDate.Month(), fileDate.Day(), 0, 0, 0, 0, fileDate.Location())
+				found := false
+				for _, d := range dates {
+					if d.Equal(parsedDate) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					dates = append(dates, parsedDate)
+				}
+			}
+		}
+		return dates, nil
+	case camera.SDCard:
+		return getModDates(filepath.Join(input, string(DCIM)))
+	}
+	return nil, fmt.Errorf("unsupported connection type %q", conn)
 }

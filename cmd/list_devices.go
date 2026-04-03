@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/erdaltsksn/cui"
 	"github.com/fatih/color"
+	"github.com/konradit/mmt/pkg/camera"
 	"github.com/konradit/mmt/pkg/gopro"
-	"github.com/konradit/mmt/pkg/utils"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/spf13/cobra"
 )
@@ -22,13 +21,19 @@ var listDevicesCmd = &cobra.Command{
 			color.Yellow("📷 Devices:")
 		}
 		for _, partition := range partitions {
-			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Mountpoint, utils.CameraGuess(partition.Mountpoint)))
+			guessed := camera.Guess(partition.Mountpoint)
+			name := ""
+			if guessed != nil {
+				name = guessed.Name()
+			}
+			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Mountpoint, name))
 		}
 
 		ctx := context.Background()
 		networkDevices, err := gopro.GetGoProNetworkAddresses(ctx)
 		if err != nil {
-			cui.Error(err.Error())
+			// Network detection is best-effort; don't fail hard.
+			return
 		}
 
 		if len(networkDevices) >= 1 {

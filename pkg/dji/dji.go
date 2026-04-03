@@ -1,57 +1,57 @@
 package dji
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
+	"github.com/konradit/mmt/pkg/camera"
+	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
-	"github.com/minio/minio/pkg/disk"
-	"github.com/rwcarlsen/goexif/exif"
+	diskinfo "github.com/minio/minio/pkg/disk"
+	gopsutil "github.com/shirou/gopsutil/disk"
 	"github.com/vbauerster/mpb/v8"
 	"gopkg.in/djherbis/times.v1"
 )
-
-func getDeviceNameFromPhoto(path string) (string, error) { //nolint:unused
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	exifData, err := exif.Decode(f)
-	if err != nil {
-		return "", err
-	}
-
-	camModel, err := exifData.Get(exif.Model)
-	if err != nil {
-		return "", err
-	}
-	s, err := camModel.StringVal()
-	if err != nil {
-		return "", err
-	}
-	return s, nil
-}
 
 var locationService = LocationService{}
 
 type Entrypoint struct{}
 
-func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
-	// Tested on Mavic Air 2. Osmo Pocket v1 and Spark specific changes to follow.
+func init() {
+	camera.Register(Entrypoint{})
+}
 
+func (Entrypoint) Name() string { return "dji" }
+
+func (Entrypoint) GuessFromPath(root string) bool {
+	_, err := os.Stat(filepath.Join(root, "MISC", "GIS", "dji.gis"))
+	return err == nil
+}
+
+func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
+	partitions, err := gopsutil.Partitions(false)
+	if err != nil {
+		return "", "", err
+	}
+	for _, partition := range partitions {
+		if (Entrypoint{}).GuessFromPath(partition.Mountpoint) {
+			return partition.Mountpoint, camera.SDCard, nil
+		}
+	}
+	return "", "", mErrors.ErrNoCameraDetected
+}
+
+func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	if params.CameraName == "" {
 		params.CameraName = "DJI Device"
 	}
-	di, err := disk.GetInfo(params.Input)
+	di, err := diskinfo.GetInfo(params.Input)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA|DJI_\d+`)
 
 	root := filepath.Join(params.Input, "DCIM")
-	var result utils.Result
+	var result camera.Result
 
 	folders, err := os.ReadDir(root)
 	if err != nil {
@@ -79,7 +79,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := utils.ResultCounter{}
+	inlineCounter := camera.ResultCounter{}
 
 	for _, f := range folders {
 		r := mediaFolderRegex.MatchString(f.Name())
@@ -102,12 +102,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 					}
 					d := t.ModTime()
 
-					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(params.DateFormat, "yyyy") && strings.Contains(params.DateFormat, "mm") && strings.Contains(params.DateFormat, "dd") {
-						mediaDate = d.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
-					}
-
-					// check if is in date range
+					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 						return godirwalk.SkipThis
@@ -119,16 +114,13 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
+					bar := camera.GetNewBar(progressBar, info.Size(), de.Name(), camera.IoTX)
 
-					dayFolder := utils.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
+					dayFolder := camera.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
 					switch ftype.Type {
 					case Photo:
-						if _, err := os.Stat(filepath.Join(dayFolder, "photos")); os.IsNotExist(err) {
-							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755)
-							if mkdirerr != nil {
-								return godirwalk.SkipThis
-							}
+						if err := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755); err != nil {
+							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
@@ -144,11 +136,8 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 						}(de.Name(), osPathname, bar)
 
 					case Video:
-						if _, err := os.Stat(filepath.Join(dayFolder, "videos")); os.IsNotExist(err) {
-							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755)
-							if mkdirerr != nil {
-								log.Fatal(mkdirerr.Error())
-							}
+						if err := os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755); err != nil {
+							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
@@ -170,11 +159,8 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							break
 						}
 
-						if _, err := os.Stat(filepath.Join(dayFolder, "videos", extraPath)); os.IsNotExist(err) {
-							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0o755)
-							if mkdirerr != nil {
-								log.Fatal(mkdirerr.Error())
-							}
+						if err := os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0o755); err != nil {
+							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
@@ -189,11 +175,8 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 							}
 						}(de.Name(), osPathname, bar)
 					case RawPhoto:
-						if _, err := os.Stat(filepath.Join(dayFolder, "photos/raw")); os.IsNotExist(err) {
-							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755)
-							if mkdirerr != nil {
-								log.Fatal(mkdirerr.Error())
-							}
+						if err := os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755); err != nil {
+							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {

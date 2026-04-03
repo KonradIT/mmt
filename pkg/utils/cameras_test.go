@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"testing"
 
-	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +21,7 @@ func TestFindFolderInPath(t *testing.T) {
 		input := "C:\\Users\\konra\\Videos\\Projects\\ElEscorialUAV\\San Lorenzo de El Escorial España\\DJI Device\\21-12-2022"
 		_, err := FindFolderInPath(input, "INVALID")
 		require.Error(t, err)
-		require.ErrorContains(t, err, mErrors.ErrNotFound("INVALID").Error())
+		require.ErrorContains(t, err, "unable to find INVALID")
 	})
 	if runtime.GOOS == "windows" {
 		t.Run("Correct path - Windows", func(t *testing.T) {

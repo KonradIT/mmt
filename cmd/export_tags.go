@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,7 +36,7 @@ func exportCSV(tags gopro.HiLights, output string) error {
 	})
 	for _, timestamp := range tags.Timestamps {
 		_ = writer.Write([]string{
-			fmt.Sprintf("%d", timestamp),
+			strconv.Itoa(timestamp),
 		})
 	}
 	writer.Flush()
@@ -69,17 +70,17 @@ func extractIndividual(input, output, format string) (int, error) {
 	switch format {
 	case "csv":
 		if output == "" {
-			output = strings.Replace(input, filepath.Ext(input), ".csv", -1)
+			output = strings.ReplaceAll(input, filepath.Ext(input), ".csv")
 		}
 		err = exportCSV(*hilights, output)
 	case "json":
 		if output == "" {
-			output = strings.Replace(input, filepath.Ext(input), ".json", -1)
+			output = strings.ReplaceAll(input, filepath.Ext(input), ".json")
 		}
 		err = exportJSON(*hilights, output)
 	case "edl":
 		if output == "" {
-			output = strings.Replace(input, filepath.Ext(input), ".edl", -1)
+			output = strings.ReplaceAll(input, filepath.Ext(input), ".edl")
 		}
 		err = exportEDL(filepath.Base(input), *hilights, output)
 	}

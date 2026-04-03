@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/konradit/mmt/pkg/camera"
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/vbauerster/mpb/v8"
@@ -128,13 +128,8 @@ func GetMediaList(in string) (*MediaList, error) {
 	return gpMediaList, nil
 }
 
-func forceGetFolder(path string) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		mkdirerr := os.MkdirAll(path, 0o755)
-		if mkdirerr != nil {
-			log.Fatal(mkdirerr.Error())
-		}
-	}
+func forceGetFolder(path string) error {
+	return os.MkdirAll(path, 0o755)
 }
 
 func validateIP() bool {
@@ -142,9 +137,9 @@ func validateIP() bool {
 	return valid.MatchString(ipAddress)
 }
 
-func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
+func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 	var verType Type
-	var result utils.Result
+	var result camera.Result
 	ipAddress = params.Input
 
 	// handle ctrl-c
@@ -157,7 +152,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 	ctx := context.Background()
 	err := caller(ctx, params.Input, "gp/gpControl/info", gpInfo)
 	if err != nil {
-		return nil, mErrors.ErrNotFound("Connect camera: " + params.Input)
+		return nil, fmt.Errorf("unable to find Connect camera: %s", params.Input)
 	}
 	cameraName := gpInfo.Info.ModelName
 
@@ -193,7 +188,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := utils.ResultCounter{}
+	inlineCounter := camera.ResultCounter{}
 
 	unsorted := filepath.Join(params.Output, "unsorted")
 	if _, err := os.Stat(unsorted); os.IsNotExist(err) {
@@ -216,20 +211,16 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 				start := params.DateRange[0]
 				end := params.DateRange[1]
 				zoneName, _ := end.Zone()
-				newTime := strings.Replace(tm.Format(time.UnixDate), "UTC", zoneName, -1)
+				newTime := strings.ReplaceAll(tm.Format(time.UnixDate), "UTC", zoneName)
 				tm, _ = time.Parse(time.UnixDate, newTime)
-				mediaDate := tm.Format("02-01-2006")
-
-				if strings.Contains(params.DateFormat, "yyyy") && strings.Contains(params.DateFormat, "mm") && strings.Contains(params.DateFormat, "dd") {
-					mediaDate = tm.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
-				}
+				mediaDate := camera.FormatMediaDate(tm, params.DateFormat)
 
 				if tm.Before(start) || tm.After(end) {
 					continue
 				}
 
 				wg.Add(1)
-				bar := utils.GetNewBar(progressBar, goprofile.S, goprofile.N, utils.IoTX)
+				bar := camera.GetNewBar(progressBar, goprofile.S, goprofile.N, camera.IoTX)
 
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
@@ -262,7 +253,7 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 
 						// Move to actual folder
 
-						finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
+						finalPath := camera.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
 						gpFileInfo := &goProMediaMetadata{}
 						err = caller(ctx, in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
 						if err != nil {
@@ -283,7 +274,10 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 
 						rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
 
-						forceGetFolder(filepath.Join(finalPath, "videos", importanceName, rfpsFolder))
+						if err := forceGetFolder(filepath.Join(finalPath, "videos", importanceName, rfpsFolder)); err != nil {
+							inlineCounter.SetFailure(err, origFilename)
+							return
+						}
 
 						err = os.Rename(
 							filepath.Join(unsorted, origFilename),
@@ -296,12 +290,12 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 
 						// download proxy
 						if lrvSize > 0 && !params.SkipAuxiliaryFiles {
-							proxyVideoName := "GL" + strings.Replace(origFilename[2:], ".MP4", ".LRV", -1)
+							proxyVideoName := "GL" + strings.ReplaceAll(origFilename[2:], ".MP4", ".LRV")
 							if verType == V1 {
-								proxyVideoName = strings.Replace(origFilename, ".MP4", ".LRV", -1)
+								proxyVideoName = strings.ReplaceAll(origFilename, ".MP4", ".LRV")
 							}
 
-							proxyVideoBar := utils.GetNewBar(progressBar, int64(lrvSize), proxyVideoName, utils.IoTX)
+							proxyVideoBar := camera.GetNewBar(progressBar, int64(lrvSize), proxyVideoName, camera.IoTX)
 							err := utils.DownloadFile(
 								filepath.Join(unsorted, proxyVideoName),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, proxyVideoName),
@@ -313,7 +307,10 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 								inlineCounter.SetFailure(err, origFilename)
 								return
 							}
-							forceGetFolder(filepath.Join(finalPath, "videos", "proxy", rfpsFolder))
+							if err := forceGetFolder(filepath.Join(finalPath, "videos", "proxy", rfpsFolder)); err != nil {
+								inlineCounter.SetFailure(err, origFilename)
+								return
+							}
 
 							err = os.Rename(
 								filepath.Join(unsorted, proxyVideoName),
@@ -347,14 +344,14 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 					hasRawPhoto := goprofile.Raw == "1"
 					if hasRawPhoto {
 						wg.Add(1)
-						rawPhotoName := strings.Replace(goprofile.N, ".JPG", ".GPR", -1)
+						rawPhotoName := strings.ReplaceAll(goprofile.N, ".JPG", ".GPR")
 
 						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", params.Input, folder.D, rawPhotoName))
 						if err != nil {
 							continue
 						}
 
-						rawPhotoBar := utils.GetNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName, utils.IoTX)
+						rawPhotoBar := camera.GetNewBar(progressBar, int64(rawPhotoTotal), rawPhotoName, camera.IoTX)
 						totalPhotos = append(totalPhotos, photo{
 							Name:   rawPhotoName,
 							Folder: folder.D,
@@ -382,13 +379,13 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 								inlineCounter.SetSuccess()
 								// Move to actual folder
 
-								finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, nowPhoto.Name), params.Output, mediaDate, cameraName)
+								finalPath := camera.GetOrder(params.Sort, locationService, filepath.Join(unsorted, nowPhoto.Name), params.Output, mediaDate, cameraName)
 
 								photoPath := filepath.Join(finalPath, "photos")
 								if nowPhoto.IsRaw {
 									photoPath = filepath.Join(photoPath, "raw")
 								}
-								forceGetFolder(photoPath)
+								_ = forceGetFolder(photoPath)
 
 								err := os.Rename(
 									filepath.Join(unsorted, nowPhoto.Name),
@@ -414,9 +411,10 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 						gpFileInfo := &goProMediaMetadata{}
 						err = caller(ctx, params.Input, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
 						if err != nil {
-							log.Fatal(err.Error())
+							inlineCounter.SetFailure(err, filename)
+							continue
 						}
-						multiShotBar := utils.GetNewBar(progressBar, gpFileInfo.S, filename, utils.IoTX)
+						multiShotBar := camera.GetNewBar(progressBar, gpFileInfo.S, filename, camera.IoTX)
 
 						go func(in, folder, origFilename, unsorted string, origSize int64, mtime time.Time) {
 							defer wg.Done()
@@ -434,8 +432,8 @@ func ImportConnect(params utils.ImportParams) (*utils.Result, error) {
 							} else {
 								inlineCounter.SetSuccess()
 								// Move to actual folder
-								finalPath := utils.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
-								forceGetFolder(filepath.Join(finalPath, "multishot", filebaseroot))
+								finalPath := camera.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
+								_ = forceGetFolder(filepath.Join(finalPath, "multishot", filebaseroot))
 
 								err := os.Rename(
 									filepath.Join(unsorted, origFilename),

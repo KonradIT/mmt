@@ -3,19 +3,21 @@ package gopro
 import (
 	"context"
 
+	"github.com/konradit/mmt/pkg/camera"
 	mErrors "github.com/konradit/mmt/pkg/errors"
-	"github.com/konradit/mmt/pkg/utils"
 	"github.com/shirou/gopsutil/disk"
 )
 
-func Detect() (string, utils.ConnectionType, error) {
+// Detect implements camera.Camera by checking for GoPro SD cards and
+// network-connected cameras.
+func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
 		return "", "", err
 	}
 	for _, partition := range partitions {
-		if utils.CameraGuess(partition.Mountpoint) == utils.GoPro.ToString() {
-			return partition.Mountpoint, utils.SDCard, nil
+		if (Entrypoint{}).GuessFromPath(partition.Mountpoint) {
+			return partition.Mountpoint, camera.SDCard, nil
 		}
 	}
 
@@ -26,7 +28,7 @@ func Detect() (string, utils.ConnectionType, error) {
 	}
 
 	if len(networkDevices) > 0 {
-		return networkDevices[0].IP, utils.Connect, nil
+		return networkDevices[0].IP, camera.Connect, nil
 	}
 
 	return "", "", mErrors.ErrNoCameraDetected

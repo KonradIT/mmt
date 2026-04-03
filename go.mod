@@ -27,7 +27,6 @@ require (
 	github.com/wayneashleyberry/lut v0.0.0-20211216075411-740ff5e84564
 	github.com/xfrr/goffmpeg v0.0.0-20210624103149-5ca2d3062daf
 	github.com/zach-klippenstein/goadb v0.0.0-20201208042340-620e0e950ed7
-	golang.org/x/exp v0.0.0-20230105000112-eab7a2c85304
 	gopkg.in/djherbis/times.v1 v1.2.0
 )
 
@@ -39,6 +38,7 @@ require (
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect

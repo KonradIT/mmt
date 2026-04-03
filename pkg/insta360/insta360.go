@@ -3,17 +3,16 @@ package insta360
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/karrick/godirwalk"
+	"github.com/konradit/mmt/pkg/camera"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/minio/minio/pkg/disk"
 	"github.com/vbauerster/mpb/v8"
@@ -43,7 +42,22 @@ func getDeviceName(manifest string) string {
 
 type Entrypoint struct{}
 
-func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
+func init() {
+	camera.Register(Entrypoint{})
+}
+
+func (Entrypoint) Name() string { return "insta360" }
+
+func (Entrypoint) GuessFromPath(root string) bool {
+	_, err := os.Stat(filepath.Join(root, "DCIM", "fileinfo_list.list"))
+	return err == nil
+}
+
+func (e Entrypoint) UpdateFirmware(input string, opts camera.UpdateOptions) error {
+	return UpdateCamera(input, opts.Model)
+}
+
+func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	if params.CameraName == "" {
 		params.CameraName = getDeviceName(filepath.Join(params.Input, "DCIM", "fileinfo_list.list"))
 	}
@@ -63,7 +77,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 	mediaFolderRegex := regexp.MustCompile(mediaFolder)
 
 	root := filepath.Join(params.Input, "DCIM")
-	var result utils.Result
+	var result camera.Result
 
 	folders, err := os.ReadDir(root)
 	if err != nil {
@@ -76,7 +90,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
 
-	inlineCounter := utils.ResultCounter{}
+	inlineCounter := camera.ResultCounter{}
 
 	for _, f := range folders {
 		r := mediaFolderRegex.MatchString(f.Name())
@@ -98,10 +112,7 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 
 					d := t.ModTime()
 
-					mediaDate := d.Format("02-01-2006")
-					if strings.Contains(params.DateFormat, "yyyy") && strings.Contains(params.DateFormat, "mm") && strings.Contains(params.DateFormat, "dd") {
-						mediaDate = d.Format(utils.DateFormatReplacer.Replace(params.DateFormat))
-					}
+					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 					// check if is in date range
 
@@ -115,19 +126,16 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 					}
 
 					wg.Add(1)
-					bar := utils.GetNewBar(progressBar, info.Size(), de.Name(), utils.IoTX)
-					dayFolder := utils.GetOrder(params.Sort, nil, osPathname, params.Output, mediaDate, params.CameraName)
+					bar := camera.GetNewBar(progressBar, info.Size(), de.Name(), camera.IoTX)
+					dayFolder := camera.GetOrder(params.Sort, nil, osPathname, params.Output, mediaDate, params.CameraName)
 
 					x := de.Name()
 
 					switch ftype.Type {
 					case Photo, RawPhoto:
 						id := x[3+8+2 : 3+8+6+2]
-						if _, err := os.Stat(filepath.Join(dayFolder, "photos", id)); os.IsNotExist(err) {
-							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0o755)
-							if mkdirerr != nil {
-								log.Fatal(mkdirerr.Error())
-							}
+						if err := os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0o755); err != nil {
+							return godirwalk.SkipThis
 						}
 
 						go func(id, filename, osPathname string, bar *mpb.Bar) {
@@ -161,11 +169,8 @@ func (Entrypoint) Import(params utils.ImportParams) (*utils.Result, error) {
 						if ftype.ProMode {
 							id = x[3+3+8+2+1 : 3+3+8+6+2+1]
 						}
-						if _, err := os.Stat(filepath.Join(dayFolder, slug, id)); os.IsNotExist(err) {
-							mkdirerr := os.MkdirAll(filepath.Join(dayFolder, slug, id), 0o755)
-							if mkdirerr != nil {
-								log.Fatal(mkdirerr.Error())
-							}
+						if err := os.MkdirAll(filepath.Join(dayFolder, slug, id), 0o755); err != nil {
+							return godirwalk.SkipThis
 						}
 
 						go func(id, filename, osPathname string, bar *mpb.Bar) {

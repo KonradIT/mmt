@@ -3,7 +3,6 @@ package videomanipulation
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -54,7 +53,7 @@ type FFConfig struct {
 
 func getMergedOutputFilename(video string) string {
 	return filepath.Join(filepath.Dir(video),
-		fmt.Sprintf("%s-merged%s", strings.Replace(filepath.Base(video), filepath.Ext(video), "", -1), filepath.Ext(video)),
+		fmt.Sprintf("%s-merged%s", strings.ReplaceAll(filepath.Base(video), filepath.Ext(video), ""), filepath.Ext(video)),
 	)
 }
 
@@ -70,7 +69,7 @@ func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...s
 
 	file, err := os.CreateTemp(filepath.Dir(videos[0]), "filelist.*.txt")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer os.Remove(file.Name())
 
@@ -120,12 +119,7 @@ func (v *VMan) Merge(bar *mpb.Bar, videos ...string) error {
 	mergeConfig.InArgs = append(mergeConfig.InArgs, []string{"-f", "concat", "-safe", "0", "-ignore_unknown"}...)
 	mergeConfig.OutArgs = append(mergeConfig.OutArgs, []string{"-map", "0:0", "-map", "0:1", "-map", "0:3"}...)
 
-	err := v.merge(getMergedOutputFilename(videos[0]), bar, mergeConfig, videos...)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return nil
+	return v.merge(getMergedOutputFilename(videos[0]), bar, mergeConfig, videos...)
 }
 
 func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {

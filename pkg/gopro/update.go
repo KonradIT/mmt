@@ -48,7 +48,7 @@ func UpdateCamera(sdcard string) error {
 		if camera.ModelString != cameraID {
 			continue
 		}
-		cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraID+".", "", 1)
+		cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraID+".", "", 1) // intentional count=1
 
 		if cameraVersion != camera.Version {
 			color.Cyan("New update available!")

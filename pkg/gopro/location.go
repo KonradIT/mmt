@@ -5,6 +5,7 @@ import (
 	"io"
 	"math"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/codingsince1985/geo-golang/openstreetmap"
@@ -12,20 +13,17 @@ import (
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/konradit/mmt/pkg/videomanipulation"
-	"golang.org/x/exp/slices"
 )
 
 type LocationService struct{}
 
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
-	switch true {
-	case strings.Contains(path, ".MP4"):
+	switch strings.ToUpper(filepath.Ext(path)) {
+	case ".MP4":
 		return fromMP4(path)
-	case strings.Contains(path, ".WAV"):
-		return fromMP4(path[:len(path)-len(filepath.Ext(path))] + ".MP4")
-	case strings.Contains(path, ".GPR"):
-		return utils.LocationFromEXIF(path)
-	case strings.Contains(path, ".JPG"):
+	case ".WAV":
+		return fromMP4(strings.TrimSuffix(path, filepath.Ext(path)) + ".MP4")
+	case ".GPR", ".JPG":
 		return utils.LocationFromEXIF(path)
 	default:
 		return nil, mErrors.ErrInvalidFile
@@ -105,7 +103,6 @@ GetLocation:
 }
 
 func getClosestLocation(locations []utils.Location) utils.Location {
-	// Find the nearest and repeat location
 	counts := make(map[utils.Location]int)
 	for _, loc := range locations {
 		counts[loc]++
@@ -118,7 +115,6 @@ func getClosestLocation(locations []utils.Location) utils.Location {
 			mostFrequentLocation = loc
 			maxCount = count
 		} else if count == maxCount {
-			// If there are multiple locations with the same frequency, choose the closest one
 			distanceToLoc := distance(locations[0], loc)
 			distanceToMostFrequent := distance(locations[0], mostFrequentLocation)
 			if distanceToLoc < distanceToMostFrequent {

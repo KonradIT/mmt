@@ -1,6 +1,7 @@
 package android
 
 import (
+	"path/filepath"
 	"strings"
 
 	mErrors "github.com/konradit/mmt/pkg/errors"
@@ -12,10 +13,10 @@ type LocationService struct{}
 var ffprobe = utils.NewFFprobe(nil)
 
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
-	switch true {
-	case strings.Contains(strings.ToLower(path), ".mp4"):
+	switch strings.ToUpper(filepath.Ext(path)) {
+	case ".MP4":
 		return ffprobe.GPSLocation(path)
-	case strings.Contains(strings.ToLower(path), ".jpg"):
+	case ".JPG":
 		return utils.LocationFromEXIF(path)
 	default:
 		return nil, mErrors.ErrInvalidFile

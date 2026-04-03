@@ -20,18 +20,6 @@ func formatFromConfig() int {
 	return viper.GetInt("location.format")
 }
 
-func fallbackFromConfig() string {
-	key := "location.fallback"
-	viper.SetDefault(key, "NoLocation")
-	return viper.GetString(key)
-}
-
-func orderFromConfig() []string {
-	key := "location.order"
-	viper.SetDefault(key, []string{"date", "location", "camera"})
-	return viper.GetStringSlice(key)
-}
-
 type locationFormat interface {
 	format(*geo.Address) string
 }

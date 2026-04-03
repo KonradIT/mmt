@@ -67,8 +67,8 @@ func applyLUTToFile(sourceFilename, lutFilename string, intensity float64, quali
 	destinationFile, err := os.Create(
 		filepath.Join(filepath.Dir(sourceFilename),
 			fmt.Sprintf("%s %s%s",
-				strings.Replace(filepath.Base(sourceFilename), filepath.Ext(sourceFilename), "", -1),
-				strings.Replace(filepath.Base(lutFilename), filepath.Ext(lutFilename), "", -1),
+				strings.ReplaceAll(filepath.Base(sourceFilename), filepath.Ext(sourceFilename), ""),
+				strings.ReplaceAll(filepath.Base(lutFilename), filepath.Ext(lutFilename), ""),
 				filepath.Ext(sourceFilename),
 			),
 		),
