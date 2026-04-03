@@ -2,9 +2,11 @@ package gopro
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"math"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/codingsince1985/geo-golang/openstreetmap"
@@ -12,20 +14,17 @@ import (
 	mErrors "github.com/konradit/mmt/pkg/errors"
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/konradit/mmt/pkg/videomanipulation"
-	"golang.org/x/exp/slices"
 )
 
 type LocationService struct{}
 
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
-	switch true {
-	case strings.Contains(path, ".MP4"):
+	switch strings.ToUpper(filepath.Ext(path)) {
+	case ".MP4":
 		return fromMP4(path)
-	case strings.Contains(path, ".WAV"):
-		return fromMP4(path[:len(path)-len(filepath.Ext(path))] + ".MP4")
-	case strings.Contains(path, ".GPR"):
-		return utils.LocationFromEXIF(path)
-	case strings.Contains(path, ".JPG"):
+	case ".WAV":
+		return fromMP4(strings.TrimSuffix(path, filepath.Ext(path)) + ".MP4")
+	case ".GPR", ".JPG":
 		return utils.LocationFromEXIF(path)
 	default:
 		return nil, mErrors.ErrInvalidFile
@@ -34,6 +33,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 
 func fromMP4(videoPath string) (*utils.Location, error) {
 	vman := videomanipulation.New()
+
 	data, err := vman.ExtractGPMF(videoPath)
 	if err != nil {
 		return nil, err
@@ -48,15 +48,16 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 GetLocation:
 	for {
 		event, err := telemetry.Read(reader)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, err
-		} else if err == io.EOF || event == nil {
+		} else if errors.Is(err, io.EOF) || event == nil {
 			break
 		}
 
 		if lastEvent.IsZero() {
 			*lastEvent = *event
 			event.Clear()
+
 			continue
 		}
 
@@ -89,6 +90,7 @@ GetLocation:
 				break GetLocation
 			}
 		}
+
 		*lastEvent = *event
 	}
 
@@ -105,21 +107,21 @@ GetLocation:
 }
 
 func getClosestLocation(locations []utils.Location) utils.Location {
-	// Find the nearest and repeat location
 	counts := make(map[utils.Location]int)
 	for _, loc := range locations {
 		counts[loc]++
 	}
 
 	mostFrequentLocation := utils.Location{}
+
 	maxCount := 0
 	for loc, count := range counts {
 		if count > maxCount {
 			mostFrequentLocation = loc
 			maxCount = count
 		} else if count == maxCount {
-			// If there are multiple locations with the same frequency, choose the closest one
 			distanceToLoc := distance(locations[0], loc)
+
 			distanceToMostFrequent := distance(locations[0], mostFrequentLocation)
 			if distanceToLoc < distanceToMostFrequent {
 				mostFrequentLocation = loc

@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/erdaltsksn/cui"
 	"github.com/fatih/color"
+	"github.com/konradit/mmt/pkg/camera"
 	"github.com/konradit/mmt/pkg/gopro"
-	"github.com/konradit/mmt/pkg/utils"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/spf13/cobra"
 )
+
+type namer interface {
+	Name() string
+}
 
 var listDevicesCmd = &cobra.Command{
 	Use:   "list",
@@ -21,19 +24,30 @@ var listDevicesCmd = &cobra.Command{
 		if len(partitions) >= 1 {
 			color.Yellow("📷 Devices:")
 		}
+
 		for _, partition := range partitions {
-			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Mountpoint, utils.CameraGuess(partition.Mountpoint)))
+			guessed := camera.Guess(partition.Mountpoint)
+
+			name := ""
+			if n, ok := guessed.(namer); ok {
+				name = n.Name()
+			}
+
+			color.Cyan(fmt.Sprintf("\t🎥 %v (%v)\n", partition.Mountpoint, name))
 		}
 
 		ctx := context.Background()
+
 		networkDevices, err := gopro.GetGoProNetworkAddresses(ctx)
 		if err != nil {
-			cui.Error(err.Error())
+			// Network detection is best-effort; don't fail hard.
+			return
 		}
 
 		if len(networkDevices) >= 1 {
 			color.Yellow("🔌 GoPro cameras via Connect (USB Ethernet):")
 		}
+
 		for i, devc := range networkDevices {
 			color.White(fmt.Sprintf("\t📹 %d - %s (%s - %s)", i, devc.IP, devc.Info.Info.ModelName, devc.Info.Info.FirmwareVersion))
 		}

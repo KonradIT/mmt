@@ -57,6 +57,7 @@ func applyLUTToFile(sourceFilename, lutFilename string, intensity float64, quali
 		if err != nil {
 			return err
 		}
+
 		parsedHeight, err := strconv.ParseUint(height, 10, 32)
 		if err != nil {
 			return err
@@ -64,11 +65,12 @@ func applyLUTToFile(sourceFilename, lutFilename string, intensity float64, quali
 
 		img = resize.Resize(uint(parsedWidth), uint(parsedHeight), img, resize.Lanczos3)
 	}
+
 	destinationFile, err := os.Create(
 		filepath.Join(filepath.Dir(sourceFilename),
 			fmt.Sprintf("%s %s%s",
-				strings.Replace(filepath.Base(sourceFilename), filepath.Ext(sourceFilename), "", -1),
-				strings.Replace(filepath.Base(lutFilename), filepath.Ext(lutFilename), "", -1),
+				strings.ReplaceAll(filepath.Base(sourceFilename), filepath.Ext(sourceFilename), ""),
+				strings.ReplaceAll(filepath.Base(lutFilename), filepath.Ext(lutFilename), ""),
 				filepath.Ext(sourceFilename),
 			),
 		),
@@ -112,22 +114,28 @@ var applyLutCmd = &cobra.Command{
 				if filepath.Ext(file.Name()) != ".JPG" {
 					continue
 				}
+
 				color.Yellow(">> Applying LUT to: %s...", file.Name())
+
 				err = applyLUTToFile(actualFilename, lutFile, intensityParsed, quality, resizeTo)
 				if err != nil {
 					color.Red(err.Error())
+
 					continue
 				}
+
 				color.Green(">> Successfully applied LUT to: %s", file.Name())
 			}
 		}
 
 		if !stat.IsDir() && filepath.Ext(input) == ".JPG" {
 			color.Yellow(">> Applying LUT to: %s...", input)
+
 			err = applyLUTToFile(input, lutFile, intensityParsed, quality, resizeTo)
 			if err != nil {
 				color.Red(err.Error())
 			}
+
 			color.Green(">> Successfully applied LUT to: %s", input)
 		}
 	},

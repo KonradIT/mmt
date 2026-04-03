@@ -39,7 +39,8 @@ func TestParseSRT(t *testing.T) {
 			require.NoError(t, err)
 			localFile, err := os.CreateTemp(".", walk.Path())
 			require.NoError(t, err)
-			defer os.Remove(localFile.Name())
+
+			defer os.Remove(localFile.Name()) //nolint:errcheck // test cleanup
 
 			buf := make([]byte, maxSize) // roughly 290 bytes per SRT entry
 

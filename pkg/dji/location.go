@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,10 +40,10 @@ var allDrones = map[ACType]LatLongPair{
 type LocationService struct{}
 
 func (LocationService) GetLocation(path string) (*utils.Location, error) {
-	switch true {
-	case strings.Contains(path, ".MP4") || strings.Contains(path, ".SRT"):
+	switch strings.ToUpper(filepath.Ext(path)) {
+	case ".MP4", ".SRT":
 		return fromSRT(path)
-	case strings.Contains(path, ".JPG") || strings.Contains(path, ".DNG"):
+	case ".JPG", ".DNG":
 		return utils.LocationFromEXIF(path)
 	default:
 		return nil, mErrors.ErrInvalidFile
@@ -50,19 +51,21 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 }
 
 func fromSRT(srtPath string) (*utils.Location, error) {
-	fs, err := os.Open(strings.Replace(srtPath, ".MP4", ".SRT", -1))
+	fs, err := os.Open(strings.ReplaceAll(srtPath, ".MP4", ".SRT"))
 	if err != nil {
 		return nil, err
 	}
 	defer fs.Close()
+
 	reader := bufio.NewReader(fs)
 	limitedSizeReader := io.LimitReader(reader, 2048)
+
 	content, err := io.ReadAll(limitedSizeReader)
 	if err != nil {
 		return nil, err
 	}
 
-	latAsFloat, lonAsFloat := float64(0), float64(0)
+	var latAsFloat, lonAsFloat float64
 
 	for _, drone := range allDrones {
 		latMatches := drone.Latitude.FindAllStringSubmatch(string(content), -1)
@@ -77,11 +80,14 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		lonAsFloat, err = strconv.ParseFloat(lonMatches[0][1], 64)
 		if err != nil {
 			return nil, err
 		}
+
 		return &utils.Location{Latitude: latAsFloat, Longitude: lonAsFloat}, nil
 	}
+
 	return nil, mErrors.ErrNoRecognizedSRTFormat
 }

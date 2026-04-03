@@ -1,35 +1,41 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/erdaltsksn/cui"
-	"github.com/konradit/mmt/pkg/gopro"
-	"github.com/konradit/mmt/pkg/insta360"
-	"github.com/konradit/mmt/pkg/utils"
+	"github.com/konradit/mmt/pkg/camera"
 	"github.com/spf13/cobra"
 )
+
+type updater interface {
+	UpdateFirmware(input string, opts camera.UpdateOptions) error
+}
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update camera firmware",
 	Run: func(cmd *cobra.Command, _ []string) {
 		input := getFlagString(cmd, "input", "")
-		camera := getFlagString(cmd, "camera", "")
-		c, err := utils.CameraGet(camera)
+		cameraType := getFlagString(cmd, "camera", "")
+
+		cam, err := camera.Get(cameraType)
 		if err != nil {
 			cui.Error("Something went wrong", err)
 		}
-		switch c {
-		case utils.GoPro:
-			err = gopro.UpdateCamera(input)
-			if err != nil {
-				cui.Error("Something went wrong", err)
-			}
-		case utils.Insta360:
-			model := getFlagString(cmd, "model", "")
-			err = insta360.UpdateCamera(input, model)
-			if err != nil {
-				cui.Error("Something went wrong", err)
-			}
+
+		upd, ok := cam.(updater)
+		if !ok {
+			cui.Error(fmt.Sprintf("camera %q does not support firmware updates", cameraType))
+
+			return
+		}
+
+		model := getFlagString(cmd, "model", "")
+
+		err = upd.UpdateFirmware(input, camera.UpdateOptions{Model: model})
+		if err != nil {
+			cui.Error("Something went wrong", err)
 		}
 	},
 }
