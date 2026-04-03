@@ -221,6 +221,10 @@ folderLoop:
 
 						rfpsFolder, err := getRfpsFolder(osPathname)
 						if err != nil {
+							inlineCounter.SetFailure(err, filename)
+							bar.Abort(true)
+							wg.Done()
+
 							return godirwalk.SkipThis
 						}
 
@@ -262,6 +266,8 @@ folderLoop:
 
 						lrvStat, err := os.Stat(lrvFullpath)
 						if err != nil {
+							wg.Done()
+
 							return godirwalk.SkipThis
 						}
 
@@ -423,6 +429,10 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						s, err := ffprobe.VideoSize(osPathname)
 						if err != nil {
+							inlineCounter.SetFailure(err, de.Name())
+							bar.Abort(true)
+							wg.Done()
+
 							return godirwalk.SkipThis
 						}
 
@@ -462,6 +472,8 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						lrvStat, err := os.Stat(lrvFullpath)
 						if err != nil {
+							wg.Done()
+
 							return godirwalk.SkipThis
 						}
 
@@ -479,6 +491,10 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						s, err := ffprobe.VideoSize(osPathname)
 						if err != nil {
+							inlineCounter.SetFailure(err, de.Name())
+							bar.Abort(true)
+							wg.Done()
+
 							return godirwalk.SkipThis
 						}
 
@@ -518,6 +534,8 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						lrvStat, err := os.Stat(lrvFullpath)
 						if err != nil {
+							wg.Done()
+
 							return godirwalk.SkipThis
 						}
 

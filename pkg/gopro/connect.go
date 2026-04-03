@@ -399,6 +399,8 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", params.Input, folder.D, rawPhotoName))
 						if err != nil {
+							wg.Done()
+
 							continue
 						}
 
@@ -467,6 +469,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 						err = caller(ctx, params.Input, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
 						if err != nil {
 							inlineCounter.SetFailure(err, filename)
+							wg.Done()
 
 							continue
 						}
