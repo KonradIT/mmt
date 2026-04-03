@@ -56,14 +56,16 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 		return nil, err
 	}
 	defer fs.Close()
+
 	reader := bufio.NewReader(fs)
 	limitedSizeReader := io.LimitReader(reader, 2048)
+
 	content, err := io.ReadAll(limitedSizeReader)
 	if err != nil {
 		return nil, err
 	}
 
-	latAsFloat, lonAsFloat := float64(0), float64(0)
+	var latAsFloat, lonAsFloat float64
 
 	for _, drone := range allDrones {
 		latMatches := drone.Latitude.FindAllStringSubmatch(string(content), -1)
@@ -78,11 +80,14 @@ func fromSRT(srtPath string) (*utils.Location, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		lonAsFloat, err = strconv.ParseFloat(lonMatches[0][1], 64)
 		if err != nil {
 			return nil, err
 		}
+
 		return &utils.Location{Latitude: latAsFloat, Longitude: lonAsFloat}, nil
 	}
+
 	return nil, mErrors.ErrNoRecognizedSRTFormat
 }

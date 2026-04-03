@@ -31,6 +31,7 @@ func (Entrypoint) Name() string { return "dji" }
 
 func (Entrypoint) GuessFromPath(root string) bool {
 	_, err := os.Stat(filepath.Join(root, "MISC", "GIS", "dji.gis"))
+
 	return err == nil
 }
 
@@ -39,11 +40,13 @@ func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
 	if err != nil {
 		return "", "", err
 	}
+
 	for _, partition := range partitions {
 		if (Entrypoint{}).GuessFromPath(partition.Mountpoint) {
 			return partition.Mountpoint, camera.SDCard, nil
 		}
 	}
+
 	return "", "", mErrors.ErrNoCameraDetected
 }
 
@@ -51,10 +54,12 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	if params.CameraName == "" {
 		params.CameraName = "DJI Device"
 	}
+
 	di, err := diskinfo.GetInfo(params.Input)
 	if err != nil {
 		return nil, err
 	}
+
 	percentage := (float64(di.Total-di.Free) / float64(di.Total)) * 100
 
 	color.Cyan("\t💾 %s/%s (%0.2f%%)\n",
@@ -66,15 +71,18 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	mediaFolderRegex := regexp.MustCompile(`\d+MEDIA|DJI_\d+`)
 
 	root := filepath.Join(params.Input, "DCIM")
+
 	var result camera.Result
 
 	folders, err := os.ReadDir(root)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
+
 		return &result, nil
 	}
 
 	var wg sync.WaitGroup
+
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -96,10 +104,12 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 					if !ftype.Regex.MatchString(de.Name()) {
 						continue
 					}
+
 					t, err := times.Stat(osPathname)
 					if err != nil {
 						return godirwalk.SkipThis
 					}
+
 					d := t.ModTime()
 
 					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
@@ -114,17 +124,21 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 					}
 
 					wg.Add(1)
+
 					bar := camera.GetNewBar(progressBar, info.Size(), de.Name(), camera.IoTX)
 
 					dayFolder := camera.GetOrder(params.Sort, locationService, osPathname, params.Output, mediaDate, params.CameraName)
+
 					switch ftype.Type {
 					case Photo:
-						if err := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755); err != nil {
+						err := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755)
+						if err != nil {
 							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
+
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
@@ -136,12 +150,14 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 						}(de.Name(), osPathname, bar)
 
 					case Video:
-						if err := os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755); err != nil {
+						err := os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755)
+						if err != nil {
 							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
+
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
@@ -153,18 +169,22 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 						}(de.Name(), osPathname, bar)
 					case Subtitle:
 						extraPath := srtFolderFromConfig()
+
 						if params.SkipAuxiliaryFiles {
 							wg.Done()
 							bar.Abort(true)
+
 							break
 						}
 
-						if err := os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0o755); err != nil {
+						err := os.MkdirAll(filepath.Join(dayFolder, "videos", extraPath), 0o755)
+						if err != nil {
 							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
+
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)
@@ -175,12 +195,14 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							}
 						}(de.Name(), osPathname, bar)
 					case RawPhoto:
-						if err := os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755); err != nil {
+						err := os.MkdirAll(filepath.Join(dayFolder, "photos/raw"), 0o755)
+						if err != nil {
 							return godirwalk.SkipThis
 						}
 
 						go func(filename, osPathname string, bar *mpb.Bar) {
 							defer wg.Done()
+
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), params.BufferSize, bar, d)
 							if err != nil {
 								bar.EwmaSetCurrent(info.Size(), 1*time.Millisecond)

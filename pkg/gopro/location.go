@@ -2,6 +2,7 @@ package gopro
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"math"
 	"path/filepath"
@@ -32,6 +33,7 @@ func (LocationService) GetLocation(path string) (*utils.Location, error) {
 
 func fromMP4(videoPath string) (*utils.Location, error) {
 	vman := videomanipulation.New()
+
 	data, err := vman.ExtractGPMF(videoPath)
 	if err != nil {
 		return nil, err
@@ -46,15 +48,16 @@ func fromMP4(videoPath string) (*utils.Location, error) {
 GetLocation:
 	for {
 		event, err := telemetry.Read(reader)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, err
-		} else if err == io.EOF || event == nil {
+		} else if errors.Is(err, io.EOF) || event == nil {
 			break
 		}
 
 		if lastEvent.IsZero() {
 			*lastEvent = *event
 			event.Clear()
+
 			continue
 		}
 
@@ -87,6 +90,7 @@ GetLocation:
 				break GetLocation
 			}
 		}
+
 		*lastEvent = *event
 	}
 
@@ -109,6 +113,7 @@ func getClosestLocation(locations []utils.Location) utils.Location {
 	}
 
 	mostFrequentLocation := utils.Location{}
+
 	maxCount := 0
 	for loc, count := range counts {
 		if count > maxCount {
@@ -116,6 +121,7 @@ func getClosestLocation(locations []utils.Location) utils.Location {
 			maxCount = count
 		} else if count == maxCount {
 			distanceToLoc := distance(locations[0], loc)
+
 			distanceToMostFrequent := distance(locations[0], mostFrequentLocation)
 			if distanceToLoc < distanceToMostFrequent {
 				mostFrequentLocation = loc

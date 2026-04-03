@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,6 +20,7 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar, modT
 	if err != nil {
 		return err
 	}
+
 	source, err := os.Open(src)
 	if err != nil {
 		return err
@@ -59,6 +61,7 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar, modT
 	proxyReader := progressbar.ProxyReader(source)
 
 	defer proxyReader.Close()
+
 	for {
 		n, err := proxyReader.Read(buf)
 		if err != nil && err != io.EOF {
@@ -85,10 +88,11 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += uint64(n)
 	wc.PrintProgress()
+
 	return n, nil
 }
 
-func (wc WriteCounter) PrintProgress() {
+func (wc *WriteCounter) PrintProgress() {
 	fmt.Printf("\r%s", strings.Repeat(" ", 35))
 	fmt.Printf("\rDownloading... %s complete", humanize.Bytes(wc.Total))
 }
@@ -101,7 +105,8 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar, mtime *time
 
 	resp, err := Client.Get(url) // #nosec
 	if err != nil {
-		out.Close()
+		_ = out.Close()
+
 		return err
 	}
 	defer resp.Body.Close()
@@ -111,22 +116,28 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar, mtime *time
 		defer proxyReader.Close()
 
 		if _, err = io.Copy(out, proxyReader); err != nil {
-			out.Close()
+			_ = out.Close()
+
 			return err
 		}
 	} else {
 		counter := &WriteCounter{}
 		if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
-			out.Close()
+			_ = out.Close()
+
 			return err
 		}
 	}
+
 	fmt.Print("\n")
 
-	out.Close()
+	if err := out.Close(); err != nil {
+		return err
+	}
 
 	if mtime != nil {
-		if err := os.Chtimes(filepath+".tmp", time.Time{}, *mtime); err != nil {
+		err := os.Chtimes(filepath+".tmp", time.Time{}, *mtime)
+		if err != nil {
 			return err
 		}
 	}
@@ -139,7 +150,7 @@ func Unzip(src string, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // read-only zip reader
 
 	for _, f := range r.File {
 		fpath := filepath.Join(dest, f.Name)                                          // #nosec
@@ -148,9 +159,11 @@ func Unzip(src string, dest string) error {
 		}
 
 		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(fpath, os.ModePerm); err != nil {
+			err := os.MkdirAll(fpath, os.ModePerm)
+			if err != nil {
 				return err
 			}
+
 			continue
 		}
 
@@ -171,15 +184,18 @@ func Unzip(src string, dest string) error {
 		for {
 			_, err := io.CopyN(outFile, rc, 1024)
 			if err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
+
 				return err
 			}
 		}
-		outFile.Close()
-		rc.Close()
+
+		_ = outFile.Close()
+		_ = rc.Close()
 	}
+
 	return nil
 }
 
@@ -188,12 +204,15 @@ func FindFolderInPath(entirePath, directory string) (string, error) {
 	if filepath.Base(modified) == directory {
 		return modified, nil
 	}
+
 	if filepath.Base(entirePath) == directory {
 		return entirePath, nil
 	}
+
 	if entirePath == "." || modified == entirePath {
 		return "", fmt.Errorf("unable to find %s", directory)
 	}
+
 	return FindFolderInPath(modified, directory)
 }
 

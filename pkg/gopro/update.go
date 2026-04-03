@@ -17,16 +17,19 @@ import (
 var FirmwareCatalogRemoteURL = "https://firmware-api.gopro.com/v2/firmware/catalog"
 
 func UpdateCamera(sdcard string) error {
-	req, err := http.NewRequest("GET", FirmwareCatalogRemoteURL, nil)
+	req, err := http.NewRequest(http.MethodGet, FirmwareCatalogRemoteURL, nil)
 	if err != nil {
 		return err
 	}
+
 	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
 	response := &FirmwareCatalog{}
+
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
 		return err
@@ -48,6 +51,7 @@ func UpdateCamera(sdcard string) error {
 		if camera.ModelString != cameraID {
 			continue
 		}
+
 		cameraVersion := strings.Replace(gpVersion.FirmwareVersion, cameraID+".", "", 1) // intentional count=1
 
 		if cameraVersion != camera.Version {
@@ -61,15 +65,19 @@ func UpdateCamera(sdcard string) error {
 			if err != nil {
 				return err
 			}
+
 			color.Cyan("Unzipping...")
+
 			err = utils.Unzip(filepath.Join(sdcard, "UPDATE.zip"), filepath.Join(sdcard, "UPDATE"))
 			if err != nil {
 				return err
 			}
+
 			err = os.Remove(filepath.Join(sdcard, "UPDATE.zip"))
 			if err != nil {
 				return err
 			}
+
 			color.Cyan("Firmware extracted to SD card!")
 			color.Cyan("Now eject the SD card and insert it into your camera")
 			color.Cyan("then turn your camera on and wait for it to update")

@@ -17,15 +17,17 @@ type Location struct {
 func formatFromConfig() int {
 	key := "location.format"
 	viper.SetDefault(key, 1)
+
 	return viper.GetInt("location.format")
 }
 
 type locationFormat interface {
-	format(*geo.Address) string
+	format(addr *geo.Address) string
 }
 
 func cleanup(input string) string {
 	repl := strings.NewReplacer("/", "_", ":", "_", "\\", "_", ".", "_")
+
 	return repl.Replace(strings.TrimSpace(input))
 }
 
@@ -35,6 +37,7 @@ func (format1) format(address *geo.Address) string {
 	if len(address.City) < 9 && address.State != "" {
 		return fmt.Sprintf("%s %s %s", address.City, address.State, address.Country)
 	}
+
 	return fmt.Sprintf("%s %s", address.City, address.Country)
 }
 
@@ -69,5 +72,6 @@ func ReverseLocation(location Location) (string, error) {
 	case 2:
 		return getPrettyAddress(format2{}, address), nil
 	}
+
 	return getPrettyAddress(format1{}, address), nil
 }

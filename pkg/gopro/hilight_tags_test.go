@@ -26,7 +26,7 @@ func TestAllInBounds(t *testing.T) {
 	require.NoError(t, err)
 
 	importanceName := getImportanceName(gpFileInfo.Hi, gpFileInfo.Dur, importanceNames)
-	require.Equal(t, importanceName, "Lit AF")
+	require.Equal(t, "Lit AF", importanceName)
 }
 
 func TestMarkerOverflow(t *testing.T) {
@@ -36,7 +36,7 @@ func TestMarkerOverflow(t *testing.T) {
 	require.NoError(t, err)
 
 	importanceName := getImportanceName(gpFileInfo.Hi, gpFileInfo.Dur, importanceNames)
-	require.Equal(t, importanceName, "Important")
+	require.Equal(t, "Important", importanceName)
 }
 
 func TestOneMarker(t *testing.T) {
@@ -46,7 +46,7 @@ func TestOneMarker(t *testing.T) {
 	require.NoError(t, err)
 
 	importanceName := getImportanceName(gpFileInfo.Hi, gpFileInfo.Dur, importanceNames)
-	require.Equal(t, importanceName, "Marked 1")
+	require.Equal(t, "Marked 1", importanceName)
 }
 
 func TestNoneAtAll(t *testing.T) {

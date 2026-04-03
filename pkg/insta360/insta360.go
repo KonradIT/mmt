@@ -21,6 +21,7 @@ import (
 
 func getDeviceName(manifest string) string {
 	name := "Insta360 Camera"
+
 	file, err := os.ReadFile(manifest)
 	if err != nil {
 		return name
@@ -37,6 +38,7 @@ func getDeviceName(manifest string) string {
 	if len(modelName) == 1 {
 		return name
 	}
+
 	return fmt.Sprintf("Insta360%s", modelName[0])
 }
 
@@ -50,6 +52,7 @@ func (Entrypoint) Name() string { return "insta360" }
 
 func (Entrypoint) GuessFromPath(root string) bool {
 	_, err := os.Stat(filepath.Join(root, "DCIM", "fileinfo_list.list"))
+
 	return err == nil
 }
 
@@ -61,10 +64,12 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	if params.CameraName == "" {
 		params.CameraName = getDeviceName(filepath.Join(params.Input, "DCIM", "fileinfo_list.list"))
 	}
+
 	di, err := disk.GetInfo(params.Input)
 	if err != nil {
 		return nil, err
 	}
+
 	percentage := (float64(di.Total-di.Free) / float64(di.Total)) * 100
 
 	color.Cyan("\t💾 %s/%s (%0.2f%%)\n",
@@ -77,15 +82,18 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	mediaFolderRegex := regexp.MustCompile(mediaFolder)
 
 	root := filepath.Join(params.Input, "DCIM")
+
 	var result camera.Result
 
 	folders, err := os.ReadDir(root)
 	if err != nil {
 		result.Errors = append(result.Errors, err)
+
 		return &result, nil
 	}
 
 	var wg sync.WaitGroup
+
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -105,6 +113,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 					if !ftype.Regex.MatchString(de.Name()) {
 						continue
 					}
+
 					t, err := times.Stat(osPathname)
 					if err != nil {
 						return godirwalk.SkipThis
@@ -126,6 +135,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 					}
 
 					wg.Add(1)
+
 					bar := camera.GetNewBar(progressBar, info.Size(), de.Name(), camera.IoTX)
 					dayFolder := camera.GetOrder(params.Sort, nil, osPathname, params.Output, mediaDate, params.CameraName)
 
@@ -134,7 +144,9 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 					switch ftype.Type {
 					case Photo, RawPhoto:
 						id := x[3+8+2 : 3+8+6+2]
-						if err := os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0o755); err != nil {
+
+						err := os.MkdirAll(filepath.Join(dayFolder, "photos", id), 0o755)
+						if err != nil {
 							return godirwalk.SkipThis
 						}
 
@@ -154,8 +166,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 						if params.SkipAuxiliaryFiles && ftype.Type == LowResolutionVideo {
 							wg.Done()
 							bar.Abort(true)
+
 							break
 						}
+
 						slug := ""
 						if ftype.SteadyCamMode {
 							slug = "videos/flat"
@@ -165,11 +179,14 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 						} else {
 							slug = "videos/360"
 						}
+
 						id := x[3+8+2 : 3+8+6+2]
 						if ftype.ProMode {
 							id = x[3+3+8+2+1 : 3+3+8+6+2+1]
 						}
-						if err := os.MkdirAll(filepath.Join(dayFolder, slug, id), 0o755); err != nil {
+
+						err := os.MkdirAll(filepath.Join(dayFolder, slug, id), 0o755)
+						if err != nil {
 							return godirwalk.SkipThis
 						}
 
@@ -187,6 +204,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 						}(id, x, osPathname, bar)
 					}
 				}
+
 				return nil
 			},
 		})
@@ -194,6 +212,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 			inlineCounter.SetFailure(err, "")
 		}
 	}
+
 	wg.Wait()
 	progressBar.Shutdown()
 

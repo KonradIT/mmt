@@ -11,6 +11,7 @@ import (
 func timeoutFromConfig() int {
 	key := "network_timeout"
 	viper.SetDefault(key, 4)
+
 	return viper.GetInt(key)
 }
 

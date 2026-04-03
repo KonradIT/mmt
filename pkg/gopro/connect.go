@@ -33,44 +33,54 @@ var (
 func handleKill() {
 	c := make(chan os.Signal, 2)
 	ctx := context.Background()
+
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
 		<-c
 		color.Red("\nKilling program, exiting Turbo mode.")
+
 		if gpTurbo {
-			if err := caller(ctx, ipAddress, "gp/gpTurbo?p=0", nil); err != nil {
+			err := caller(ctx, ipAddress, "gp/gpTurbo?p=0", nil)
+			if err != nil {
 				color.Red("Could not exit turbo mode")
 			}
 		}
+
 		os.Exit(0)
 	}()
 }
 
 func caller(ctx context.Context, ip, path string, object any) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
 		return err
 	}
+
 	req = req.WithContext(ctx)
+
 	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
 	if object != nil {
 		err = json.NewDecoder(resp.Body).Decode(object)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
 func head(path string) (int, error) {
-	req, err := http.NewRequest("HEAD", path, nil)
+	req, err := http.NewRequest(http.MethodHead, path, nil)
 	if err != nil {
 		return 0, err
 	}
+
 	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return 0, err
@@ -81,13 +91,16 @@ func head(path string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return length, nil
 }
 
 func GetGoProNetworkAddresses(ctx context.Context) ([]ConnectDevice, error) {
 	ctx, cancelCtx := context.WithTimeout(ctx, 2*time.Second)
 	defer cancelCtx()
+
 	ipsFound := []ConnectDevice{}
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return ipsFound, err
@@ -98,16 +111,25 @@ func GetGoProNetworkAddresses(ctx context.Context) ([]ConnectDevice, error) {
 		if err != nil {
 			continue
 		}
+
 		for _, a := range addrs {
 			r := regexp.MustCompile(`172.2\d.\d\d\d.5\d`)
-			ipv4Addr := a.(*net.IPNet).IP.To4()
-			if r.MatchString(ipv4Addr.String()) {
+
+			ipNet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
+
+			ipv4Addr := ipNet.IP.To4()
+			if ipv4Addr != nil && r.MatchString(ipv4Addr.String()) {
 				correctIP := ipv4Addr.String()[:len(ipv4Addr.String())-1] + "1"
 				gpInfo := &cameraInfo{}
+
 				err := caller(ctx, correctIP, "gp/gpControl/info", gpInfo)
 				if err != nil {
 					continue
 				}
+
 				ipsFound = append(ipsFound, ConnectDevice{
 					IP:   correctIP,
 					Info: *gpInfo,
@@ -115,16 +137,19 @@ func GetGoProNetworkAddresses(ctx context.Context) ([]ConnectDevice, error) {
 			}
 		}
 	}
+
 	return ipsFound, nil
 }
 
 func GetMediaList(in string) (*MediaList, error) {
 	ctx := context.Background()
 	gpMediaList := &MediaList{}
+
 	err := caller(ctx, in, "gp/gpMediaList", gpMediaList)
 	if err != nil {
 		return nil, err
 	}
+
 	return gpMediaList, nil
 }
 
@@ -134,12 +159,16 @@ func forceGetFolder(path string) error {
 
 func validateIP() bool {
 	valid := regexp.MustCompile(`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`)
+
 	return valid.MatchString(ipAddress)
 }
 
 func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
-	var verType Type
-	var result camera.Result
+	var (
+		verType Type
+		result  camera.Result
+	)
+
 	ipAddress = params.Input
 
 	// handle ctrl-c
@@ -148,12 +177,15 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 	if !validateIP() {
 		return nil, mErrors.ErrInvalidSuppliedData(ipAddress)
 	}
+
 	gpInfo := &cameraInfo{}
 	ctx := context.Background()
+
 	err := caller(ctx, params.Input, "gp/gpControl/info", gpInfo)
 	if err != nil {
 		return nil, fmt.Errorf("unable to find Connect camera: %s", params.Input)
 	}
+
 	cameraName := gpInfo.Info.ModelName
 
 	root := strings.Split(gpInfo.Info.FirmwareVersion, ".")[0]
@@ -184,6 +216,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 	}
 
 	var wg sync.WaitGroup
+
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -203,10 +236,12 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 				if !fileTypeMatch.Regex.MatchString(goprofile.N) {
 					continue
 				}
+
 				i, err := strconv.ParseInt(goprofile.Mod, 10, 64)
 				if err != nil {
 					continue
 				}
+
 				tm := time.Unix(i, 0).UTC()
 				start := params.DateRange[0]
 				end := params.DateRange[1]
@@ -220,19 +255,21 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 				}
 
 				wg.Add(1)
+
 				bar := camera.GetNewBar(progressBar, goprofile.S, goprofile.N, camera.IoTX)
 
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
-
 					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar, mtime time.Time) {
 						defer wg.Done()
+
 						x := origFilename
 						filename := origFilename
 
 						if verType == V2 {
 							filename = fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], "MP4")
 						}
+
 						if verType == V1 && chaptered.MatchString(x) {
 							filename = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], "MP4")
 						}
@@ -246,6 +283,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 							bar.EwmaSetCurrent(origSize, 1*time.Millisecond)
 							bar.EwmaIncrInt64(origSize, 1*time.Millisecond)
 							inlineCounter.SetFailure(err, origFilename)
+
 							return
 						}
 
@@ -255,9 +293,11 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 						finalPath := camera.GetOrder(params.Sort, locationService, filepath.Join(unsorted, origFilename), params.Output, mediaDate, cameraName)
 						gpFileInfo := &goProMediaMetadata{}
+
 						err = caller(ctx, in, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder, origFilename), gpFileInfo)
 						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)
+
 							return
 						}
 
@@ -267,6 +307,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 						if denom == 0 {
 							denom = 1
 						}
+
 						framerate := gpFileInfo.Fps / denom
 						if framerate == 0 {
 							framerate = (denom / gpFileInfo.Fps)
@@ -276,6 +317,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 						if err := forceGetFolder(filepath.Join(finalPath, "videos", importanceName, rfpsFolder)); err != nil {
 							inlineCounter.SetFailure(err, origFilename)
+
 							return
 						}
 
@@ -285,6 +327,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 						)
 						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)
+
 							return
 						}
 
@@ -296,6 +339,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 							}
 
 							proxyVideoBar := camera.GetNewBar(progressBar, int64(lrvSize), proxyVideoName, camera.IoTX)
+
 							err := utils.DownloadFile(
 								filepath.Join(unsorted, proxyVideoName),
 								fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", in, folder, proxyVideoName),
@@ -305,10 +349,13 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 								proxyVideoBar.EwmaSetCurrent(int64(lrvSize), 1*time.Millisecond)
 								proxyVideoBar.EwmaIncrInt64(int64(lrvSize), 1*time.Millisecond)
 								inlineCounter.SetFailure(err, origFilename)
+
 								return
 							}
+
 							if err := forceGetFolder(filepath.Join(finalPath, "videos", "proxy", rfpsFolder)); err != nil {
 								inlineCounter.SetFailure(err, origFilename)
+
 								return
 							}
 
@@ -318,8 +365,10 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 							)
 							if err != nil {
 								inlineCounter.SetFailure(err, origFilename)
+
 								return
 							}
+
 							inlineCounter.SetSuccess()
 						}
 					}(params.Input, folder.D, goprofile.N, unsorted, goprofile.S, goprofile.Glrv, bar, tm)
@@ -332,6 +381,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 						IsRaw  bool
 						Bar    *mpb.Bar
 					}
+
 					totalPhotos := []photo{
 						{
 							Folder: folder.D,
@@ -344,6 +394,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 					hasRawPhoto := goprofile.Raw == "1"
 					if hasRawPhoto {
 						wg.Add(1)
+
 						rawPhotoName := strings.ReplaceAll(goprofile.N, ".JPG", ".GPR")
 
 						rawPhotoTotal, err := head(fmt.Sprintf("http://%s:8080/videos/DCIM/%s/%s", params.Input, folder.D, rawPhotoName))
@@ -385,6 +436,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 								if nowPhoto.IsRaw {
 									photoPath = filepath.Join(photoPath, "raw")
 								}
+
 								_ = forceGetFolder(photoPath)
 
 								err := os.Rename(
@@ -393,6 +445,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 								)
 								if err != nil {
 									inlineCounter.SetFailure(err, nowPhoto.Name)
+
 									return
 								}
 							}
@@ -406,14 +459,18 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 						if i > goprofile.B {
 							wg.Add(1)
 						}
+
 						filename := fmt.Sprintf("%s%04d.JPG", filebaseroot, i)
 
 						gpFileInfo := &goProMediaMetadata{}
+
 						err = caller(ctx, params.Input, fmt.Sprintf("gp/gpMediaMetadata?p=%s/%s&t=v4info", folder.D, filename), gpFileInfo)
 						if err != nil {
 							inlineCounter.SetFailure(err, filename)
+
 							continue
 						}
+
 						multiShotBar := camera.GetNewBar(progressBar, gpFileInfo.S, filename, camera.IoTX)
 
 						go func(in, folder, origFilename, unsorted string, origSize int64, mtime time.Time) {
@@ -441,6 +498,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 								)
 								if err != nil {
 									inlineCounter.SetFailure(err, origFilename)
+
 									return
 								}
 							}
@@ -449,6 +507,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 				default:
 					color.Red("Unsupported file %s", goprofile.N)
+
 					result.Errors = append(result.Errors, mErrors.ErrUnrecognizedMediaFormat)
 					result.FilesNotImported = append(result.FilesNotImported, goprofile.N)
 				}
@@ -458,16 +517,20 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 	wg.Wait()
 	progressBar.Shutdown()
+
 	if gpTurbo {
-		if err := caller(ctx, params.Input, "gp/gpTurbo?p=0", nil); err != nil {
+		err := caller(ctx, params.Input, "gp/gpTurbo?p=0", nil)
+		if err != nil {
 			color.Red("Could not exit turbo mode")
 		}
 	}
+
 	result.Errors = append(result.Errors, inlineCounter.Get().Errors...)
 	result.FilesImported += inlineCounter.Get().FilesImported
 	result.FilesNotImported = append(result.FilesNotImported, inlineCounter.Get().FilesNotImported...)
 
 	// cleanup
-	os.Remove(unsorted)
+	_ = os.Remove(unsorted)
+
 	return &result, nil
 }

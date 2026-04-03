@@ -19,16 +19,20 @@ func UpdateCamera(sdcard string, model string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("GET", fmt.Sprintf(FirmwareCatalogRemoteURL, camera.String()), nil)
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(FirmwareCatalogRemoteURL, camera.String()), nil)
 	if err != nil {
 		return err
 	}
+
 	resp, err := utils.Client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
 	response := &FirmwareDownloadList{}
+
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
 		return err
@@ -42,15 +46,18 @@ func UpdateCamera(sdcard string, model string) error {
 				color.White(html2text.HTML2Text(item.Description))
 
 				fwURL := item.Channels[0].DownloadURL
+
 				err = utils.DownloadFile(filepath.Join(sdcard, strings.Split(fwURL, "/")[len(strings.Split(fwURL, "/"))-1]), fwURL, nil, nil)
 				if err != nil {
 					return err
 				}
+
 				color.Cyan("Firmware downloaded to SD card!")
 				color.Cyan("Now eject the SD card and insert it into your camera")
 				color.Cyan("then turn your camera on and wait for it to update")
 			}
 		}
 	}
+
 	return nil
 }

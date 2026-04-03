@@ -41,8 +41,11 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".mmt")
 	}
+
 	viper.AutomaticEnv()
-	if err := viper.ReadInConfig(); err == nil {
+
+	err := viper.ReadInConfig()
+	if err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 }

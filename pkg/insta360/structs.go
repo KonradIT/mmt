@@ -115,5 +115,6 @@ func CameraGet(s string) (Camera, error) {
 	case Go2.String():
 		return Go2, nil
 	}
+
 	return OneX, mErrors.ErrUnsupportedCamera(s)
 }

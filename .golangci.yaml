@@ -1,32 +1,63 @@
+version: "2"
+run:
+  concurrency: 4
 
 linters:
+  default: all
+  disable:
+    - godox
+    - wsl
+    - depguard # no allowlist configured; blocks all third-party imports
+    - gochecknoglobals # package-level vars are idiomatic for registries, configs, compiled regexps
+    - gochecknoinits # init() is used for camera self-registration pattern
+    - mnd # magic number detector is too noisy for file-format parsing code
+    - varnamelen # short names like d, f, x are idiomatic in Go loops
+    - exhaustive # switch statements intentionally use default cases
+    - err113 # wrapping every error adds noise in this codebase
+    - wrapcheck # same as err113
+    - funlen # import functions are inherently long due to file-type dispatch
+    - maintidx # correlated with funlen
+    - gocognit # correlated with funlen/cyclop
+    - cyclop # import functions have inherent branching complexity
+    - gocyclo # same family as cyclop
+    - nestif # correlated with the above
+    - nlreturn # conflicts with gofumpt in some cases
+    - noctx # http.Client.Get is used for simple downloads
+    - exhaustruct # requiring all struct fields (e.g. cobra.Command) is impractical
+    - tagliatelle # JSON tags match external API response formats (GoPro, DJI)
+    - testpackage # moving to _test packages is a large refactor
+    - paralleltest # adding t.Parallel() to existing tests needs careful review
+    - nonamedreturns # named returns are idiomatic in some cases
+    - funcorder # method ordering is a style preference
+    - goconst # short repeated strings like "photos", "videos" are clearer as literals
+    - nosprintfhostport # URLs are built for known IPv4 GoPro addresses, not general use
+    - lll # line length is handled by the formatter
+    - forbidigo # fmt.Print is appropriate for a CLI tool
+    - noinlineerr # inline error handling is idiomatic Go
+
+  settings:
+    gosec:
+      excludes:
+        - G301 # directory permissions 0755 are fine for media output dirs
+        - G304 # file paths come from user input (CLI args), not untrusted sources
+
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: exported
+          disabled: true
+
+    errcheck:
+      exclude-functions:
+        - (*github.com/fatih/color.Color).Printf
+        - (*os.File).Close
+        - (io.Closer).Close
+        - (*github.com/vbauerster/mpb/v8.Bar).ProxyReader
+
+formatters:
   enable:
-  - whitespace
-  - gosec
-  - gci
-  - gofmt
-  - goimports
-  - revive
-  - nilerr
-  - nestif
-  - goconst
-  - asasalint
-  - bodyclose
-  - dupl
-  - durationcheck
-  - errname
-  - goconst
-  - godox
-  - gofumpt
-  - importas
-  - unconvert
-  - unparam
-linter-settings:
-  nestif:
-    min-complexity: 20
-  gosec:
-    excludes:
-      - G107
-config:
-  global:
-    nosec: false
+    - gofmt
+    - goimports
+    - gofumpt
+    - gci

@@ -25,8 +25,15 @@ func splitSliceInChunks(a []string, chuckSize int) [][]string {
 	for chuckSize < len(a) {
 		a, chunks = a[chuckSize:], append(chunks, a[0:chuckSize:chuckSize])
 	}
+
 	chunks = append(chunks, a)
+
 	return chunks
+}
+
+type calendarCamera interface {
+	Detect() (string, camera.ConnectionType, error)
+	CaptureDates(input string, conn camera.ConnectionType) ([]time.Time, error)
 }
 
 var calendarView = &cobra.Command{
@@ -38,18 +45,19 @@ var calendarView = &cobra.Command{
 			cui.Error(err.Error())
 		}
 
-		input, connectionType, err := cam.Detect()
+		cc, ok := cam.(calendarCamera)
+		if !ok {
+			cui.Error("camera does not support calendar view")
+
+			return
+		}
+
+		input, connectionType, err := cc.Detect()
 		if err != nil {
 			cui.Error(err.Error())
 		}
 
-		cp, ok := cam.(camera.CalendarProvider)
-		if !ok {
-			cui.Error("camera does not support calendar view")
-			return
-		}
-
-		modificationDates, err := cp.CaptureDates(input, connectionType)
+		modificationDates, err := cc.CaptureDates(input, connectionType)
 		if err != nil {
 			cui.Error(err.Error())
 		}
@@ -83,22 +91,27 @@ var calendarView = &cobra.Command{
 			// No slices.Contains because we need to check for equality, not just presence.
 			// Time.time.Equal ignores monotonic clock and location.
 			found := false
+
 			for _, d := range modificationDates {
 				if d.Equal(date) {
 					found = true
+
 					break
 				}
 			}
+
 			if found {
 				data = append(data, color.CyanString(strconv.Itoa(i)))
 			} else {
 				data = append(data, color.YellowString(strconv.Itoa(i)))
 			}
 		}
+
 		prepared := splitSliceInChunks(data, 7)
 		for _, v := range prepared {
 			table.Append(v)
 		}
+
 		table.Render()
 	},
 }

@@ -1,7 +1,6 @@
 package camera
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -17,6 +16,11 @@ const (
 	SDCard  ConnectionType = "sd_card"
 	Connect ConnectionType = "connect"
 )
+
+// UpdateOptions holds parameters for firmware updates.
+type UpdateOptions struct {
+	Model string // sub-model identifier (e.g. Insta360 model variant)
+}
 
 // SortOptions controls how imported media is organized on disk.
 type SortOptions struct {
@@ -72,6 +76,7 @@ func (rc *ResultCounter) SetSuccess() {
 func (rc *ResultCounter) Get() Result {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
+
 	return Result{
 		FilesImported:    rc.FilesImported,
 		FilesNotImported: rc.FilesNotImported,
@@ -93,9 +98,10 @@ func GetNewBar(progressBar *mpb.Progress, total int64, filename string, barType 
 	if barType == Percentage {
 		decorator = decor.Percentage(decor.WCSyncSpace)
 	}
+
 	return progressBar.AddBar(total,
 		mpb.PrependDecorators(
-			decor.Name(color.CyanString(fmt.Sprintf("%s: ", filename))),
+			decor.Name(color.CyanString(filename+": ")),
 			decorator,
 		),
 		mpb.AppendDecorators(

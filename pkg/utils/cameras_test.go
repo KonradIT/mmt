@@ -23,6 +23,7 @@ func TestFindFolderInPath(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorContains(t, err, "unable to find INVALID")
 	})
+
 	if runtime.GOOS == "windows" {
 		t.Run("Correct path - Windows", func(t *testing.T) {
 			input := "26-12-2022\\San Lorenzo de El Escorial España\\DJI Device"

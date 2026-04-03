@@ -8,23 +8,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type updater interface {
+	UpdateFirmware(input string, opts camera.UpdateOptions) error
+}
+
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update camera firmware",
 	Run: func(cmd *cobra.Command, _ []string) {
 		input := getFlagString(cmd, "input", "")
 		cameraType := getFlagString(cmd, "camera", "")
+
 		cam, err := camera.Get(cameraType)
 		if err != nil {
 			cui.Error("Something went wrong", err)
 		}
-		updater, ok := cam.(camera.Updater)
+
+		upd, ok := cam.(updater)
 		if !ok {
 			cui.Error(fmt.Sprintf("camera %q does not support firmware updates", cameraType))
+
 			return
 		}
+
 		model := getFlagString(cmd, "model", "")
-		err = updater.UpdateFirmware(input, camera.UpdateOptions{Model: model})
+
+		err = upd.UpdateFirmware(input, camera.UpdateOptions{Model: model})
 		if err != nil {
 			cui.Error("Something went wrong", err)
 		}

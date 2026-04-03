@@ -19,7 +19,7 @@ type VMan struct {
 	trans *transcoder.Transcoder
 }
 
-// FFmpeg params
+// FFmpeg params.
 const (
 	Copy = "copy"
 )
@@ -31,6 +31,7 @@ func New() *VMan {
 	conf.FfprobeBin = strings.Trim(conf.FfprobeBin, "\r")
 	conf.FfmpegBin = strings.Trim(conf.FfmpegBin, "\r")
 	v.trans.SetConfiguration(conf)
+
 	return v
 }
 
@@ -71,10 +72,11 @@ func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...s
 	if err != nil {
 		return err
 	}
-	defer os.Remove(file.Name())
+	defer os.Remove(file.Name()) //nolint:errcheck // best-effort cleanup
 
 	for _, video := range videos {
 		a := fmt.Sprintf("file '%s'\n", video)
+
 		_, err = file.WriteString(a)
 		if err != nil {
 			return err
@@ -96,6 +98,7 @@ func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...s
 	if err != nil {
 		return err
 	}
+
 	v.trans.MediaFile().SetVideoCodec(ffConfig.VideoCodec)
 	v.trans.MediaFile().SetAudioCodec(ffConfig.AudioCodec)
 	v.trans.MediaFile().SetRawInputArgs(ffConfig.InArgs)
@@ -111,6 +114,7 @@ func (v *VMan) merge(output string, bar *mpb.Bar, ffConfig FFConfig, videos ...s
 	}
 
 	err = <-done
+
 	return err
 }
 
@@ -142,18 +146,22 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	ffprobe := utils.NewFFprobe(nil)
 
 	streams, err := ffprobe.Streams(input)
 	if err != nil {
 		return nil, err
 	}
+
 	gpmfStream := 3
+
 	for _, stream := range streams.Streams {
 		if stream.CodecTagString == "gpmd" {
 			gpmfStream = stream.Index
 		}
 	}
+
 	v.trans.MediaFile().SetRawOutputArgs([]string{"-map", fmt.Sprintf("0:%d", gpmfStream)})
 	v.trans.MediaFile().SetOutputFormat("rawvideo")
 	v.trans.MediaFile().SetVideoCodec("copy")
@@ -166,10 +174,11 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 
 	go func() {
 		defer wg.Done()
-		defer r.Close()
+		defer r.Close() //nolint:errcheck // pipe reader close
 
 		data, err := io.ReadAll(r)
 		extractData <- data
+
 		extractError <- err
 	}()
 
@@ -179,9 +188,11 @@ func (v *VMan) ExtractGPMF(input string) (*[]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	dataExtracted := <-extractData
 
-	if extractErr := <-extractError; extractErr != nil {
+	extractErr := <-extractError
+	if extractErr != nil {
 		return nil, extractErr
 	}
 
@@ -202,6 +213,7 @@ func (v *VMan) Convert(input, output string, resolution string, bitrate string, 
 	if config.UseHWAccel {
 		config.InArgs = append(config.InArgs, []string{"-hwaccel", "cuda"}...)
 	}
+
 	err = v.trans.SetInputPath(input)
 	if err != nil {
 		return err
@@ -212,6 +224,7 @@ func (v *VMan) Convert(input, output string, resolution string, bitrate string, 
 	if err != nil {
 		return err
 	}
+
 	v.trans.MediaFile().SetVideoCodec(config.VideoCodec)
 	v.trans.MediaFile().SetAudioCodec(config.AudioCodec)
 	v.trans.MediaFile().SetRawInputArgs(config.InArgs)
@@ -229,5 +242,6 @@ func (v *VMan) Convert(input, output string, resolution string, bitrate string, 
 	}
 
 	err = <-done
+
 	return err
 }

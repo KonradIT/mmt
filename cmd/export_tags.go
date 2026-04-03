@@ -21,6 +21,7 @@ func tagAsDuration(tag int, increase bool) string {
 	if increase {
 		seconds++
 	}
+
 	return fmt.Sprintf("01:00:%d:%03d", seconds, 0)
 }
 
@@ -30,7 +31,9 @@ func exportCSV(tags gopro.HiLights, output string) error {
 		return err
 	}
 	defer csvFile.Close()
+
 	writer := csv.NewWriter(csvFile)
+
 	_ = writer.Write([]string{
 		"timestamps",
 	})
@@ -39,7 +42,9 @@ func exportCSV(tags gopro.HiLights, output string) error {
 			strconv.Itoa(timestamp),
 		})
 	}
+
 	writer.Flush()
+
 	return writer.Error()
 }
 
@@ -48,6 +53,7 @@ func exportJSON(tags gopro.HiLights, output string) error {
 	if err != nil {
 		return err
 	}
+
 	return os.WriteFile(output, b, 0o600)
 }
 
@@ -58,6 +64,7 @@ FCM: NON-DROP FRAME
 	for index, tag := range tags.Timestamps {
 		content = fmt.Sprintf("%s\n%03d  AX       V     C        %s %s %s %s\n* FROM CLIP NAME: %s\n", content, index, "00:00:00:00", "00:00:00:01", tagAsDuration(tag, false), tagAsDuration(tag, true), name)
 	}
+
 	return os.WriteFile(output, []byte(content), 0o600)
 }
 
@@ -72,18 +79,22 @@ func extractIndividual(input, output, format string) (int, error) {
 		if output == "" {
 			output = strings.ReplaceAll(input, filepath.Ext(input), ".csv")
 		}
+
 		err = exportCSV(*hilights, output)
 	case "json":
 		if output == "" {
 			output = strings.ReplaceAll(input, filepath.Ext(input), ".json")
 		}
+
 		err = exportJSON(*hilights, output)
 	case "edl":
 		if output == "" {
 			output = strings.ReplaceAll(input, filepath.Ext(input), ".edl")
 		}
+
 		err = exportEDL(filepath.Base(input), *hilights, output)
 	}
+
 	return hilights.Count, err
 }
 
@@ -108,10 +119,12 @@ var exportTags = &cobra.Command{
 
 			for _, file := range files {
 				actualFilename := filepath.Join(input, file.Name())
+
 				count, err := extractIndividual(actualFilename, output, format)
 				if err != nil {
 					cui.Error(err.Error())
 				}
+
 				color.Green(">> Successfully extracted %d tags", count)
 			}
 		}
@@ -121,6 +134,7 @@ var exportTags = &cobra.Command{
 			if err != nil {
 				cui.Error(err.Error())
 			}
+
 			color.Green(">> Successfully extracted %d tags", count)
 		}
 	},

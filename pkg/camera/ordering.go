@@ -16,12 +16,14 @@ type LocationProvider interface {
 func orderFromConfig() []string {
 	key := "location.order"
 	viper.SetDefault(key, []string{"date", "location", "camera"})
+
 	return viper.GetStringSlice(key)
 }
 
 func fallbackFromConfig() string {
 	key := "location.fallback"
 	viper.SetDefault(key, "NoLocation")
+
 	return viper.GetString(key)
 }
 
@@ -43,7 +45,9 @@ func GetOrder(sortoptions SortOptions, getLocation LocationProvider, osPathname,
 			if getLocation == nil || !sortoptions.ByLocation {
 				continue
 			}
+
 			location := fallbackFromConfig()
+
 			locationFromFile, locerr := getLocation.GetLocation(osPathname)
 			if locerr == nil {
 				reverseLocation, reverseerr := utils.ReverseLocation(*locationFromFile)
@@ -51,10 +55,12 @@ func GetOrder(sortoptions SortOptions, getLocation LocationProvider, osPathname,
 					location = reverseLocation
 				}
 			}
+
 			dayFolder = filepath.Join(dayFolder, location)
 		}
 	}
 
 	_ = os.MkdirAll(dayFolder, 0o755)
+
 	return dayFolder
 }

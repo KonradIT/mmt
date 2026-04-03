@@ -16,6 +16,7 @@ func BoxTypeHMMT() mp4.BoxType { return mp4.StrToBoxType("HMMT") }
 
 type HMMT struct {
 	mp4.Box
+
 	Count   int   `mp4:"0,size=32,len=dynamic,int"`
 	Entries []int `mp4:"1,size=32,len=dynamic,int"`
 }
@@ -27,6 +28,7 @@ func (*HMMT) GetType() mp4.BoxType {
 func (h *HMMT) GetFieldLength(name string, ctx mp4.Context) uint {
 	_ = name
 	_ = ctx
+
 	return uint(h.Count) //nolint:gosec // signed to unsigned is fine.
 }
 
@@ -46,12 +48,17 @@ func GetHiLights(path string) (*HiLights, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			if h.BoxInfo.Type.String() == "HMMT" {
-				hmmtData = box.(*HMMT)
+				if hmmt, ok := box.(*HMMT); ok {
+					hmmtData = hmmt
+				}
 			}
+
 			return h.Expand()
 		}
-		return nil, nil
+
+		return 0, nil // skip unrelated box
 	})
 
 	if hmmtData != nil {
@@ -60,5 +67,6 @@ func GetHiLights(path string) (*HiLights, error) {
 			hmmtData.Entries,
 		}, nil
 	}
-	return nil, errors.New("No data found")
+
+	return nil, errors.New("no data found")
 }

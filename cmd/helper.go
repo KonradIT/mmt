@@ -13,12 +13,15 @@ func getFlagString(cmd *cobra.Command, name string, defaultString string) string
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
 	}
+
 	if value == "" {
 		value = viper.GetString(name)
 	}
+
 	if value == "" {
 		value = defaultString
 	}
+
 	return value
 }
 
@@ -27,9 +30,11 @@ func getFlagSlice(cmd *cobra.Command, name string) []string {
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
 	}
+
 	if len(value) == 0 {
 		value = viper.GetStringSlice(name)
 	}
+
 	return value
 }
 
@@ -38,16 +43,20 @@ func getFlagInt(cmd *cobra.Command, name string, defaultInt string) int {
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
 	}
+
 	if value == "" {
 		value = viper.GetString(name)
 	}
+
 	if value == "" {
 		value = defaultInt
 	}
+
 	int1, err := strconv.Atoi(value)
 	if err != nil {
 		cui.Error("Problem parsing "+value, err)
 	}
+
 	return int1
 }
 
@@ -56,15 +65,19 @@ func getFlagBool(cmd *cobra.Command, name string, defaultBool string) bool {
 	if err != nil {
 		cui.Error("Problem parsing "+name, err)
 	}
+
 	if value == "" {
 		value = viper.GetString(name)
 	}
+
 	if value == "" {
 		value = defaultBool
 	}
+
 	bool1, err := strconv.ParseBool(value)
 	if err != nil {
 		cui.Error("Problem parsing "+value, err)
 	}
+
 	return bool1
 }

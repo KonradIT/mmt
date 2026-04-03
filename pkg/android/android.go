@@ -17,15 +17,14 @@ import (
 func pixelNameSort(filename string) (string, string) {
 	if strings.Contains(filename, "MOTION") {
 		s := strings.Split(filename, ".MOTION")
+
 		return filename, s[0]
 	}
+
 	return filename, ""
 }
 
-var (
-	locationService = LocationService{}
-	replacer        = strings.NewReplacer("dd", "02", "mm", "01", "yyyy", "2006")
-)
+var locationService = LocationService{}
 
 type Entrypoint struct{}
 
@@ -45,14 +44,18 @@ func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
 	if err != nil {
 		return "", "", mErrors.ErrNoCameraDetected
 	}
+
 	if err := client.StartServer(); err != nil {
 		return "", "", mErrors.ErrNoCameraDetected
 	}
+
 	device := client.Device(adb.AnyUsbDevice())
+
 	info, err := device.DeviceInfo()
 	if err != nil {
 		return "", "", mErrors.ErrNoCameraDetected
 	}
+
 	return info.Serial, camera.SDCard, nil
 }
 
@@ -80,10 +83,12 @@ func prepare(out string, deviceFileName string, deviceModel string, mediaDate st
 	if err != nil {
 		return nil, "", err
 	}
+
 	err = os.Remove(filepath.Join(out, localFile.Name()))
 	if err != nil {
 		return nil, "", err
 	}
+
 	return bar, dayFolder, nil
 }
 
@@ -96,6 +101,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	err = client.StartServer()
 	if err != nil {
 		return nil, err
@@ -105,14 +111,16 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	if params.Input != "any" {
 		deviceDescriptor = adb.DeviceWithSerial(params.Input)
 	}
+
 	device := client.Device(deviceDescriptor)
 
 	entries, err := device.ListDirEntries("/sdcard/DCIM/Camera")
 	if err != nil {
 		return nil, err
 	}
+
 	if entries.Err() != nil {
-		return nil, err
+		return nil, entries.Err()
 	}
 
 	deviceInfo, err := device.DeviceInfo()
@@ -121,6 +129,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	}
 
 	var wg sync.WaitGroup
+
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -171,6 +180,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil //nolint
 		}
+
 		if err := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755); err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
@@ -184,7 +194,8 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 
 		filename, folder := pixelNameSort(entries.Entry().Name)
 		if folder != "" {
-			if err := os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0o755); err != nil {
+			err := os.MkdirAll(filepath.Join(dayFolder, "photos", folder), 0o755)
+			if err != nil {
 				result.Errors = append(result.Errors, err)
 				result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 				return &result, nil //nolint
@@ -197,15 +208,19 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 
 		go func(filename, localPath string, bar *mpb.Bar) {
 			defer wg.Done()
+
 			readfile, err = device.OpenRead("/sdcard/DCIM/Camera/" + filename)
 			if err != nil {
 				inlineCounter.SetFailure(err, filename)
+
 				return
 			}
 			defer readfile.Close()
+
 			outFile, err := os.Create(localPath)
 			if err != nil {
 				inlineCounter.SetFailure(err, filename)
+
 				return
 			}
 			defer outFile.Close()
@@ -216,8 +231,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 			_, err = io.Copy(outFile, proxyReader)
 			if err != nil {
 				inlineCounter.SetFailure(err, localPath)
+
 				return
 			}
+
 			inlineCounter.SetSuccess()
 		}(entries.Entry().Name, localPath, bar)
 	}

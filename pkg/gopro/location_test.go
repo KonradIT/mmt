@@ -37,6 +37,7 @@ func TestParseGPMF(t *testing.T) {
 		if walk.Path() == "" {
 			walk.Step()
 		}
+
 		if _, found := videoTests[walk.Path()]; !found {
 			walk.Step()
 		}
@@ -47,7 +48,8 @@ func TestParseGPMF(t *testing.T) {
 		require.NoError(t, err)
 		localFile, err := os.CreateTemp(".", walk.Path())
 		require.NoError(t, err)
-		defer os.Remove(localFile.Name())
+
+		defer os.Remove(localFile.Name()) //nolint:errcheck // test cleanup
 
 		stat, err := remoteFile.Stat()
 		require.NoError(t, err)

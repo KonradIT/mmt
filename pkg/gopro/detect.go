@@ -8,13 +8,13 @@ import (
 	"github.com/shirou/gopsutil/disk"
 )
 
-// Detect implements camera.Camera by checking for GoPro SD cards and
-// network-connected cameras.
+// Detect checks for GoPro SD cards and network-connected cameras.
 func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
 		return "", "", err
 	}
+
 	for _, partition := range partitions {
 		if (Entrypoint{}).GuessFromPath(partition.Mountpoint) {
 			return partition.Mountpoint, camera.SDCard, nil
@@ -22,6 +22,7 @@ func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
 	}
 
 	ctx := context.Background()
+
 	networkDevices, err := GetGoProNetworkAddresses(ctx)
 	if err != nil {
 		return "", "", err

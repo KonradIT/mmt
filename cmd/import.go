@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"time"
 
@@ -15,8 +16,15 @@ import (
 	"github.com/konradit/mmt/pkg/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"slices"
 )
+
+type detector interface {
+	Detect() (string, camera.ConnectionType, error)
+}
+
+type importer interface {
+	Import(params camera.ImportParams) (*camera.Result, error)
+}
 
 var importCmd = &cobra.Command{
 	Use:   "import",
@@ -28,7 +36,8 @@ var importCmd = &cobra.Command{
 		projectName := getFlagString(cmd, "name", "")
 
 		if projectName != "" {
-			if err := os.MkdirAll(filepath.Join(output, projectName), 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
+			err := os.MkdirAll(filepath.Join(output, projectName), 0o755)
+			if err != nil && !errors.Is(err, fs.ErrExist) {
 				cui.Error("Something went wrong creating project dir", err)
 			}
 		}
@@ -40,10 +49,12 @@ var importCmd = &cobra.Command{
 		cameraName := getFlagString(cmd, "camera-name", "")
 		connection := camera.ConnectionType(getFlagString(cmd, "connection", ""))
 		skipAuxFiles := getFlagBool(cmd, "skip-aux", "true")
+
 		sortBy := getFlagSlice(cmd, "sort-by")
 		if len(sortBy) == 0 {
 			sortBy = []string{"camera", "location"}
 		}
+
 		sortOptions := camera.SortOptions{
 			ByLocation: slices.Contains(sortBy, "location"),
 			ByCamera:   slices.Contains(sortBy, "camera"),
@@ -55,10 +66,17 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				cui.Error(err.Error())
 			}
-			detectedInput, connType, err := cam.Detect()
+
+			det, ok := cam.(detector)
+			if !ok {
+				cui.Error("gopro camera does not support detection")
+			}
+
+			detectedInput, connType, err := det.Detect()
 			if err != nil {
 				cui.Error(err.Error())
 			}
+
 			input = detectedInput
 			connection = connType
 			cameraType = "gopro"
@@ -67,10 +85,17 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				cui.Error(err.Error())
 			}
-			detectedInput, connType, err := cam.Detect()
+
+			det, ok := cam.(detector)
+			if !ok {
+				cui.Error("insta360 camera does not support detection")
+			}
+
+			detectedInput, connType, err := det.Detect()
 			if err != nil {
 				cui.Error(err.Error())
 			}
+
 			input = detectedInput
 			connection = connType
 			cameraType = "insta360"
@@ -82,6 +107,11 @@ var importCmd = &cobra.Command{
 				cui.Error("Something went wrong", err)
 			}
 
+			imp, ok := cam.(importer)
+			if !ok {
+				cui.Error(fmt.Sprintf("camera %q does not support import", cameraType))
+			}
+
 			if cameraType == "gopro" && connection == "" {
 				connection = camera.SDCard
 			}
@@ -90,6 +120,7 @@ var importCmd = &cobra.Command{
 			if err != nil {
 				cui.Error("Invalid date range", err)
 			}
+
 			params := camera.ImportParams{
 				Input:              input,
 				Output:             filepath.Join(output, projectName),
@@ -103,7 +134,8 @@ var importCmd = &cobra.Command{
 				Connection:         connection,
 				Sort:               sortOptions,
 			}
-			r, err := cam.Import(params)
+
+			r, err := imp.Import(params)
 			if err != nil {
 				cui.Error("Something went wrong", err)
 			}
@@ -117,16 +149,20 @@ var importCmd = &cobra.Command{
 			for _, v := range data {
 				table.Append(v)
 			}
+
 			table.Render()
 
 			if len(r.Errors) != 0 {
 				fmt.Println("Errors: ")
+
 				for _, error := range r.Errors {
 					color.Red(">> " + error.Error())
 				}
 			}
+
 			return
 		}
+
 		color.Red("Error: required flag(s) \"camera\", \"output\" not set")
 	},
 }
@@ -160,6 +196,7 @@ func parseDateRange(dateRange []string, dateFormat string) ([]time.Time, error) 
 
 	if len(dateRange) == 1 {
 		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+
 		switch dateRange[0] {
 		case "today":
 			dateStart = today
@@ -177,12 +214,14 @@ func parseDateRange(dateRange []string, dateFormat string) ([]time.Time, error) 
 		if err != nil {
 			return nil, fmt.Errorf("invalid start date %q: %w", dateRange[0], err)
 		}
+
 		dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 
 		end, err := time.Parse(utils.DateFormatReplacer.Replace(dateFormat), dateRange[1])
 		if err != nil {
 			return nil, fmt.Errorf("invalid end date %q: %w", dateRange[1], err)
 		}
+
 		dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
 	}
 
