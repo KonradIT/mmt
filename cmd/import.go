@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/erdaltsksn/cui"
 	"github.com/fatih/color"
@@ -57,6 +55,8 @@ var importCmd = &cobra.Command{
 		}
 		tagNames := getFlagSlice(cmd, "tag-names")
 
+		utils.ParseDateRange(dateRange, dateFormat)
+
 		if useGoPro, err := cmd.Flags().GetBool("use-gopro"); err == nil && useGoPro {
 			detectedGoPro, connectionType, err := gopro.Detect()
 			if err != nil {
@@ -96,7 +96,6 @@ var importCmd = &cobra.Command{
 				DateFormat:         dateFormat,
 				BufferSize:         bufferSize,
 				Prefix:             prefix,
-				DateRange:          parseDateRange(dateRange, dateFormat),
 				TagNames:           tagNames,
 				Connection:         connection,
 				Sort:               sortOptions,
@@ -150,44 +149,6 @@ func init() {
 	// Camera helpers
 	importCmd.Flags().Bool("use-gopro", false, "Detect GoPro camera attached")
 	importCmd.Flags().Bool("use-insta360", false, "Detect Insta360 camera attached")
-}
-
-func parseDateRange(dateRange []string, dateFormat string) []time.Time {
-	dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-	dateEnd := time.Now()
-
-	if len(dateRange) == 1 {
-		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
-		switch dateRange[0] {
-		case "today":
-			dateStart = today
-		case "yesterday":
-			dateStart = today.Add(-24 * time.Hour)
-		case "week":
-			dateStart = today.Add(-24 * time.Duration((int(dateEnd.Weekday()) - 1)) * time.Hour)
-		case "week-back":
-			dateStart = today.Add((-24 * 7) * time.Hour)
-		}
-	}
-
-	if len(dateRange) == 2 {
-		start, err := time.Parse(utils.DateFormatReplacer.Replace(dateFormat), dateRange[0])
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		if err == nil {
-			dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-		}
-		end, err := time.Parse(utils.DateFormatReplacer.Replace(dateFormat), dateRange[1])
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		if err == nil {
-			dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
-		}
-	}
-
-	return []time.Time{dateStart, dateEnd}
 }
 
 func callImport(cameraIf utils.Import, params utils.ImportParams) (*utils.Result, error) {
