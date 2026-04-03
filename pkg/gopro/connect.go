@@ -224,9 +224,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 	inlineCounter := camera.ResultCounter{}
 
 	unsorted := filepath.Join(params.Output, "unsorted")
-	if _, err := os.Stat(unsorted); os.IsNotExist(err) {
-		_ = os.Mkdir(unsorted, 0o755)
-	}
+	_ = os.MkdirAll(unsorted, 0o755)
 
 	chaptered := regexp.MustCompile(`GP\d+.MP4`)
 
@@ -315,7 +313,8 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 						rfpsFolder := fmt.Sprintf("%sx%s %d", gpFileInfo.W, gpFileInfo.H, framerate)
 
-						if err := forceGetFolder(filepath.Join(finalPath, "videos", importanceName, rfpsFolder)); err != nil {
+						err = forceGetFolder(filepath.Join(finalPath, "videos", importanceName, rfpsFolder))
+						if err != nil {
 							inlineCounter.SetFailure(err, origFilename)
 
 							return
@@ -353,7 +352,8 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 								return
 							}
 
-							if err := forceGetFolder(filepath.Join(finalPath, "videos", "proxy", rfpsFolder)); err != nil {
+							err = forceGetFolder(filepath.Join(finalPath, "videos", "proxy", rfpsFolder))
+							if err != nil {
 								inlineCounter.SetFailure(err, origFilename)
 
 								return

@@ -229,8 +229,10 @@ folderLoop:
 							additionalDir = "360"
 						}
 
-						if hilights, err := GetHiLights(osPathname); err == nil {
-							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
+						hilights, hilightErr := GetHiLights(osPathname)
+						if hilightErr == nil {
+							durationResp, durationErr := ffprobe.Duration(osPathname)
+							if durationErr == nil {
 								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), params.TagNames))
 							}
 						}
@@ -429,8 +431,10 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						additionalDir := ""
 
-						if hilights, err := GetHiLights(osPathname); err == nil {
-							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
+						hilights, hilightErr := GetHiLights(osPathname)
+						if hilightErr == nil {
+							durationResp, durationErr := ffprobe.Duration(osPathname)
+							if durationErr == nil {
 								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), params.TagNames))
 							}
 						}
@@ -483,8 +487,10 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						additionalDir := ""
 
-						if hilights, err := GetHiLights(osPathname); err == nil {
-							if durationResp, err := ffprobe.Duration(osPathname); err == nil {
+						hilights, hilightErr := GetHiLights(osPathname)
+						if hilightErr == nil {
+							durationResp, durationErr := ffprobe.Duration(osPathname)
+							if durationErr == nil {
 								additionalDir = filepath.Join(additionalDir, getImportanceName(hilights.Timestamps, int(durationResp.Streams[0].Duration), params.TagNames))
 							}
 						}
@@ -649,7 +655,8 @@ func getFileTime(osPathname string, utcFix bool) time.Time {
 }
 
 func parse(folder string, name string, osPathname string, bufferSize int, bar *mpb.Bar, modTime time.Time) error {
-	if err := os.MkdirAll(folder, 0o755); err != nil {
+	err := os.MkdirAll(folder, 0o755)
+	if err != nil {
 		return err
 	}
 

@@ -64,7 +64,7 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar, modT
 
 	for {
 		n, err := proxyReader.Read(buf)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
 
@@ -72,7 +72,8 @@ func CopyFile(src string, dst string, buffersize int, progressbar *mpb.Bar, modT
 			break
 		}
 
-		if _, err := destination.Write(buf[:n]); err != nil {
+		_, err = destination.Write(buf[:n])
+		if err != nil {
 			return err
 		}
 	}
@@ -115,14 +116,17 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar, mtime *time
 		proxyReader := progressbar.ProxyReader(resp.Body)
 		defer proxyReader.Close()
 
-		if _, err = io.Copy(out, proxyReader); err != nil {
+		_, err = io.Copy(out, proxyReader)
+		if err != nil {
 			_ = out.Close()
 
 			return err
 		}
 	} else {
 		counter := &WriteCounter{}
-		if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
+
+		_, err = io.Copy(out, io.TeeReader(resp.Body, counter))
+		if err != nil {
 			_ = out.Close()
 
 			return err
@@ -131,7 +135,8 @@ func DownloadFile(filepath string, url string, progressbar *mpb.Bar, mtime *time
 
 	fmt.Print("\n")
 
-	if err := out.Close(); err != nil {
+	err = out.Close()
+	if err != nil {
 		return err
 	}
 
@@ -167,7 +172,8 @@ func Unzip(src string, dest string) error {
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+		err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
+		if err != nil {
 			return err
 		}
 

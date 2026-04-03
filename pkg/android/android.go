@@ -45,7 +45,8 @@ func (Entrypoint) Detect() (string, camera.ConnectionType, error) {
 		return "", "", mErrors.ErrNoCameraDetected
 	}
 
-	if err := client.StartServer(); err != nil {
+	err = client.StartServer()
+	if err != nil {
 		return "", "", mErrors.ErrNoCameraDetected
 	}
 
@@ -175,13 +176,15 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755); err != nil {
+		err = os.MkdirAll(filepath.Join(dayFolder, "videos"), 0o755)
+		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil //nolint
 		}
 
-		if err := os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755); err != nil {
+		err = os.MkdirAll(filepath.Join(dayFolder, "photos"), 0o755)
+		if err != nil {
 			result.Errors = append(result.Errors, err)
 			result.FilesNotImported = append(result.FilesNotImported, entries.Entry().Name)
 			return &result, nil //nolint

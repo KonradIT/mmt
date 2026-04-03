@@ -33,7 +33,6 @@ linters:
     - nosprintfhostport # URLs are built for known IPv4 GoPro addresses, not general use
     - lll # line length is handled by the formatter
     - forbidigo # fmt.Print is appropriate for a CLI tool
-    - noinlineerr # inline error handling is idiomatic Go
 
   settings:
     gosec:

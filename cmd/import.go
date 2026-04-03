@@ -61,7 +61,8 @@ var importCmd = &cobra.Command{
 		}
 		tagNames := getFlagSlice(cmd, "tag-names")
 
-		if useGoPro, err := cmd.Flags().GetBool("use-gopro"); err == nil && useGoPro {
+		useGoPro, err := cmd.Flags().GetBool("use-gopro")
+		if err == nil && useGoPro {
 			cam, err := camera.Get("gopro")
 			if err != nil {
 				cui.Error(err.Error())
@@ -80,7 +81,10 @@ var importCmd = &cobra.Command{
 			input = detectedInput
 			connection = connType
 			cameraType = "gopro"
-		} else if useInsta360, err := cmd.Flags().GetBool("use-insta360"); err == nil && useInsta360 {
+		}
+
+		useInsta360, err := cmd.Flags().GetBool("use-insta360")
+		if err == nil && useInsta360 {
 			cam, err := camera.Get("insta360")
 			if err != nil {
 				cui.Error(err.Error())
