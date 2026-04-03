@@ -20,7 +20,7 @@ type FFprobe struct {
 }
 
 type VideoSizeResponse struct {
-	Programs []interface{} `json:"programs"`
+	Programs []any `json:"programs"`
 	Streams  []struct {
 		Width      int    `json:"width"`
 		Height     int    `json:"height"`
@@ -29,14 +29,14 @@ type VideoSizeResponse struct {
 }
 
 type FramesResponse struct {
-	Programs []interface{} `json:"programs"`
+	Programs []any `json:"programs"`
 	Streams  []struct {
 		Frames int `json:"nb_frames,string"`
 	} `json:"streams"`
 }
 
 type DurationResponse struct {
-	Programs []interface{} `json:"programs"`
+	Programs []any `json:"programs"`
 	Streams  []struct {
 		Duration float32 `json:"duration,string"`
 	} `json:"streams"`

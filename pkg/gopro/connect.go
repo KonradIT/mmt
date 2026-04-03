@@ -46,7 +46,7 @@ func handleKill() {
 	}()
 }
 
-func caller(ctx context.Context, ip, path string, object interface{}) error {
+func caller(ctx context.Context, ip, path string, object any) error {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/%s", ip, path), nil)
 	if err != nil {
 		return err

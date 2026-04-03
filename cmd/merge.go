@@ -21,7 +21,7 @@ var mergeCmd = &cobra.Command{
 		videos := getFlagSlice(cmd, "input")
 		totalFrames := 0
 		ffprobe := utils.NewFFprobe(nil)
-		for i := 0; i < len(videos); i++ {
+		for i := range videos {
 			head, err := ffprobe.Frames(videos[i])
 			if err != nil {
 				cui.Error(err.Error())

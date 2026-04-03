@@ -40,7 +40,7 @@ func GetHiLights(path string) (*HiLights, error) {
 
 	hmmtData := &HMMT{}
 
-	_, _ = mp4.ReadBoxStructure(f, func(h *mp4.ReadHandle) (interface{}, error) {
+	_, _ = mp4.ReadBoxStructure(f, func(h *mp4.ReadHandle) (any, error) {
 		if h.BoxInfo.IsSupportedType() && h.BoxInfo.Type.String() == "moov" || h.BoxInfo.Type.String() == "udta" || h.BoxInfo.Type.String() == "HMMT" {
 			box, _, err := h.ReadPayload()
 			if err != nil {

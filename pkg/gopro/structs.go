@@ -100,18 +100,18 @@ type MediaList struct {
 	Media []struct {
 		D  string `json:"d"`
 		Fs []struct {
-			N    string        `json:"n"`
-			Cre  int64         `json:"cre,string"`
-			Mod  string        `json:"mod"`
-			Glrv int           `json:"glrv,string,omitempty"`
-			Ls   string        `json:"ls,omitempty"`
-			S    int64         `json:"s,string"`
-			G    string        `json:"g,omitempty"`
-			B    int           `json:"b,string,omitempty"`
-			L    int           `json:"l,string,omitempty"`
-			T    string        `json:"t,omitempty"`
-			M    []interface{} `json:"m,omitempty"`
-			Raw  string        `json:"raw,omitempty"`
+			N    string `json:"n"`
+			Cre  int64  `json:"cre,string"`
+			Mod  string `json:"mod"`
+			Glrv int    `json:"glrv,string,omitempty"`
+			Ls   string `json:"ls,omitempty"`
+			S    int64  `json:"s,string"`
+			G    string `json:"g,omitempty"`
+			B    int    `json:"b,string,omitempty"`
+			L    int    `json:"l,string,omitempty"`
+			T    string `json:"t,omitempty"`
+			M    []any  `json:"m,omitempty"`
+			Raw  string `json:"raw,omitempty"`
 		} `json:"fs"`
 	} `json:"media"`
 }
@@ -122,25 +122,25 @@ type ConnectDevice struct {
 }
 
 type goProMediaMetadata struct {
-	Cre       string        `json:"cre"`
-	S         int64         `json:"s,string"`
-	Us        string        `json:"us"`
-	Mos       []interface{} `json:"mos"`
-	Eis       string        `json:"eis"`
-	Pta       string        `json:"pta"`
-	Ao        string        `json:"ao"`
-	Tr        string        `json:"tr"`
-	Mp        string        `json:"mp"`
-	Gumi      string        `json:"gumi"`
-	Ls        string        `json:"ls"`
-	Cl        string        `json:"cl"`
-	Hc        string        `json:"hc"`
-	Hi        []int         `json:"hi"`
-	Dur       int           `json:"dur,string"`
-	W         string        `json:"w"`
-	H         string        `json:"h"`
-	Fps       int           `json:"fps,string"`
-	FpsDenom  int           `json:"fps_denom,string"`
-	Prog      string        `json:"prog"`
-	Subsample string        `json:"subsample"`
+	Cre       string `json:"cre"`
+	S         int64  `json:"s,string"`
+	Us        string `json:"us"`
+	Mos       []any  `json:"mos"`
+	Eis       string `json:"eis"`
+	Pta       string `json:"pta"`
+	Ao        string `json:"ao"`
+	Tr        string `json:"tr"`
+	Mp        string `json:"mp"`
+	Gumi      string `json:"gumi"`
+	Ls        string `json:"ls"`
+	Cl        string `json:"cl"`
+	Hc        string `json:"hc"`
+	Hi        []int  `json:"hi"`
+	Dur       int    `json:"dur,string"`
+	W         string `json:"w"`
+	H         string `json:"h"`
+	Fps       int    `json:"fps,string"`
+	FpsDenom  int    `json:"fps_denom,string"`
+	Prog      string `json:"prog"`
+	Subsample string `json:"subsample"`
 }
