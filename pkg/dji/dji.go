@@ -83,6 +83,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 
 	var wg sync.WaitGroup
 
+	sem := camera.NewSemaphore(params.MaxConcurrent)
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -136,7 +137,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							return godirwalk.SkipThis
 						}
 
+						sem <- struct{}{}
+
 						go func(filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", filename), params.BufferSize, bar, d)
@@ -155,7 +159,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							return godirwalk.SkipThis
 						}
 
+						sem <- struct{}{}
+
 						go func(filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", filename), params.BufferSize, bar, d)
@@ -182,7 +189,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							return godirwalk.SkipThis
 						}
 
+						sem <- struct{}{}
+
 						go func(filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "videos", extraPath, filename), params.BufferSize, bar, d)
@@ -200,7 +210,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							return godirwalk.SkipThis
 						}
 
+						sem <- struct{}{}
+
 						go func(filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos/raw", filename), params.BufferSize, bar, d)

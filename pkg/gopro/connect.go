@@ -217,6 +217,7 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 	var wg sync.WaitGroup
 
+	sem := camera.NewSemaphore(params.MaxConcurrent)
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -258,7 +259,10 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 				switch fileTypeMatch.Type {
 				case Video, ChapteredVideo:
+					sem <- struct{}{}
+
 					go func(in, folder, origFilename, unsorted string, origSize int64, lrvSize int, bar *mpb.Bar, mtime time.Time) {
+						defer func() { <-sem }()
 						defer wg.Done()
 
 						x := origFilename
@@ -415,7 +419,10 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 					}
 
 					for _, item := range totalPhotos {
+						sem <- struct{}{}
+
 						go func(in string, nowPhoto photo, unsorted string, mtime time.Time) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := utils.DownloadFile(
@@ -476,7 +483,10 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 						multiShotBar := camera.GetNewBar(progressBar, gpFileInfo.S, filename, camera.IoTX)
 
+						sem <- struct{}{}
+
 						go func(in, folder, origFilename, unsorted string, origSize int64, mtime time.Time) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := utils.DownloadFile(

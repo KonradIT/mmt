@@ -34,11 +34,18 @@ type ImportParams struct {
 	SkipAuxiliaryFiles        bool
 	DateFormat                string
 	BufferSize                int
+	MaxConcurrent             int
 	Prefix                    string
 	DateRange                 []time.Time
 	TagNames                  []string
 	Connection                ConnectionType
 	Sort                      SortOptions
+}
+
+// NewSemaphore returns a buffered channel used as a counting semaphore to
+// limit concurrent file operations.
+func NewSemaphore(maxConcurrent int) chan struct{} {
+	return make(chan struct{}, maxConcurrent)
 }
 
 // Result holds the outcome of an import operation.

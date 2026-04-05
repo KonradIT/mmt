@@ -94,6 +94,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 
 	var wg sync.WaitGroup
 
+	sem := camera.NewSemaphore(params.MaxConcurrent)
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -150,7 +151,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							return godirwalk.SkipThis
 						}
 
+						sem <- struct{}{}
+
 						go func(id, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, "photos", id, x), params.BufferSize, bar, d)
@@ -190,7 +194,10 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 							return godirwalk.SkipThis
 						}
 
+						sem <- struct{}{}
+
 						go func(id, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err = utils.CopyFile(osPathname, filepath.Join(dayFolder, slug, id, x), params.BufferSize, bar, d)

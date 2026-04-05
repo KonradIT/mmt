@@ -44,6 +44,7 @@ var importCmd = &cobra.Command{
 
 		dateFormat := getFlagString(cmd, "date", "dd-mm-yyyy")
 		bufferSize := getFlagInt(cmd, "buffer", "1000")
+		maxConcurrent := getFlagInt(cmd, "concurrent", "10")
 		prefix := getFlagString(cmd, "prefix", "")
 		dateRange := getFlagSlice(cmd, "range")
 		cameraName := getFlagString(cmd, "camera-name", "")
@@ -132,6 +133,7 @@ var importCmd = &cobra.Command{
 				SkipAuxiliaryFiles: skipAuxFiles,
 				DateFormat:         dateFormat,
 				BufferSize:         bufferSize,
+				MaxConcurrent:      maxConcurrent,
 				Prefix:             prefix,
 				DateRange:          dateRangeParsed,
 				TagNames:           tagNames,
@@ -187,6 +189,7 @@ func init() {
 	importCmd.Flags().StringSlice("sort-by", []string{}, "Sort files by: `camera`, `location`")
 	importCmd.Flags().StringSlice("tag-names", []string{}, "Tag names for number of HiLight tags in last 10s of video, each position being the amount, eg: 'marked 1,good stuff,important' => num of tags: 1,2,3")
 	importCmd.Flags().StringP("skip-aux", "s", "true", "Skip auxiliary files (GoPro: THM, LRV. DJI: SRT)")
+	importCmd.Flags().String("concurrent", "10", "Maximum number of files to copy concurrently")
 	importCmd.Flags().String("camera-name", "", "Override camera name detection with specified string")
 
 	// Camera helpers

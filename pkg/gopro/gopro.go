@@ -172,6 +172,7 @@ func importFromGoProV2(params camera.ImportParams) camera.Result {
 
 	var wg sync.WaitGroup
 
+	sem := camera.NewSemaphore(params.MaxConcurrent)
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -242,7 +243,11 @@ folderLoop:
 						}
 
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -273,7 +278,10 @@ folderLoop:
 
 						proxyVideoBar := camera.GetNewBar(progressBar, lrvStat.Size(), lrvReplacer.Replace(de.Name()), camera.IoTX)
 
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							_ = parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -285,7 +293,11 @@ folderLoop:
 						}
 
 						folder := filepath.Join(dayFolder, "photos", additionalDir)
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -303,7 +315,11 @@ folderLoop:
 						}
 
 						folder := filepath.Join(dayFolder, "multishot", additionalDir, de.Name()[:4])
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -316,7 +332,11 @@ folderLoop:
 
 					case RawPhoto:
 						folder := filepath.Join(dayFolder, "photos/raw")
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -329,7 +349,11 @@ folderLoop:
 
 					case Audio:
 						folder := filepath.Join(dayFolder, "audios")
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -378,6 +402,7 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 	var wg sync.WaitGroup
 
+	sem := camera.NewSemaphore(params.MaxConcurrent)
 	progressBar := mpb.New(mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond))
@@ -450,7 +475,11 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 						}
 
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -479,7 +508,10 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						proxyVideoBar := camera.GetNewBar(progressBar, lrvStat.Size(), strings.ReplaceAll(de.Name(), ".MP4", ".LRV"), camera.IoTX)
 
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							_ = parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -512,7 +544,11 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 						}
 
 						folder := filepath.Join(dayFolder, "videos", additionalDir, rfpsFolder)
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -541,14 +577,21 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 						proxyVideoBar := camera.GetNewBar(progressBar, lrvStat.Size(), strings.ReplaceAll(de.Name(), ".MP4", ".LRV"), camera.IoTX)
 
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							_ = parse(folder, filename, osPathname, params.BufferSize, bar, d)
 						}(folder, x, lrvFullpath, proxyVideoBar)
 					case Photo:
 						folder := filepath.Join(dayFolder, "photos")
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -565,7 +608,11 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 						}
 
 						folder := filepath.Join(dayFolder, "videos/proxy")
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -578,7 +625,11 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 					case Multishot:
 						folder := filepath.Join(dayFolder, "multishot", de.Name()[:4])
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
@@ -591,7 +642,11 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 
 					case RawPhoto:
 						folder := filepath.Join(dayFolder, "photos/raw")
+
+						sem <- struct{}{}
+
 						go func(folder, filename, osPathname string, bar *mpb.Bar) {
+							defer func() { <-sem }()
 							defer wg.Done()
 
 							err := parse(folder, filename, osPathname, params.BufferSize, bar, d)
