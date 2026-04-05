@@ -197,7 +197,7 @@ folderLoop:
 						continue fileTypeLoop
 					}
 
-					d := getFileTime(osPathname, true)
+					d := getFileTime(osPathname)
 					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
@@ -425,7 +425,7 @@ func importFromGoProV1(params camera.ImportParams) camera.Result {
 						continue
 					}
 
-					d := getFileTime(osPathname, true)
+					d := getFileTime(osPathname)
 					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 					if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
@@ -709,22 +709,13 @@ func readInfo(inBytes []byte) (*Info, error) {
 	return &gpVersion, nil
 }
 
-func getFileTime(osPathname string, utcFix bool) time.Time {
-	var d time.Time
-
+func getFileTime(osPathname string) time.Time {
 	t, err := times.Stat(osPathname)
 	if err != nil {
-		return d
+		return time.Time{}
 	}
 
-	d = t.ModTime()
-	if utcFix {
-		zoneName, _ := d.Zone()
-		newTime := strings.ReplaceAll(d.Format(time.UnixDate), zoneName, "UTC")
-		d, _ = time.Parse(time.UnixDate, newTime)
-	}
-
-	return d
+	return camera.ModTimeAsUTC(t.ModTime())
 }
 
 func parse(folder string, name string, osPathname string, bufferSize int, bar *mpb.Bar, modTime time.Time) error {

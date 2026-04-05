@@ -198,11 +198,11 @@ func init() {
 }
 
 func parseDateRange(dateRange []string, dateFormat string) ([]time.Time, error) {
-	dateStart := time.Date(0o000, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-	dateEnd := time.Now()
+	dateStart := time.Date(0o000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	dateEnd := time.Now().UTC()
 
 	if len(dateRange) == 1 {
-		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, dateEnd.Location())
+		today := time.Date(dateEnd.Year(), dateEnd.Month(), dateEnd.Day(), 0, 0, 0, 0, time.UTC)
 
 		switch dateRange[0] {
 		case "today":
@@ -222,14 +222,14 @@ func parseDateRange(dateRange []string, dateFormat string) ([]time.Time, error) 
 			return nil, fmt.Errorf("invalid start date %q: %w", dateRange[0], err)
 		}
 
-		dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+		dateStart = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC)
 
 		end, err := time.Parse(utils.DateFormatReplacer.Replace(dateFormat), dateRange[1])
 		if err != nil {
 			return nil, fmt.Errorf("invalid end date %q: %w", dateRange[1], err)
 		}
 
-		dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+		dateEnd = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 	}
 
 	return []time.Time{dateStart, dateEnd}, nil
