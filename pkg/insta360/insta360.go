@@ -120,7 +120,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 						return godirwalk.SkipThis
 					}
 
-					d := t.ModTime()
+					d := camera.ModTimeAsUTC(t.ModTime())
 
 					mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 

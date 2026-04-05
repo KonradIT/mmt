@@ -242,14 +242,9 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 				}
 
 				tm := time.Unix(i, 0).UTC()
-				start := params.DateRange[0]
-				end := params.DateRange[1]
-				zoneName, _ := end.Zone()
-				newTime := strings.ReplaceAll(tm.Format(time.UnixDate), "UTC", zoneName)
-				tm, _ = time.Parse(time.UnixDate, newTime)
 				mediaDate := camera.FormatMediaDate(tm, params.DateFormat)
 
-				if tm.Before(start) || tm.After(end) {
+				if tm.Before(params.DateRange[0]) || tm.After(params.DateRange[1]) {
 					continue
 				}
 

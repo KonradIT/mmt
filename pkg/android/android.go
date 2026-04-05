@@ -139,10 +139,11 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	inlineCounter := camera.ResultCounter{}
 
 	for entries.Next() {
-		mediaDate := camera.FormatMediaDate(entries.Entry().ModifiedAt, params.DateFormat)
+		d := camera.ModTimeAsUTC(entries.Entry().ModifiedAt)
+		mediaDate := camera.FormatMediaDate(d, params.DateFormat)
 
 		// check if is in date range
-		if entries.Entry().ModifiedAt.Before(params.DateRange[0]) || entries.Entry().ModifiedAt.After(params.DateRange[1]) {
+		if d.Before(params.DateRange[0]) || d.After(params.DateRange[1]) {
 			continue
 		}
 
