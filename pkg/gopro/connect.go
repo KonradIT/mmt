@@ -262,13 +262,14 @@ func ImportConnect(params camera.ImportParams) (*camera.Result, error) {
 
 						x := origFilename
 						filename := origFilename
+						ext := strings.TrimPrefix(filepath.Ext(x), ".")
 
 						if verType == V2 {
-							filename = fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], "MP4")
+							filename = fmt.Sprintf("%s%s-%s.%s", x[:2], x[4:][:4], x[2:][:2], ext)
 						}
 
 						if verType == V1 && chaptered.MatchString(x) {
-							filename = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], "MP4")
+							filename = fmt.Sprintf("GOPR%s%s.%s", x[4:][:4], x[2:][:2], ext)
 						}
 
 						err := utils.DownloadFile(
