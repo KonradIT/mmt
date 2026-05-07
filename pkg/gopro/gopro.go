@@ -145,7 +145,7 @@ func (Entrypoint) Import(params camera.ImportParams) (*camera.Result, error) {
 	params.Input = filepath.Join(params.Input, fmt.Sprint(DCIM))
 
 	switch root {
-	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22", "H23", "H24":
+	case "HD6", "HD7", "HD8", "H19", "HD9", "H21", "H22", "H23", "H24", "H26":
 		result := importFromGoProV2(params)
 
 		return &result, nil
